@@ -564,9 +564,9 @@ class FabricDataExtractor:
         except Exception as e:
             self.logger.error(f"Authentication test failed: {str(e)}")
         
-        # Test Fabric API
+        # Test Fabric API (use member-only for connectivity test to avoid rate limits)
         try:
-            workspaces = self.get_workspaces()
+            workspaces = self.get_workspaces(tenant_wide=False, exclude_personal=True)
             results["fabric_api"] = len(workspaces) >= 0  # Even 0 workspaces means API is accessible
         except Exception as e:
             self.logger.error(f"Fabric API test failed: {str(e)}")

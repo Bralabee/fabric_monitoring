@@ -13,7 +13,7 @@ load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from core.auth import FabricAuthenticator, create_authenticator_from_env
-from core.monitor_hub_extractor import MonitorHubExtractor  
+from core.extractor import FabricDataExtractor
 from core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 
 def test_pipeline():
@@ -35,17 +35,22 @@ def test_pipeline():
     # Test 2: Data extraction (small test)
     print("\n2. Testing data extraction...")
     try:
-        extractor = MonitorHubExtractor(auth)
-        print("   ✅ MonitorHubExtractor initialized")
+        extractor = FabricDataExtractor(auth)
+        print("   ✅ FabricDataExtractor initialized")
         
-        # Quick test with simulation
-        print("   🔍 Running quick extraction test...")
-        data = extractor.extract_historical_data(days=7, target_workspaces=None, use_simulation=True)
+        # Quick connectivity test
+        print("   🔍 Testing API connectivity...")
+        connectivity = extractor.test_api_connectivity()
         
-        if data and data.get("activities"):
-            print(f"   ✅ Extracted {len(data['activities'])} activities")
+        if all(connectivity.values()):
+            print(f"   ✅ All API tests passed: {connectivity}")
         else:
-            print("   ⚠️  No activities extracted (may be normal)")
+            print(f"   ⚠️  Some API tests failed: {connectivity}")
+            
+        # Test workspace enumeration (member-only for quick test)
+        print("   🔍 Testing workspace enumeration...")
+        workspaces = extractor.get_workspaces(tenant_wide=False, exclude_personal=True)
+        print(f"   ✅ Found {len(workspaces)} member workspaces")
         
     except Exception as e:
         print(f"   ❌ Extraction failed: {str(e)}")

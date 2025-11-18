@@ -2,6 +2,10 @@
 """
 Fabric Workspace Inventory and Monitoring Report
 
+⚠️ Note: This script uses member-only workspace access (not tenant-wide).
+    It returns only workspaces where the service principal is a member (~139 workspaces).
+    For tenant-wide monitoring, use monitor_hub_pipeline.py instead.
+
 This script generates comprehensive monitoring data from available Fabric APIs
 when admin permissions for activity logs are not available.
 
@@ -9,7 +13,7 @@ Usage:
     python fabric_workspace_report.py [--output-format csv|excel|json]
     
 Examples:
-    # Generate CSV report
+    # Generate CSV report (member workspaces only)
     python fabric_workspace_report.py
     
     # Generate Excel report with charts
@@ -17,6 +21,9 @@ Examples:
     
     # Generate JSON for API consumption
     python fabric_workspace_report.py --output-format json
+    
+For tenant-wide monitoring:
+    python monitor_hub_pipeline.py --days 7
 """
 
 import os

@@ -1,6 +1,9 @@
 """
 Microsoft Fabric Monitor Hub Historical Analysis Extractor
 
+⚠️ DEPRECATED: This module is deprecated and kept for backward compatibility only.
+    Use FabricDataExtractor from core.extractor instead for new code.
+
 This module mimics the Monitor Hub functionality by extracting and analyzing
 historical data from Microsoft Fabric workspaces to produce the key measurables:
 - Activities
@@ -16,6 +19,15 @@ Dimensions for analysis:
 - Created By/Last Updated By
 - Item Type
 - Status
+
+Migration Guide:
+    Old: from core.monitor_hub_extractor import MonitorHubExtractor
+         extractor = MonitorHubExtractor(auth)
+         data = extractor.extract_historical_data(days=7)
+    
+    New: from core.extractor import FabricDataExtractor
+         extractor = FabricDataExtractor(auth)
+         # Use extract_historical_data.py script or monitor_hub_pipeline.py
 """
 
 import os
