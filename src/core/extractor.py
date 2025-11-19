@@ -125,12 +125,14 @@ class FabricDataExtractor:
                 
                 workspaces.extend(items)
                 self.logger.info(f"Retrieved {len(items)} workspaces (total: {len(workspaces)})")
+                print(f"   ⏳ Retrieved {len(workspaces)} workspaces...", end='\r', flush=True)
                 
                 if len(items) < page_size:
                     break
                 
                 skip += page_size
             
+            print(f"   ✅ Retrieved {len(workspaces)} workspaces total.          ")
             self.logger.info(f"Total tenant-wide workspaces retrieved: {len(workspaces)}")
             return workspaces
             
@@ -289,17 +291,32 @@ class FabricDataExtractor:
             }
             
             self.logger.info(f"Fetching tenant-wide activities from {start_date.strftime('%Y-%m-%d %H:%M:%S')} to {end_date.strftime('%Y-%m-%d %H:%M:%S')}")
-            response = self.session.get(url, headers=headers, params=params, timeout=self.timeout)
             
-            if response.status_code == 429:
-                retry_after = int(response.headers.get('Retry-After', 60))
-                self.logger.warning(f"Rate limited. Retry after {retry_after} seconds.")
-                raise requests.exceptions.RequestException(f"Rate limit exceeded. Retry after {retry_after}s")
+            all_activities = []
             
-            response.raise_for_status()
-            data = response.json()
-            all_activities = data.get("activityEventEntities", [])
+            while url:
+                response = self.session.get(url, headers=headers, params=params, timeout=self.timeout)
+                
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('Retry-After', 60))
+                    self.logger.warning(f"Rate limited. Retry after {retry_after} seconds.")
+                    raise requests.exceptions.RequestException(f"Rate limit exceeded. Retry after {retry_after}s")
+                
+                response.raise_for_status()
+                data = response.json()
+                items = data.get("activityEventEntities", [])
+                all_activities.extend(items)
+                
+                self.logger.info(f"Retrieved {len(items)} activities (Total: {len(all_activities)})")
+                print(f"   ⏳ Fetched {len(all_activities)} activities...", end='\r', flush=True)
+                
+                # Check for continuation URI
+                url = data.get("continuationUri")
+                if url:
+                    # continuationUri includes all necessary parameters, so we clear params
+                    params = None
             
+            print(f"   ✅ Fetched {len(all_activities)} activities total.          ")
             self.logger.info(f"Retrieved {len(all_activities)} tenant-wide activities")
             
             # Filter by workspace IDs if specified

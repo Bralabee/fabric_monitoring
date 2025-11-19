@@ -161,16 +161,19 @@ def main():
     load_dotenv()
     setup_logging()
     
+    # Parse date range
+    max_days = int(os.getenv('MAX_HISTORICAL_DAYS', '28'))
+    
     parser = argparse.ArgumentParser(
-        description="Extract historical Microsoft Fabric activity data (up to 28 days)",
+        description=f"Extract historical Microsoft Fabric activity data (up to {max_days} days)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        epilog=f"""
 Examples:
   # Extract last 7 days
   python extract_historical_data.py --days 7
   
-  # Extract last 28 days (maximum)
-  python extract_historical_data.py --days 28
+  # Extract last {max_days} days (maximum)
+  python extract_historical_data.py --days {max_days}
   
   # Extract specific date range
   python extract_historical_data.py --start-date 2025-11-01 --end-date 2025-11-14
@@ -183,7 +186,7 @@ Examples:
     parser.add_argument(
         "--days",
         type=int,
-        help="Number of days back from today to extract (max 28)"
+        help=f"Number of days back from today to extract (max {max_days})"
     )
     
     parser.add_argument(
@@ -218,9 +221,6 @@ Examples:
     )
     
     args = parser.parse_args()
-    
-    # Parse date range
-    max_days = int(os.getenv('MAX_HISTORICAL_DAYS', '28'))
     
     if args.start_date and args.end_date:
         # Use explicit date range

@@ -24,11 +24,15 @@ from core.csv_exporter import CSVExporter
 
 def setup_logging():
     """Setup basic logging configuration."""
+    # Ensure stdout is line-buffered for immediate output
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(line_buffering=True)
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.StreamHandler(),
+            logging.StreamHandler(sys.stdout),
             logging.FileHandler('logs/daily_extraction.log')
         ]
     )

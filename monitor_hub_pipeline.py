@@ -231,11 +231,15 @@ class MonitorHubPipeline:
     
     def _setup_logging(self) -> logging.Logger:
         """Setup logging configuration"""
+        # Ensure stdout is line-buffered for immediate output
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(line_buffering=True)
+
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             handlers=[
-                logging.StreamHandler(),
+                logging.StreamHandler(sys.stdout),
                 logging.FileHandler('monitor_hub_pipeline.log')
             ]
         )
@@ -283,6 +287,8 @@ class MonitorHubPipeline:
 
 def main():
     """Main function for command line execution"""
+    max_days = int(os.getenv('MAX_HISTORICAL_DAYS', '28'))
+    
     parser = argparse.ArgumentParser(
         description="Microsoft Fabric Monitor Hub Analysis Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -299,7 +305,7 @@ Examples:
         "--days",
         type=int,
         default=None,
-        help="Number of days of historical data to analyze (default: from env, max: 28 due to API limits)"
+        help=f"Number of days of historical data to analyze (default: from env, max: {max_days} due to API limits)"
     )
     
     parser.add_argument(
