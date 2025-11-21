@@ -220,20 +220,24 @@ class FabricDataExtractor:
         Fallback method to get activities using Power BI Admin API.
         """
         try:
-            # Power BI Admin API for activity events requires ISO format with quotes
-            start_str = f"'{start_date.strftime('%Y-%m-%dT%H:%M:%S')}'"
-            end_str = f"'{end_date.strftime('%Y-%m-%dT%H:%M:%S')}'"
+            # Power BI Admin API for activity events requires literal single quotes
+            start_str = start_date.strftime('%Y-%m-%dT%H:%M:%S')
+            end_str = end_date.strftime('%Y-%m-%dT%H:%M:%S')
             
-            url = f"{self.powerbi_base_url}/v1.0/myorg/admin/activityevents"
+            base_url = f"{self.powerbi_base_url}/v1.0/myorg/admin/activityevents"
+            query = f"startDateTime='{start_str}'&endDateTime='{end_str}'"
+            url = f"{base_url}?{query}"
+            
             headers = self.auth.get_powerbi_headers()
             
-            params = {
-                "startDateTime": start_str,
-                "endDateTime": end_str
-            }
-            
             self.logger.info(f"Using Power BI Admin API fallback for workspace {workspace_id}")
-            response = self.session.get(url, headers=headers, params=params, timeout=self.timeout)
+            
+            # Use PreparedRequest to prevent requests from encoding the URL
+            req = requests.Request('GET', url, headers=headers)
+            prepped = self.session.prepare_request(req)
+            prepped.url = url # Force the URL to be exactly as we constructed it
+            
+            response = self.session.send(prepped, timeout=self.timeout)
             response.raise_for_status()
             
             data = response.json()
@@ -278,24 +282,31 @@ class FabricDataExtractor:
             List of all tenant activities for the date range
         """
         try:
-            # Power BI Admin API requires ISO format with quotes
-            start_str = f"'{start_date.strftime('%Y-%m-%dT%H:%M:%S')}'"
-            end_str = f"'{end_date.strftime('%Y-%m-%dT%H:%M:%S')}'"
+            # Power BI Admin API requires literal single quotes in the URL
+            # We must manually construct the URL and bypass requests' automatic encoding
+            start_str = start_date.strftime('%Y-%m-%dT%H:%M:%S')
+            end_str = end_date.strftime('%Y-%m-%dT%H:%M:%S')
             
-            url = f"{self.powerbi_base_url}/v1.0/myorg/admin/activityevents"
+            # Base URL without query params
+            base_url = f"{self.powerbi_base_url}/v1.0/myorg/admin/activityevents"
+            
+            # Construct query string with literal quotes
+            query = f"startDateTime='{start_str}'&endDateTime='{end_str}'"
+            url = f"{base_url}?{query}"
+            
             headers = self.auth.get_powerbi_headers()
-            
-            params = {
-                "startDateTime": start_str,
-                "endDateTime": end_str
-            }
             
             self.logger.info(f"Fetching tenant-wide activities from {start_date.strftime('%Y-%m-%d %H:%M:%S')} to {end_date.strftime('%Y-%m-%d %H:%M:%S')}")
             
             all_activities = []
             
             while url:
-                response = self.session.get(url, headers=headers, params=params, timeout=self.timeout)
+                # Use PreparedRequest to prevent requests from encoding the URL
+                req = requests.Request('GET', url, headers=headers)
+                prepped = self.session.prepare_request(req)
+                prepped.url = url # Force the URL to be exactly as we constructed it
+                
+                response = self.session.send(prepped, timeout=self.timeout)
                 
                 if response.status_code == 429:
                     retry_after = int(response.headers.get('Retry-After', 60))
@@ -312,9 +323,8 @@ class FabricDataExtractor:
                 
                 # Check for continuation URI
                 url = data.get("continuationUri")
-                if url:
-                    # continuationUri includes all necessary parameters, so we clear params
-                    params = None
+                # continuationUri is already a full URL, we'll use it as is in the next loop
+                # and the same prepped.url override will ensure it's not re-encoded
             
             print(f"   ✅ Fetched {len(all_activities)} activities total.          ")
             self.logger.info(f"Retrieved {len(all_activities)} tenant-wide activities")
