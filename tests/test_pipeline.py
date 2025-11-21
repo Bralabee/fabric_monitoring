@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
 from core.auth import FabricAuthenticator, create_authenticator_from_env
 from core.extractor import FabricDataExtractor

@@ -42,8 +42,7 @@ def get_daily_activities(date, workspace_ids=None, activity_types=None, tenant_w
 All extraction scripts now use tenant-wide monitoring by default:
 
 - **`extract_historical_data.py`**: Multi-day extraction (up to 28 days)
-- **`extract_daily_data.py`**: Single-day extraction
-- **`extract_daily_data_real.py`**: Real-time single-day extraction
+- **`extract_daily_data.py`**: Single-day extraction (Real API calls)
 - **`monitor_hub_pipeline.py`**: Complete analysis pipeline
 
 ### 3. CLI Updates

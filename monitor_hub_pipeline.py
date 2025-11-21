@@ -32,7 +32,7 @@ load_dotenv()
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from extract_historical_data import extract_historical_data as run_historical_extraction
+from scripts.extract_historical_data import extract_historical_data as run_historical_extraction
 from core.data_loader import load_activities_from_directory
 from core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 
@@ -241,7 +241,8 @@ class MonitorHubPipeline:
             handlers=[
                 logging.StreamHandler(sys.stdout),
                 logging.FileHandler('monitor_hub_pipeline.log')
-            ]
+            ],
+            force=True
         )
         return logging.getLogger(__name__)
     
@@ -323,14 +324,15 @@ Examples:
     
     args = parser.parse_args()
     
+    # Print banner immediately
+    print("🚀 Starting Microsoft Fabric Monitor Hub Analysis Pipeline", flush=True)
+    print(f"   • Analysis Period: {args.days} days", flush=True)
+    print(f"   • Output Directory: {args.output_dir}", flush=True)
+    print(f"   • Monitoring Scope: {'Member workspaces only (~139)' if args.member_only else 'All tenant workspaces (~2187)'}", flush=True)
+    print(f"   • API Strategy: {'Per-workspace loop' if args.member_only else 'Tenant-wide Power BI Admin API'}", flush=True)
+
     # Initialize and run pipeline
     pipeline = MonitorHubPipeline(args.output_dir)
-    
-    print("🚀 Starting Microsoft Fabric Monitor Hub Analysis Pipeline")
-    print(f"   • Analysis Period: {args.days} days")
-    print(f"   • Output Directory: {args.output_dir}")
-    print(f"   • Monitoring Scope: {'Member workspaces only (~139)' if args.member_only else 'All tenant workspaces (~2187)'}")
-    print(f"   • API Strategy: {'Per-workspace loop' if args.member_only else 'Tenant-wide Power BI Admin API'}")
     
     results = pipeline.run_complete_analysis(
         days=args.days

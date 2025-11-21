@@ -26,8 +26,7 @@ I have performed a comprehensive review of the following files to ensure consist
 | `src/core/extractor.py` | **Verified** | Pagination logic is robust. |
 | `monitor_hub_pipeline.py` | **Verified** | Uses `.env` for all config. |
 | `extract_historical_data.py` | **Verified** | CLI help text is dynamic. |
-| `extract_daily_data.py` | **Verified** | Uses `MAX_HISTORICAL_DAYS` from env. |
-| `extract_daily_data_real.py` | **Verified** | Uses `MAX_HISTORICAL_DAYS` from env. |
+| `extract_daily_data.py` | **Verified** | Canonical script for single-day extraction (Real API calls). |
 | `simple_test.py` | **Verified** | Uses `MAX_HISTORICAL_DAYS` from env. |
 | `test_pipeline.py` | **Verified** | Uses `MAX_HISTORICAL_DAYS` and `DEFAULT_ANALYSIS_DAYS`. |
 | `fabric_workspace_report.py` | **Verified** | Inventory tool, no historical limit issues. |

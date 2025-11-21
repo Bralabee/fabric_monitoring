@@ -38,7 +38,7 @@ import requests
 import pandas as pd
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from dotenv import load_dotenv
 from core.auth import create_authenticator_from_env

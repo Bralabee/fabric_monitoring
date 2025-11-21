@@ -16,7 +16,7 @@ def main():
     load_dotenv()
 
     # Add src to path
-    sys.path.insert(0, str(Path(__file__).parent / "src"))
+    sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
     print("🔍 Simple test - NO INFINITE LOOPS")
 

@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
 from dotenv import load_dotenv
 from core.auth import create_authenticator_from_env
@@ -89,6 +89,7 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
             try:
                 date_str = current_date.strftime('%Y-%m-%d')
                 logger.info(f"  Processing {date_str}...")
+                print(f"  Processing {date_str}...", end="\r", flush=True)
                 
                 daily_activities = extractor.get_daily_activities(
                     date=current_date,
@@ -100,9 +101,13 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
                 if daily_activities:
                     activities_by_date[date_str] = daily_activities
                     total_activities += len(daily_activities)
-                    logger.info(f"  ✓ {date_str}: {len(daily_activities)} activities")
+                    msg = f"  ✓ {date_str}: {len(daily_activities)} activities"
+                    logger.info(msg)
+                    print(msg, flush=True)
                 else:
-                    logger.info(f"  ⊘ {date_str}: No activities")
+                    msg = f"  ⊘ {date_str}: No activities"
+                    logger.info(msg)
+                    print(msg, flush=True)
                     
             except Exception as e:
                 logger.error(f"  ✗ {date_str}: Failed - {str(e)}")
