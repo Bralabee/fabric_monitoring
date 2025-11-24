@@ -25,7 +25,9 @@ from .enrichment import (
     extract_user_from_metadata,
     infer_domain,
     infer_location,
+    infer_location,
     normalize_user,
+    normalize_status,
 )
 
 
@@ -532,6 +534,9 @@ class FabricDataExtractor:
         domain_source = activity.get("ItemName") or workspace_name
         activity["Domain"] = activity.get("Domain") or infer_domain(domain_source)
         activity["Location"] = activity.get("Location") or infer_location(workspace)
+        
+        # Normalize status
+        activity["Status"] = normalize_status(activity.get("Status") or activity.get("status"))
 
         return activity
 

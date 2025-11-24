@@ -182,6 +182,7 @@ class LineageExtractor:
                                     "Workspace ID": ws_id,
                                     "Item Name": db_name,
                                     "Item ID": db_id,
+                                    "Source Type": source_props.get("sourceType", "Unknown"),
                                     "Source Connection": source_props.get("connection", "Unknown"),
                                     "Source Database": source_props.get("database", "Unknown"),
                                     "Connection ID": source_type_props.get("connectionIdentifier", "Unknown"),
@@ -194,6 +195,17 @@ class LineageExtractor:
             filepath = output_path / filename
             df.to_csv(filepath, index=False)
             self.logger.info(f"✅ Lineage exported to {filepath}")
+            
+            # Print Summary
+            print("\n" + "="*40)
+            print("🔗 LINEAGE SUMMARY")
+            print("="*40)
+            print(f"Total Mirrored Databases: {len(df)}")
+            if "Source Type" in df.columns:
+                print("\nTop Source Types:")
+                print(df["Source Type"].value_counts().head().to_string())
+            print("\n" + "="*40 + "\n")
+            
         else:
             self.logger.warning("No lineage data found.")
 
