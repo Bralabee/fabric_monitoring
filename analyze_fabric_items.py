@@ -7,14 +7,14 @@ from datetime import datetime
 def load_latest_json(pattern):
     files = glob.glob(pattern)
     if not files:
-        return None
+        return None, None
     latest_file = max(files, key=os.path.getctime)
     print(f"Loading data from: {latest_file}")
     with open(latest_file, 'r') as f:
         data = json.load(f)
-    return pd.DataFrame(data)
+    return pd.DataFrame(data), latest_file
 
-def analyze_dataframe(df, item_type):
+def analyze_dataframe(df, item_type, source_file=None):
     if df is None or df.empty:
         print(f"No data found for {item_type}.")
         return
@@ -53,16 +53,29 @@ def analyze_dataframe(df, item_type):
         for reason, count in failure_reasons.items():
             print(f"({count}) {reason}")
 
+    # Export to CSV
+    if source_file:
+        # Save Full CSV
+        csv_path = source_file.replace('.json', '.csv')
+        print(f"\nSaving full data to: {csv_path}")
+        df.to_csv(csv_path, index=False)
+        
+        # Save Failures CSV
+        if failed_runs > 0:
+            failures_csv_path = source_file.replace('.json', '_failures.csv')
+            print(f"Saving failures to: {failures_csv_path}")
+            df[df['status'] == 'Failed'].to_csv(failures_csv_path, index=False)
+
 def main():
     base_dir = 'exports/fabric_item_details'
     
     # Analyze Pipelines
-    pipeline_df = load_latest_json(os.path.join(base_dir, 'pipelines_*.json'))
-    analyze_dataframe(pipeline_df, "Pipelines")
+    pipeline_df, pipeline_file = load_latest_json(os.path.join(base_dir, 'pipelines_*.json'))
+    analyze_dataframe(pipeline_df, "Pipelines", pipeline_file)
 
     # Analyze Notebooks
-    notebook_df = load_latest_json(os.path.join(base_dir, 'notebooks_*.json'))
-    analyze_dataframe(notebook_df, "Notebooks")
+    notebook_df, notebook_file = load_latest_json(os.path.join(base_dir, 'notebooks_*.json'))
+    analyze_dataframe(notebook_df, "Notebooks", notebook_file)
 
 if __name__ == "__main__":
     main()

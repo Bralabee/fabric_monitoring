@@ -96,6 +96,11 @@ class FabricDataExtractor:
         This returns the complete workspace inventory across the entire tenant,
         not just workspaces where the service principal is a member.
         """
+        # Return cached result if available
+        if self._cached_tenant_workspaces is not None:
+            self.logger.info(f"Returning {len(self._cached_tenant_workspaces)} cached tenant-wide workspaces")
+            return self._cached_tenant_workspaces
+
         try:
             workspaces = []
             skip = 0
@@ -113,12 +118,18 @@ class FabricDataExtractor:
                 self.logger.info(f"Fetching page at skip={skip}...")
                 
                 # Retry loop for 429s
+                retries = 0
+                max_retries = 20
                 while True:
                     response = self.session.get(url, headers=headers, timeout=self.timeout)
                     
                     if response.status_code == 429:
+                        retries += 1
+                        if retries > max_retries:
+                            raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                            
                         retry_after = int(response.headers.get('Retry-After', 60))
-                        self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
+                        self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
                         print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
                         time.sleep(retry_after + 1)
                         continue
@@ -143,6 +154,9 @@ class FabricDataExtractor:
             
             print(f"   ✅ Retrieved {len(workspaces)} workspaces total.          ")
             self.logger.info(f"Total tenant-wide workspaces retrieved: {len(workspaces)}")
+            
+            # Cache the result
+            self._cached_tenant_workspaces = workspaces
             return workspaces
             
         except requests.exceptions.RequestException as e:
@@ -207,12 +221,18 @@ class FabricDataExtractor:
             self.logger.info(f"Fetching activities for workspace {workspace_id} from {start_str} to {end_str}")
             
             # Retry loop for 429s
+            retries = 0
+            max_retries = 20
             while True:
                 response = self.session.get(url, headers=headers, params=params, timeout=self.timeout)
                 
                 if response.status_code == 429:
+                    retries += 1
+                    if retries > max_retries:
+                        raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                        
                     retry_after = int(response.headers.get('Retry-After', 60))
-                    self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
+                    self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
                     time.sleep(retry_after + 1)
                     continue
                 
@@ -258,12 +278,18 @@ class FabricDataExtractor:
             prepped.url = url # Force the URL to be exactly as we constructed it
             
             # Retry loop for 429s
+            retries = 0
+            max_retries = 20
             while True:
                 response = self.session.send(prepped, timeout=self.timeout)
                 
                 if response.status_code == 429:
+                    retries += 1
+                    if retries > max_retries:
+                        raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                        
                     retry_after = int(response.headers.get('Retry-After', 60))
-                    self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
+                    self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
                     time.sleep(retry_after + 1)
                     continue
                 
@@ -338,12 +364,18 @@ class FabricDataExtractor:
                 prepped.url = url # Force the URL to be exactly as we constructed it
                 
                 # Retry loop for 429s
+                retries = 0
+                max_retries = 20
                 while True:
                     response = self.session.send(prepped, timeout=self.timeout)
                     
                     if response.status_code == 429:
+                        retries += 1
+                        if retries > max_retries:
+                            raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                            
                         retry_after = int(response.headers.get('Retry-After', 60))
-                        self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
+                        self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
                         print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
                         time.sleep(retry_after + 1)
                         continue
