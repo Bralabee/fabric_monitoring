@@ -11,10 +11,23 @@ from core.data_loader import load_activities_from_directory
 from core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 
 def main():
-    extraction_dir = "exports/monitor_hub_analysis/extracted/20251124_121746"
+    # Find the latest extraction directory
+    base_extract_dir = Path("exports/monitor_hub_analysis/extracted")
+    if not base_extract_dir.exists():
+        print(f"Error: Extraction directory {base_extract_dir} does not exist.")
+        return
+
+    # Get all subdirectories and sort by name (timestamp) descending
+    extract_dirs = sorted([d for d in base_extract_dir.iterdir() if d.is_dir()], reverse=True)
+    
+    if not extract_dirs:
+        print("Error: No extraction directories found.")
+        return
+        
+    extraction_dir = str(extract_dirs[0])
     output_dir = "exports/monitor_hub_analysis"
     
-    print(f"Loading activities from {extraction_dir}...")
+    print(f"Loading activities from latest extraction: {extraction_dir}...")
     activities = load_activities_from_directory(extraction_dir)
     print(f"Loaded {len(activities)} activities")
     

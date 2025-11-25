@@ -10,6 +10,7 @@ This module handles data extraction from Microsoft Fabric APIs including:
 
 import os
 import logging
+import time
 from typing import List, Dict, Any, Optional, Union
 from datetime import datetime, timedelta, timezone
 import json
@@ -66,6 +67,7 @@ class FabricDataExtractor:
         # Simple in-memory caches for workspace metadata
         self._workspace_items_cache: Dict[str, Dict[str, Dict[str, Any]]] = {}
         self._workspace_lookup: Dict[str, Dict[str, Any]] = {}
+        self._cached_tenant_workspaces: Optional[List[Dict[str, Any]]] = None
     
     def get_workspaces(self, tenant_wide: bool = False, exclude_personal: bool = True) -> List[Dict[str, Any]]:
         """
@@ -109,14 +111,19 @@ class FabricDataExtractor:
                 headers = self.auth.get_powerbi_headers()
                 
                 self.logger.info(f"Fetching page at skip={skip}...")
-                response = self.session.get(url, headers=headers, timeout=self.timeout)
                 
-                if response.status_code == 429:
-                    retry_after = int(response.headers.get('Retry-After', 60))
-                    self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
-                    raise requests.exceptions.RequestException(
-                        f"Rate limit exceeded. Retry after {retry_after} seconds."
-                    )
+                # Retry loop for 429s
+                while True:
+                    response = self.session.get(url, headers=headers, timeout=self.timeout)
+                    
+                    if response.status_code == 429:
+                        retry_after = int(response.headers.get('Retry-After', 60))
+                        self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
+                        print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
+                        time.sleep(retry_after + 1)
+                        continue
+                    
+                    break
                 
                 response.raise_for_status()
                 data = response.json()
@@ -198,7 +205,18 @@ class FabricDataExtractor:
                 params["activityTypes"] = ",".join(activity_types)
             
             self.logger.info(f"Fetching activities for workspace {workspace_id} from {start_str} to {end_str}")
-            response = self.session.get(url, headers=headers, params=params, timeout=self.timeout)
+            
+            # Retry loop for 429s
+            while True:
+                response = self.session.get(url, headers=headers, params=params, timeout=self.timeout)
+                
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('Retry-After', 60))
+                    self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
+                    time.sleep(retry_after + 1)
+                    continue
+                
+                break
             
             if response.status_code == 404:
                 self.logger.warning(f"Activities endpoint not found for workspace {workspace_id} - using Power BI API fallback")
@@ -239,7 +257,18 @@ class FabricDataExtractor:
             prepped = self.session.prepare_request(req)
             prepped.url = url # Force the URL to be exactly as we constructed it
             
-            response = self.session.send(prepped, timeout=self.timeout)
+            # Retry loop for 429s
+            while True:
+                response = self.session.send(prepped, timeout=self.timeout)
+                
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('Retry-After', 60))
+                    self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
+                    time.sleep(retry_after + 1)
+                    continue
+                
+                break
+            
             response.raise_for_status()
             
             data = response.json()
@@ -308,12 +337,18 @@ class FabricDataExtractor:
                 prepped = self.session.prepare_request(req)
                 prepped.url = url # Force the URL to be exactly as we constructed it
                 
-                response = self.session.send(prepped, timeout=self.timeout)
-                
-                if response.status_code == 429:
-                    retry_after = int(response.headers.get('Retry-After', 60))
-                    self.logger.warning(f"Rate limited. Retry after {retry_after} seconds.")
-                    raise requests.exceptions.RequestException(f"Rate limit exceeded. Retry after {retry_after}s")
+                # Retry loop for 429s
+                while True:
+                    response = self.session.send(prepped, timeout=self.timeout)
+                    
+                    if response.status_code == 429:
+                        retry_after = int(response.headers.get('Retry-After', 60))
+                        self.logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
+                        print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
+                        time.sleep(retry_after + 1)
+                        continue
+                    
+                    break
                 
                 response.raise_for_status()
                 data = response.json()
@@ -385,8 +420,10 @@ class FabricDataExtractor:
             )
             
             # Get workspace metadata for enrichment
-            workspaces = self.get_workspaces(tenant_wide=True, exclude_personal=True)
-            self._workspace_lookup = {ws.get("id"): ws for ws in workspaces if ws.get("id")}
+            if not self._workspace_lookup:
+                self.logger.info("Populating workspace lookup cache...")
+                workspaces = self.get_workspaces(tenant_wide=True, exclude_personal=True)
+                self._workspace_lookup = {ws.get("id"): ws for ws in workspaces if ws.get("id")}
             
             # Enrich activities with workspace and item metadata
             enriched_activities = []
