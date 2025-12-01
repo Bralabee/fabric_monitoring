@@ -173,8 +173,8 @@ class MonitorHubPipeline:
         return start_date, end_date
 
     def _prepare_extraction_directory(self) -> Path:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        extraction_dir = self.output_directory / "extracted" / timestamp
+        # Use a persistent directory for raw data to enable caching/incremental updates
+        extraction_dir = self.output_directory / "raw_data"
         extraction_dir.mkdir(parents=True, exist_ok=True)
         return extraction_dir
 

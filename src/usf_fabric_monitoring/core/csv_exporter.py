@@ -49,7 +49,7 @@ class CSVExporter:
             # Export to CSV
             df_clean.to_csv(file_path, index=False, encoding='utf-8')
             
-            self.logger.info(f"Exported {len(activities)} activities to {file_path}")
+            self.logger.info(f"Exported {len(activities)} daily activities for {date.strftime('%Y-%m-%d')} to {file_path}")
             return str(file_path)
             
         except Exception as e:
@@ -76,7 +76,7 @@ class CSVExporter:
             summary_df = pd.DataFrame(summary_data)
             summary_df.to_csv(file_path, index=False, encoding='utf-8')
             
-            self.logger.info(f"Exported activity summary to {file_path}")
+            self.logger.info(f"Exported daily summary for {date.strftime('%Y-%m-%d')} to {file_path}")
             return str(file_path)
             
         except Exception as e:

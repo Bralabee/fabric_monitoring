@@ -103,6 +103,16 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
                 logger.info(f"  Processing {date_str}...")
                 print(f"  Processing {date_str}...", end="\r", flush=True)
                 
+                # Check if file already exists
+                file_info = exporter.get_export_file_info(current_date)
+                if file_info['files'].get('daily_activities'):
+                    msg = f"  ✓ {date_str}: Found existing local file (Skipping API)"
+                    logger.info(msg)
+                    print(msg, flush=True)
+                    files_created.append(file_info['files']['daily_activities']['path'])
+                    current_date += timedelta(days=1)
+                    continue
+
                 daily_activities = extractor.get_daily_activities(
                     date=current_date,
                     workspace_ids=workspace_ids,
@@ -133,7 +143,8 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
             
             current_date += timedelta(days=1)
         
-        if not activities_by_date:
+        # If we have files (either newly created or existing), consider it a success
+        if not activities_by_date and not files_created:
             return {
                 "status": "no_data",
                 "message": f"No activities found for date range {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}",
@@ -146,7 +157,7 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
             }
         
         # Log completion
-        logger.info(f"✅ Retrieved {total_activities} REAL activities across {days_span} days")
+        logger.info(f"✅ Retrieved {total_activities} NEW activities across {days_span} days")
         
         return {
             "status": "success",
@@ -155,7 +166,7 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
             "days_span": days_span,
             "total_activities": total_activities,
             "failed_days": failed_days,
-            "source": "Microsoft Fabric APIs",
+            "source": "Microsoft Fabric APIs / Local Cache",
             "is_real_data": True,
             "files_created": files_created
         }

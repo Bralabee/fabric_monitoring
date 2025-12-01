@@ -25,6 +25,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
+
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
@@ -38,13 +39,13 @@ def main():
     parser = argparse.ArgumentParser(
         description="Microsoft Fabric Monitor Hub Analysis Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=\"\"\"
+        epilog="""
 Examples:
   python monitor_hub_pipeline.py                    # Run with defaults (tenant-wide, 90 days)
   python monitor_hub_pipeline.py --days 30         # Analyze last 30 days (all tenant workspaces)
   python monitor_hub_pipeline.py --member-only     # Monitor only member workspaces (~139)
   python monitor_hub_pipeline.py --output exports/ # Custom output directory
-        \"\"\"
+        """
     )
     
     parser.add_argument(

@@ -137,6 +137,17 @@ export:
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 	fi
 
+# BUILD: Build python package (wheel)
+build:
+	@echo "$(GREEN)Building Python package$(NC)"
+	@if conda env list | grep -q "^$(ENV_NAME) "; then \
+		conda run -n $(ENV_NAME) pip install build; \
+		conda run -n $(ENV_NAME) python -m build; \
+		echo "$(GREEN)✅ Package built successfully! Check dist/ folder.$(NC)"; \
+	else \
+		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
+	fi
+
 # Development commands
 test:
 	@echo "$(GREEN)Running tests$(NC)"
