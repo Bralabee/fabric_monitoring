@@ -213,7 +213,7 @@ enforce-access:
 		API_ARG=$${API_PREFERENCE:+--api-preference $$API_PREFERENCE}; \
 		MAX_WS_ARG=$${MAX_WORKSPACES:+--max-workspaces $$MAX_WORKSPACES}; \
 		INCLUDE_PERSONAL_ARG=$${INCLUDE_PERSONAL:+--include-personal-workspaces}; \
-		conda run --no-capture-output -n $(ENV_NAME) python enforce_workspace_access.py $$MODE_ARG $$CONFIRM_ARG $$DRY_RUN_ARG $$CSV_ARG $$API_ARG $$MAX_WS_ARG $$INCLUDE_PERSONAL_ARG; \
+		conda run --no-capture-output -n $(ENV_NAME) python src/usf_fabric_monitoring/scripts/enforce_workspace_access.py $$MODE_ARG $$CONFIRM_ARG $$DRY_RUN_ARG $$CSV_ARG $$API_ARG $$MAX_WS_ARG $$INCLUDE_PERSONAL_ARG; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -226,7 +226,7 @@ monitor-hub:
 		DAYS_ARG=$${DAYS:+--days $$DAYS}; \
 		MEMBER_ONLY_ARG=$${MEMBER_ONLY:+--member-only}; \
 		OUTPUT_ARG=$${OUTPUT_DIR:+--output-dir $$OUTPUT_DIR}; \
-		conda run --no-capture-output -n $(ENV_NAME) python monitor_hub_pipeline.py $$DAYS_ARG $$MEMBER_ONLY_ARG $$OUTPUT_ARG; \
+		conda run --no-capture-output -n $(ENV_NAME) python src/usf_fabric_monitoring/scripts/monitor_hub_pipeline.py $$DAYS_ARG $$MEMBER_ONLY_ARG $$OUTPUT_ARG; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -244,7 +244,7 @@ extract-lineage:
 	@echo "$(GREEN)Running Mirrored Database Lineage Extraction$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
 		OUTPUT_ARG=$${OUTPUT_DIR:+--output-dir $$OUTPUT_DIR}; \
-		conda run --no-capture-output -n $(ENV_NAME) python src/scripts/extract_lineage.py $$OUTPUT_ARG; \
+		conda run --no-capture-output -n $(ENV_NAME) python src/usf_fabric_monitoring/scripts/extract_lineage.py $$OUTPUT_ARG; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -257,7 +257,7 @@ compute-analysis: monitor-hub
 generate-reports:
 	@echo "$(GREEN)Generating reports from existing data$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
-		conda run --no-capture-output -n $(ENV_NAME) python generate_reports_manual.py; \
+		conda run --no-capture-output -n $(ENV_NAME) python src/usf_fabric_monitoring/scripts/generate_reports_manual.py; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -267,7 +267,7 @@ generate-reports:
 audit-sp-access:
 	@echo "$(GREEN)Auditing Service Principal access to workspaces$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
-		conda run --no-capture-output -n $(ENV_NAME) python audit_sp_access.py; \
+		conda run --no-capture-output -n $(ENV_NAME) python src/usf_fabric_monitoring/scripts/audit_sp_access.py; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
