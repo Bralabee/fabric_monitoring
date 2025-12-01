@@ -6,7 +6,7 @@ import unittest
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
-from core.enrichment import infer_domain, infer_location, _load_inference_rules
+from usf_fabric_monitoring.core.enrichment import infer_domain, infer_location, _load_inference_rules
 
 class TestInferenceConfig(unittest.TestCase):
     def test_load_config(self):

@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from core.data_loader import load_activities_from_directory
-from core.monitor_hub_reporter_clean import MonitorHubCSVReporter
+from usf_fabric_monitoring.core.data_loader import load_activities_from_directory
+from usf_fabric_monitoring.core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 
 def main():
     # Find the latest extraction directory

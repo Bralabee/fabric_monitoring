@@ -25,10 +25,10 @@ from dotenv import load_dotenv
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from core.auth import create_authenticator_from_env
-from core.extractor import FabricDataExtractor
-from core.fabric_item_details import FabricItemDetailExtractor
-from core.logger import setup_logging
+from usf_fabric_monitoring.core.auth import create_authenticator_from_env
+from usf_fabric_monitoring.core.extractor import FabricDataExtractor
+from usf_fabric_monitoring.core.fabric_item_details import FabricItemDetailExtractor
+from usf_fabric_monitoring.core.logger import setup_logging
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Extract Fabric item details")

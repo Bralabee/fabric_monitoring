@@ -25,8 +25,8 @@ from dotenv import load_dotenv
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from core.workspace_access_enforcer import WorkspaceAccessEnforcer, WorkspaceAccessError
-from core.logger import setup_logging
+from usf_fabric_monitoring.core.workspace_access_enforcer import WorkspaceAccessEnforcer, WorkspaceAccessError
+from usf_fabric_monitoring.core.logger import setup_logging
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 

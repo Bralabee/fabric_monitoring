@@ -15,12 +15,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parents[1]))
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from dotenv import load_dotenv
-from core.auth import create_authenticator_from_env
-from core.extractor import FabricDataExtractor
-from core.csv_exporter import CSVExporter
+from usf_fabric_monitoring.core.auth import create_authenticator_from_env
+from usf_fabric_monitoring.core.extractor import FabricDataExtractor
+from usf_fabric_monitoring.core.csv_exporter import CSVExporter
 
 
 def setup_logging():

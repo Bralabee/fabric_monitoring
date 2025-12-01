@@ -12,9 +12,9 @@ load_dotenv()
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
-from core.auth import FabricAuthenticator, create_authenticator_from_env
-from core.extractor import FabricDataExtractor
-from core.monitor_hub_reporter_clean import MonitorHubCSVReporter
+from usf_fabric_monitoring.core.auth import FabricAuthenticator, create_authenticator_from_env
+from usf_fabric_monitoring.core.extractor import FabricDataExtractor
+from usf_fabric_monitoring.core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 
 def test_pipeline():
     print("🚀 Testing Monitor Hub Pipeline Components")

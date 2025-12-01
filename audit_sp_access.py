@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from core.workspace_access_enforcer import WorkspaceAccessEnforcer, WorkspaceAccessError
+from usf_fabric_monitoring.core.workspace_access_enforcer import WorkspaceAccessEnforcer, WorkspaceAccessError
 
 # Setup logging
 logging.basicConfig(
@@ -33,7 +33,7 @@ class ServicePrincipalAuditor(WorkspaceAccessEnforcer):
         kwargs.pop('access_requirements', None)
         
         # Pass dummy requirement to satisfy base class validation
-        from core.workspace_access_enforcer import AccessRequirement
+        from usf_fabric_monitoring.core.workspace_access_enforcer import AccessRequirement
         dummy = AccessRequirement(object_id="dummy", display_name="Audit", role="Viewer")
         
         super().__init__(access_requirements=[dummy], **kwargs)
@@ -138,7 +138,7 @@ def main():
     # Initialize Auditor
     # We pass dummy requirements because the base class expects them, but we won't use them.
     # We construct a dummy AccessRequirement just to satisfy the init.
-    from core.workspace_access_enforcer import AccessRequirement
+    from usf_fabric_monitoring.core.workspace_access_enforcer import AccessRequirement
     dummy_req = AccessRequirement(object_id="dummy", display_name="dummy", role="Viewer")
     
     auditor = ServicePrincipalAuditor(

@@ -38,10 +38,10 @@ import requests
 import pandas as pd
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parents[1]))
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from dotenv import load_dotenv
-from core.auth import create_authenticator_from_env
+from usf_fabric_monitoring.core.auth import create_authenticator_from_env
 
 
 class FabricWorkspaceMonitor:

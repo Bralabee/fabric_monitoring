@@ -1,0 +1,10 @@
+[project]
+name = "usf_fabric_monitoring"
+version = "0.1.0"
+
+[fabric]
+environment = "monitoring_env"
+
+[artifacts.notebooks]
+monitor_hub_analysis = "notebooks/Monitor_Hub_Analysis.ipynb"
+workspace_access_enforcement = "notebooks/Workspace_Access_Enforcement.ipynb"

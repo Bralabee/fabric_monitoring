@@ -6,7 +6,7 @@ from datetime import datetime
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
-from core.enrichment import compute_duration_seconds, _parse_datetime
+from usf_fabric_monitoring.core.enrichment import compute_duration_seconds, _parse_datetime
 
 def test_duration_parsing():
     # Test case 1: Standard ISO with Z

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "usf_fabric_monitoring"
+version = "0.1.0"
+description = "Microsoft Fabric Monitoring & Governance System"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests",
+    "pandas",
+    "numpy",
+    "plotly",
+    "openpyxl",
+    "aiohttp",
+    "pyyaml",
+    "jsonschema",
+    "click",
+    "rich",
+    "typer",
+    "python-dotenv",
+    "azure-identity",
+    "azure-storage-blob",
+    "asyncio-throttle"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "black",
+    "flake8",
+    "mypy",
+    "jupyter",
+    "notebook"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
