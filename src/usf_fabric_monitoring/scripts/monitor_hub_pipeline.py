@@ -74,7 +74,7 @@ Examples:
     print("🚀 Starting Microsoft Fabric Monitor Hub Analysis Pipeline", flush=True)
     print(f"   • Analysis Period: {args.days} days", flush=True)
     print(f"   • Output Directory: {args.output_dir}", flush=True)
-    print(f"   • Monitoring Scope: {'Member workspaces only (~139)' if args.member_only else 'All tenant workspaces (~2187)'}", flush=True)
+    print(f"   • Monitoring Scope: {'Member workspaces only' if args.member_only else 'All tenant workspaces'}", flush=True)
     print(f"   • API Strategy: {'Per-workspace loop' if args.member_only else 'Tenant-wide Power BI Admin API'}", flush=True)
 
     # Initialize and run pipeline
