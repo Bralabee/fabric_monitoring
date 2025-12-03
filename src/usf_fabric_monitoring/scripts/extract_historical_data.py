@@ -118,7 +118,7 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
                     date=current_date,
                     workspace_ids=workspace_ids,
                     activity_types=activity_types,
-                    tenant_wide=False  # Use member-only API (Legacy)
+                    tenant_wide=True  # Try Admin API first, auto-fallback to member-only if denied
                 )
                 
                 if daily_activities:
