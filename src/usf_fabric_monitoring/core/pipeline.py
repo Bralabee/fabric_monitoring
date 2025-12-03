@@ -21,7 +21,7 @@ class MonitorHubPipeline:
         # Configure logging for the entire package so scripts inherit it
         self.logger = setup_logging(
             name="usf_fabric_monitoring",
-            log_file='monitor_hub_pipeline.log'
+            log_file='logs/monitor_hub_pipeline.log'
         )
         
         # Use environment configuration for output directory

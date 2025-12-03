@@ -14,7 +14,8 @@ venv/
 Thumbs.db
 
 # Logs and run artifacts
-logs/
+logs/*
+!logs/.gitkeep
 monitor_hub_pipeline.log
 *.log
 

@@ -184,6 +184,11 @@ clean:
 	@find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	@echo "$(GREEN)✅ Cache and temporary files cleaned$(NC)"
 
+clean-logs:
+	@echo "$(GREEN)Cleaning log files$(NC)"
+	@find . -type f -name "*.log*" -delete 2>/dev/null || true
+	@echo "$(GREEN)✅ Log files cleaned$(NC)"
+
 # Check if environment exists (utility function)
 check-env:
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
