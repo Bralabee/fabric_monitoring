@@ -6,9 +6,10 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 
 ### 1. Monitor Hub Analysis (`monitor_hub_pipeline.py`)
 - **Historical Data Extraction**: Retrieves up to 28 days of activity data (API limit compliant).
+- **Detailed Job History**: Automatically fetches granular job execution details (JSON) to ensure accurate failure tracking.
 - **Pagination Support**: Handles high-volume data (>5,000 events/day) using `continuationUri` to ensure zero data loss.
 - **Comprehensive Reporting**: Generates CSV reports on:
-  - Activity volume and success rates.
+  - Activity volume and success rates (enriched with job status).
   - Long-running operations.
   - User and item-level usage patterns.
   - Failure analysis.
