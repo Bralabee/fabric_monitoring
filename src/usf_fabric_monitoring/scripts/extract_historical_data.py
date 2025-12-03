@@ -102,7 +102,7 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
             try:
                 date_str = current_date.strftime('%Y-%m-%d')
                 logger.info(f"  Processing {date_str}...")
-                print(f"  Processing {date_str}...", end="\r", flush=True)
+                print(f"  Processing {date_str}...", flush=True)
                 
                 # Check if file already exists
                 file_info = exporter.get_export_file_info(current_date)
@@ -118,7 +118,7 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
                     date=current_date,
                     workspace_ids=workspace_ids,
                     activity_types=activity_types,
-                    tenant_wide=True  # Use tenant-wide Power BI Admin API
+                    tenant_wide=False  # Use member-only API (Legacy)
                 )
                 
                 if daily_activities:

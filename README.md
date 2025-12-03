@@ -171,3 +171,28 @@ The system has been refactored to strictly adhere to Microsoft Fabric API limita
 - **Rate Limiting**: Built-in throttling to prevent 429 errors.
 
 See `REFACTORING_SUMMARY.md` for more details.
+
+## ☁️ Deployment to Microsoft Fabric
+
+To run this solution directly within a Microsoft Fabric Notebook:
+
+1.  **Build the Package**:
+    Run the following command locally to create a Python Wheel (`.whl`) file:
+    ```bash
+    python -m build
+    ```
+    This will generate a file like `dist/usf_fabric_monitoring-0.1.11-py3-none-any.whl`.
+
+2.  **Upload to Fabric**:
+    -   Navigate to your Fabric Workspace.
+    -   Create a **Fabric Environment** (or use an existing one).
+    -   In the "Public Libraries" or "Custom Libraries" section, upload the `.whl` file you just built.
+    -   Save and Publish the Environment.
+
+3.  **Configure the Notebook**:
+    -   Open `notebooks/Monitor_Hub_Analysis.ipynb` in Fabric (or import it).
+    -   In the notebook settings (Environment), select the Environment you created in step 2.
+    -   This ensures the `usf_fabric_monitoring` library is installed and available to the notebook.
+
+4.  **Run**:
+    -   Execute the notebook cells. The library will be automatically detected.

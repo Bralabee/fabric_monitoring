@@ -101,67 +101,62 @@ class FabricDataExtractor:
             self.logger.info(f"Returning {len(self._cached_tenant_workspaces)} cached tenant-wide workspaces")
             return self._cached_tenant_workspaces
 
-        try:
-            workspaces = []
-            skip = 0
-            page_size = 200
+        workspaces = []
+        skip = 0
+        page_size = 200
+        
+        filter_clause = "$filter=type ne 'PersonalGroup'" if exclude_personal else ""
+        filter_param = f"&{filter_clause}" if filter_clause else ""
+        
+        self.logger.info("Fetching tenant-wide workspaces via Power BI Admin API")
+        
+        while True:
+            url = f"{self.powerbi_base_url}/v1.0/myorg/admin/groups?$top={page_size}&$skip={skip}{filter_param}"
+            headers = self.auth.get_powerbi_headers()
             
-            filter_clause = "$filter=type ne 'PersonalGroup'" if exclude_personal else ""
-            filter_param = f"&{filter_clause}" if filter_clause else ""
+            self.logger.info(f"Fetching page at skip={skip}...")
             
-            self.logger.info("Fetching tenant-wide workspaces via Power BI Admin API")
-            
+            # Retry loop for 429s
+            retries = 0
+            max_retries = 20
             while True:
-                url = f"{self.powerbi_base_url}/v1.0/myorg/admin/groups?$top={page_size}&$skip={skip}{filter_param}"
-                headers = self.auth.get_powerbi_headers()
+                response = self.session.get(url, headers=headers, timeout=self.timeout)
                 
-                self.logger.info(f"Fetching page at skip={skip}...")
+                if response.status_code == 429:
+                    retries += 1
+                    if retries > max_retries:
+                        raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                        
+                    retry_after = int(response.headers.get('Retry-After', 60))
+                    self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
+                    print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
+                    time.sleep(retry_after + 1)
+                    continue
                 
-                # Retry loop for 429s
-                retries = 0
-                max_retries = 20
-                while True:
-                    response = self.session.get(url, headers=headers, timeout=self.timeout)
-                    
-                    if response.status_code == 429:
-                        retries += 1
-                        if retries > max_retries:
-                            raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
-                            
-                        retry_after = int(response.headers.get('Retry-After', 60))
-                        self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
-                        print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
-                        time.sleep(retry_after + 1)
-                        continue
-                    
-                    break
-                
-                response.raise_for_status()
-                data = response.json()
-                items = data.get("value", [])
-                
-                if not items:
-                    break
-                
-                workspaces.extend(items)
-                self.logger.info(f"Retrieved {len(items)} workspaces (total: {len(workspaces)})")
-                print(f"   ⏳ Retrieved {len(workspaces)} workspaces...", end='\r', flush=True)
-                
-                if len(items) < page_size:
-                    break
-                
-                skip += page_size
+                break
             
-            print(f"   ✅ Retrieved {len(workspaces)} workspaces total.          ")
-            self.logger.info(f"Total tenant-wide workspaces retrieved: {len(workspaces)}")
+            response.raise_for_status()
+            data = response.json()
+            items = data.get("value", [])
             
-            # Cache the result
-            self._cached_tenant_workspaces = workspaces
-            return workspaces
+            if not items:
+                break
             
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Failed to fetch tenant-wide workspaces: {str(e)}")
-            raise
+            workspaces.extend(items)
+            self.logger.info(f"Retrieved {len(items)} workspaces (total: {len(workspaces)})")
+            print(f"   ⏳ Retrieved {len(workspaces)} workspaces...", end='\r', flush=True)
+            
+            if len(items) < page_size:
+                break
+            
+            skip += page_size
+        
+        print(f"   ✅ Retrieved {len(workspaces)} workspaces total.          ")
+        self.logger.info(f"Total tenant-wide workspaces retrieved: {len(workspaces)}")
+        
+        # Cache the result
+        self._cached_tenant_workspaces = workspaces
+        return workspaces
     
     def _get_workspaces_member_only(self) -> List[Dict[str, Any]]:
         """
@@ -426,6 +421,10 @@ class FabricDataExtractor:
                 self.logger.info(f"Filtered to {len(all_activities)} activities for specified types")
             
             return all_activities
+
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Failed to fetch tenant-wide activities: {str(e)}")
+            raise
             
     
     def get_daily_activities(self, date: datetime, workspace_ids: Optional[List[str]] = None, 
