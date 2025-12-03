@@ -1,0 +1,22 @@
+{
+  "pipeline_execution": {
+    "executed_at": "2025-12-03T09:19:13.350075",
+    "analysis_period_days": 30,
+    "total_reports_generated": 1
+  },
+  "key_measurables": {
+    "total_activities": 174553,
+    "failed_activities": 0,
+    "success_rate_percent": 100.0,
+    "total_duration_hours": 0.0
+  },
+  "analysis_scope": {
+    "unique_workspaces": 118,
+    "unique_users": 64,
+    "unique_domains": 8,
+    "unique_item_types": 17
+  },
+  "report_files": {
+    "test_report": "test.csv"
+  }
+}

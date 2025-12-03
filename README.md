@@ -115,6 +115,21 @@ make extract-lineage
 ```
 *Output: `exports/lineage/mirrored_lineage_YYYYMMDD_HHMMSS.csv`*
 
+### Interactive Analysis (Notebooks)
+
+For advanced analysis and visualization, use the consolidated Jupyter Notebook:
+
+1.  **Launch Jupyter**:
+    ```bash
+    jupyter notebook
+    ```
+2.  **Open**: `notebooks/Monitor_Hub_Analysis.ipynb`
+3.  **Run**: This notebook handles the end-to-end workflow:
+    -   Installs dependencies.
+    -   Runs the extraction pipeline (`monitor_hub_pipeline.py`).
+    -   Uses PySpark to analyze the detailed JSON logs.
+    -   Visualizes failures, user activity, and error trends.
+
 ### Manual Report Generation
 
 Regenerate reports from previously extracted data (useful if extraction was interrupted):
