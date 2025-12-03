@@ -31,4 +31,6 @@ exports/
 # Local tooling
 .ipynb_checkpoints/
 dist/
+build/
+notebooks/monitor_hub_analysis/
 *.log*
