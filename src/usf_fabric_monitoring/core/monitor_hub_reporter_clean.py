@@ -103,8 +103,8 @@ class MonitorHubCSVReporter:
         df = pd.DataFrame(activities)
         
         # Add derived columns for analysis
-        df["date"] = pd.to_datetime(df["start_time"]).dt.date
-        df["hour"] = pd.to_datetime(df["start_time"]).dt.hour
+        df["date"] = pd.to_datetime(df["start_time"], format='mixed', errors='coerce', utc=True).dt.date
+        df["hour"] = pd.to_datetime(df["start_time"], format='mixed', errors='coerce', utc=True).dt.hour
         df["duration_minutes"] = df["duration_seconds"] / 60
         df["is_failed"] = df["status"] == "Failed"
         df["is_success"] = df["status"] != "Failed"

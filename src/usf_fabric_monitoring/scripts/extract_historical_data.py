@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 from usf_fabric_monitoring.core.auth import create_authenticator_from_env
 from usf_fabric_monitoring.core.extractor import FabricDataExtractor
 from usf_fabric_monitoring.core.csv_exporter import CSVExporter
+from usf_fabric_monitoring.core.utils import resolve_path
 
 
 def setup_logging():
@@ -138,7 +139,9 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
                     print(msg, flush=True)
                     
             except Exception as e:
-                logger.error(f"  ✗ {date_str}: Failed - {str(e)}")
+                msg = f"  ✗ {date_str}: Failed - {str(e)}"
+                logger.error(msg)
+                print(msg, flush=True)
                 failed_days.append(date_str)
             
             current_date += timedelta(days=1)
@@ -221,11 +224,13 @@ Examples:
         help="End date (YYYY-MM-DD format)"
     )
     
+    # Default to resolved path (Lakehouse in Fabric, local otherwise)
+    default_output = str(resolve_path("exports/historical"))
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="exports/historical",
-        help="Output directory for CSV files (default: exports/historical)"
+        default=default_output,
+        help=f"Output directory for CSV files (default: {default_output})"
     )
     
     parser.add_argument(

@@ -135,7 +135,7 @@ class HistoricalAnalysisEngine:
         """Analyze activities across a specific dimension"""
         if column_name == "start_time":
             # Special handling for time dimension
-            activities_df["date"] = pd.to_datetime(activities_df["start_time"]).dt.date
+            activities_df["date"] = pd.to_datetime(activities_df["start_time"], format='mixed', errors='coerce', utc=True).dt.date
             grouped = activities_df.groupby("date")
         else:
             grouped = activities_df.groupby(column_name)
@@ -178,7 +178,7 @@ class HistoricalAnalysisEngine:
             return {"daily_trends": {}, "weekly_trends": {}}
         
         # Convert start_time to datetime
-        activities_df["datetime"] = pd.to_datetime(activities_df["start_time"])
+        activities_df["datetime"] = pd.to_datetime(activities_df["start_time"], format='mixed', errors='coerce', utc=True)
         activities_df["date"] = activities_df["datetime"].dt.date
         activities_df["week"] = activities_df["datetime"].dt.isocalendar().week
         
@@ -311,7 +311,7 @@ class HistoricalAnalysisEngine:
         failure_analysis["top_failing_items"] = failing_items.to_dict(orient="records")
         
         # Failure trends over time
-        failed_activities["date"] = pd.to_datetime(failed_activities["start_time"]).dt.date
+        failed_activities["date"] = pd.to_datetime(failed_activities["start_time"], format='mixed', errors='coerce', utc=True).dt.date
         daily_failures = failed_activities.groupby("date").size().to_dict()
         failure_analysis["failure_trends"] = {str(k): v for k, v in daily_failures.items()}
         

@@ -28,11 +28,14 @@ from usf_fabric_monitoring.core.auth import create_authenticator_from_env
 from usf_fabric_monitoring.core.extractor import FabricDataExtractor
 from usf_fabric_monitoring.core.fabric_item_details import FabricItemDetailExtractor
 from usf_fabric_monitoring.core.logger import setup_logging
+from usf_fabric_monitoring.core.utils import resolve_path
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Extract Fabric item details")
     parser.add_argument("--workspace", help="Filter by specific workspace ID")
-    parser.add_argument("--output-dir", default="exports/fabric_item_details", help="Output directory")
+    # Default to resolved path (Lakehouse in Fabric, local otherwise)
+    default_output = str(resolve_path("exports/fabric_item_details"))
+    parser.add_argument("--output-dir", default=default_output, help="Output directory")
     parser.add_argument("--log-level", default="INFO", help="Logging level")
     return parser.parse_args(args)
 
@@ -114,6 +117,12 @@ def run_item_details_extraction(workspace_id: str = None, output_dir: str = "exp
             "lakehouses": []
         }
         
+        # List of item types that support job instances
+        SUPPORTED_JOB_ITEM_TYPES = {
+            "DataPipeline", "Notebook", "SparkJobDefinition", 
+            "Dataflow", "Datamart", "SemanticModel"
+        }
+        
         for ws in workspaces:
             ws_id = ws.get("id")
             workspace_name = ws.get("displayName")
@@ -134,8 +143,8 @@ def run_item_details_extraction(workspace_id: str = None, output_dir: str = "exp
                         table["_item_name"] = item_name
                         table["_item_type"] = item_type
                         all_details["lakehouses"].append(table)
-                else:
-                    # Try to fetch jobs for all other item types
+                elif item_type in SUPPORTED_JOB_ITEM_TYPES:
+                    # Try to fetch jobs for supported item types
                     try:
                         jobs = detail_extractor.get_item_job_instances(ws_id, item_id)
                         if jobs:

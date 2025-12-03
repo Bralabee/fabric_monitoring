@@ -11,22 +11,27 @@ from usf_fabric_monitoring.scripts.extract_fabric_item_details import run_item_d
 from usf_fabric_monitoring.core.data_loader import load_activities_from_directory
 from usf_fabric_monitoring.core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 from usf_fabric_monitoring.core.logger import setup_logging
+from usf_fabric_monitoring.core.utils import resolve_path
 
 class MonitorHubPipeline:
     """Complete Monitor Hub analysis pipeline"""
     
     def __init__(self, output_directory: str = None):
         """Initialize the pipeline"""
+        # Configure logging for the entire package so scripts inherit it
         self.logger = setup_logging(
-            name=__name__,
+            name="usf_fabric_monitoring",
             log_file='monitor_hub_pipeline.log'
         )
         
         # Use environment configuration for output directory
         if output_directory is None:
-            output_directory = os.getenv('EXPORT_DIRECTORY', 'exports/monitor_hub_analysis')
+            # Default to exports/monitor_hub_analysis, resolved to Lakehouse if in Fabric
+            self.output_directory = resolve_path(os.getenv('EXPORT_DIRECTORY', 'exports/monitor_hub_analysis'))
+        else:
+            # Resolve user provided path to ensure it lands in Lakehouse if relative
+            self.output_directory = resolve_path(output_directory)
         
-        self.output_directory = Path(output_directory)
         self.output_directory.mkdir(parents=True, exist_ok=True)
         
         self.reporter = None
@@ -63,11 +68,15 @@ class MonitorHubPipeline:
                 self.logger.warning(message)
                 return {"status": "error", "message": message, "report_files": {}}
 
+            if extraction_result.get("failed_days"):
+                self.logger.warning(f"⚠️  Failed to extract data for {len(extraction_result['failed_days'])} days: {extraction_result['failed_days']}")
+
             self.logger.info("Step 1b: Extracting detailed job history (for accurate failure tracking)")
             # We use a separate directory for item details, but we can pass it if needed.
             # The default is exports/fabric_item_details, which matches what we load later.
+            details_output_dir = self.output_directory / "fabric_item_details"
             details_result = run_item_details_extraction(
-                output_dir="exports/fabric_item_details"
+                output_dir=str(details_output_dir)
             )
             
             if details_result.get("status") != "success":
@@ -198,7 +207,7 @@ class MonitorHubPipeline:
 
     def _load_detailed_jobs(self) -> List[Dict[str, Any]]:
         """Load all detailed jobs exports"""
-        export_dir = Path("exports/fabric_item_details")
+        export_dir = self.output_directory / "fabric_item_details"
         if not export_dir.exists():
             self.logger.warning(f"Detailed jobs directory not found: {export_dir}")
             return []
