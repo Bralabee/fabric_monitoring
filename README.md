@@ -13,6 +13,7 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
   - Long-running operations.
   - User and item-level usage patterns.
   - Failure analysis.
+  - **Parquet Integration**: Automatically persists merged activity data to Parquet format for seamless integration with Delta Tables and downstream analytics.
   - **Enhanced Accuracy**: Robust handling of activity duration and status normalization.
   - **Configurable Inference**: Domain and location mapping logic is now configurable via JSON.
 - **Scope Control**: Analyze all tenant workspaces or filter to specific subsets.
