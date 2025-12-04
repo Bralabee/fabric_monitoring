@@ -63,18 +63,16 @@ class FabricAuthenticator:
             
         # 1. Try Explicit Service Principal (Priority)
         if self.client_id and self.client_secret:
-            try:
-                self.logger.info("Acquiring Fabric API access token via Explicit Service Principal")
-                token = self.credential.get_token("https://api.fabric.microsoft.com/.default")
-                
-                self._fabric_token = token.token
-                self._fabric_token_expires = datetime.fromtimestamp(token.expires_on)
-                
-                self.logger.info(f"Fabric token acquired, expires at: {self._fabric_token_expires}")
-                return self._fabric_token
-            except Exception as e:
-                self.logger.error(f"Failed to acquire Fabric token via SP: {str(e)}")
-                # Fall through to other methods if SP fails (unlikely but safe)
+            self.logger.info("Acquiring Fabric API access token via Explicit Service Principal")
+            # We do NOT catch exceptions here. If explicit credentials are provided but fail,
+            # we should raise the error rather than silently falling back to a different identity.
+            token = self.credential.get_token("https://api.fabric.microsoft.com/.default")
+            
+            self._fabric_token = token.token
+            self._fabric_token_expires = datetime.fromtimestamp(token.expires_on)
+            
+            self.logger.info(f"Fabric token acquired, expires at: {self._fabric_token_expires}")
+            return self._fabric_token
 
         # 2. Try notebookutils (Fabric Environment)
         try:
@@ -112,18 +110,16 @@ class FabricAuthenticator:
             
         # 1. Try Explicit Service Principal (Priority)
         if self.client_id and self.client_secret:
-            try:
-                self.logger.info("Acquiring Power BI API access token via Explicit Service Principal")
-                token = self.credential.get_token("https://analysis.windows.net/powerbi/api/.default")
-                
-                self._powerbi_token = token.token
-                self._powerbi_token_expires = datetime.fromtimestamp(token.expires_on)
-                
-                self.logger.info(f"Power BI token acquired, expires at: {self._powerbi_token_expires}")
-                return self._powerbi_token
-            except Exception as e:
-                self.logger.error(f"Failed to acquire Power BI token via SP: {str(e)}")
-                # Fall through
+            self.logger.info("Acquiring Power BI API access token via Explicit Service Principal")
+            # We do NOT catch exceptions here. If explicit credentials are provided but fail,
+            # we should raise the error rather than silently falling back to a different identity.
+            token = self.credential.get_token("https://analysis.windows.net/powerbi/api/.default")
+            
+            self._powerbi_token = token.token
+            self._powerbi_token_expires = datetime.fromtimestamp(token.expires_on)
+            
+            self.logger.info(f"Power BI token acquired, expires at: {self._powerbi_token_expires}")
+            return self._powerbi_token
 
         # 2. Try notebookutils
         try:

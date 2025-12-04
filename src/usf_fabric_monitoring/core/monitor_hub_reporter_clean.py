@@ -111,7 +111,7 @@ class MonitorHubCSVReporter:
         
         # Reorder columns for better readability
         column_order = [
-            "activity_id", "workspace_id", "item_id", "item_name", "item_type", 
+            "activity_id", "workspace_id", "workspace_name", "item_id", "item_name", "item_type", 
             "activity_type", "status", "start_time", "end_time", "date", "hour",
             "duration_seconds", "duration_minutes", "submitted_by", "created_by", 
             "last_updated_by", "domain", "location", "object_url", "is_simulated"
