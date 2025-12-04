@@ -13,7 +13,7 @@ YELLOW = \033[1;33m
 RED = \033[0;31m
 NC = \033[0m # No Color
 
-.PHONY: help create update delete status install test clean lint format check-env enforce-access monitor-hub extract-lineage compute-analysis generate-reports audit-sp-access extract-details build export activate dev-setup dev-check
+.PHONY: help create update delete status install test clean lint format check-env enforce-access monitor-hub extract-lineage compute-analysis generate-reports audit-sp-access extract-details build export activate dev-setup dev-check test-duration-fix test-offline test-comparative test-complete-pipeline test-all
 
 # Default target
 help:
@@ -27,6 +27,9 @@ help:
 	@echo "  $(GREEN)install$(NC)     - Install additional pip dependencies from requirements.txt"
 	@echo "  $(GREEN)activate$(NC)    - Show activation command"
 	@echo "  $(GREEN)test$(NC)        - Run tests in the environment"
+	@echo "  $(GREEN)test-all$(NC)    - Run comprehensive test suite including duration fixes"
+	@echo "  $(GREEN)test-duration-fix$(NC) - Test duration calculation fixes"
+	@echo "  $(GREEN)test-offline$(NC) - Test offline analysis with existing data"
 	@echo "  $(GREEN)lint$(NC)        - Run linting checks"
 	@echo "  $(GREEN)format$(NC)      - Format code with black"
 	@echo "  $(GREEN)clean$(NC)       - Clean cache and temporary files"
@@ -288,3 +291,43 @@ extract-details:
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
 	fi
+
+# Comprehensive Test Suite
+test-duration-fix:
+	@echo "$(GREEN)Testing Duration Calculation Fixes$(NC)"
+	@if conda env list | grep -q "^$(ENV_NAME) "; then \
+		conda run --no-capture-output -n $(ENV_NAME) python test_duration_fix.py; \
+	else \
+		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
+		echo "$(YELLOW)Create it first with: make create$(NC)"; \
+	fi
+
+test-offline:
+	@echo "$(GREEN)Testing Offline Analysis$(NC)"
+	@if conda env list | grep -q "^$(ENV_NAME) "; then \
+		conda run --no-capture-output -n $(ENV_NAME) python test_offline_analysis.py; \
+	else \
+		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
+		echo "$(YELLOW)Create it first with: make create$(NC)"; \
+	fi
+
+test-comparative:
+	@echo "$(GREEN)Testing Comparative Analysis (Before/After Duration Fixes)$(NC)"
+	@if conda env list | grep -q "^$(ENV_NAME) "; then \
+		conda run --no-capture-output -n $(ENV_NAME) python test_comparative_analysis.py; \
+	else \
+		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
+		echo "$(YELLOW)Create it first with: make create$(NC)"; \
+	fi
+
+test-complete-pipeline:
+	@echo "$(GREEN)Testing Complete End-to-End Pipeline$(NC)"
+	@if conda env list | grep -q "^$(ENV_NAME) "; then \
+		conda run --no-capture-output -n $(ENV_NAME) python test_complete_pipeline.py; \
+	else \
+		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
+		echo "$(YELLOW)Create it first with: make create$(NC)"; \
+	fi
+
+test-all: test test-duration-fix test-comparative test-complete-pipeline
+	@echo "$(GREEN)Comprehensive test suite completed$(NC)"

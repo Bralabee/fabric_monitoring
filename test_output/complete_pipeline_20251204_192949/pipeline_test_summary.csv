@@ -1,0 +1,11 @@
+activity_id,item_type,status,duration_seconds,workspace_name
+,DataPipeline,Succeeded,600.0,RE Finance - Hyperion
+,SynapseNotebook,Succeeded,360.0,fabric-monitoring-analytics
+,DataPipeline,Succeeded,720.0,RE Finance - Hyperion
+,DataPipeline,Failed,780.0,RE Sales & Marketing - Lead Management [DEV]
+ad11a22b-4117-4fe5-848d-8c63066a760c,SemanticModel,Succeeded,360.0,RE Finance - Hyperion
+,DataPipeline,Failed,900.0,RE Sales & Marketing - Lead Management [DEV]
+,Lakehouse,Succeeded,720.0,fabric-monitoring-analytics
+,Lakehouse,Succeeded,720.0,fabric-monitoring-analytics
+,DataPipeline,Failed,1080.0,RE Finance - Hyperion
+,DataPipeline,Succeeded,1140.0,RE Finance - Hyperion

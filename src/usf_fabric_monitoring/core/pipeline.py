@@ -384,6 +384,40 @@ class MonitorHubPipeline:
             if 'job_invoker' in merged_df.columns:
                 merged_df['submitted_by'] = merged_df['submitted_by'].fillna(merged_df['job_invoker'])
 
+            # Fix Duration Calculation: Use job end times when activity end times are missing
+            self.logger.info("Applying duration calculation fix...")
+            original_missing_end_time = merged_df['end_time'].isna().sum()
+            
+            if original_missing_end_time > 0 and 'job_end_time' in merged_df.columns:
+                # Fill missing end_time with job_end_time
+                merged_df['end_time'] = merged_df['end_time'].fillna(merged_df['job_end_time'])
+                
+                after_fix_missing_end_time = merged_df['end_time'].isna().sum()
+                fixed_count = original_missing_end_time - after_fix_missing_end_time
+                self.logger.info(f"Fixed {fixed_count} missing end times using job data")
+                
+                # Recalculate duration_seconds
+                def calculate_duration(start_time, end_time):
+                    if pd.isna(start_time) or pd.isna(end_time):
+                        return 0.0
+                    try:
+                        duration = (end_time - start_time).total_seconds()
+                        return max(0.0, duration)  # Ensure non-negative duration
+                    except:
+                        return 0.0
+
+                merged_df['duration_seconds'] = merged_df.apply(
+                    lambda row: calculate_duration(row['start_time'], row['end_time']), 
+                    axis=1
+                )
+                
+                # Log improvement statistics
+                original_zero_duration = (pd.DataFrame(activities).get('duration_seconds', pd.Series([0.0] * len(activities))) == 0.0).sum()
+                fixed_zero_duration = (merged_df['duration_seconds'] == 0.0).sum()
+                duration_improvement = original_zero_duration - fixed_zero_duration
+                if duration_improvement > 0:
+                    self.logger.info(f"Duration fix: restored duration data for {duration_improvement} records")
+
             # Fill remaining NaNs in key columns to avoid serialization issues
             merged_df['status'] = merged_df['status'].fillna('Unknown')
             

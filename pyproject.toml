@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "usf_fabric_monitoring"
 version = "0.1.15"
-description = "Microsoft Fabric Monitoring & Governance System"
+description = "Microsoft Fabric Monitoring & Governance System with Smart Merge Technology for Duration Fix"
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
