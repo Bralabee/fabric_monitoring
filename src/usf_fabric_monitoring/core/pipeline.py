@@ -286,36 +286,121 @@ class MonitorHubPipeline:
         return all_jobs
 
     def _merge_activities(self, activities: List[Dict[str, Any]], detailed_jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Merge detailed job status into activities"""
+        """
+        Smart Merge: Correlate Activity Events with Detailed Job History.
+        Uses pandas merge_asof to align events by ItemId and Time (within 5 mins).
+        """
+        if not activities:
+            return []
         if not detailed_jobs:
             return activities
-            
-        # Since we couldn't match by ID, we will append the detailed jobs as new activities
-        # This ensures we capture the failures.
+
+        self.logger.info("Starting Smart Merge of Activities and Detailed Jobs...")
+
+        # 1. Prepare Activities DataFrame
+        df_activities = pd.DataFrame(activities)
         
-        converted_jobs = []
-        for job in detailed_jobs:
-            # Normalize job to activity format (snake_case to match data_loader)
-            new_activity = {
-                "activity_id": job.get("id"),
-                "activity_type": job.get("jobType", "JobExecution"),
-                "item_name": job.get("_item_name", "Unknown"),
-                "item_type": job.get("_item_type", "Unknown"),
-                "item_id": job.get("itemId"),
-                "workspace_name": job.get("_workspace_name", "Unknown"),
-                "status": job.get("status"),
-                "start_time": job.get("startTimeUtc"),
-                "end_time": job.get("endTimeUtc"),
-                "failure_reason": job.get("failureReason"),
-                "submitted_by": "System",
-                "source": "JobHistory"
-            }
-            converted_jobs.append(new_activity)
-            
-        self.logger.info(f"Added {len(converted_jobs)} detailed jobs to activities")
+        # Ensure timestamps are datetime
+        time_cols = ['start_time', 'end_time', 'creation_time']
+        for col in time_cols:
+            if col in df_activities.columns:
+                df_activities[col] = pd.to_datetime(df_activities[col], utc=True, errors='coerce')
+
+        # Ensure item_id is string and handle NaNs
+        if 'item_id' in df_activities.columns:
+            df_activities['item_id'] = df_activities['item_id'].astype(str)
         
-        # Combine lists
-        return activities + converted_jobs
+        # Sort for merge_asof
+        df_activities = df_activities.sort_values('start_time')
+
+        # 2. Prepare Jobs DataFrame
+        df_jobs = pd.DataFrame(detailed_jobs)
+        
+        # Map Job columns to friendly names
+        job_rename_map = {
+            'id': 'job_instance_id',
+            'startTimeUtc': 'job_start_time',
+            'endTimeUtc': 'job_end_time',
+            'status': 'job_status',
+            'failureReason': 'job_failure_reason',
+            'itemId': 'item_id',
+            'jobType': 'job_type',
+            'invoker': 'job_invoker'
+        }
+        df_jobs = df_jobs.rename(columns=job_rename_map)
+        
+        # Ensure timestamps are datetime
+        job_time_cols = ['job_start_time', 'job_end_time']
+        for col in job_time_cols:
+            if col in df_jobs.columns:
+                df_jobs[col] = pd.to_datetime(df_jobs[col], utc=True, errors='coerce')
+        
+        # Ensure item_id is string
+        if 'item_id' in df_jobs.columns:
+            df_jobs['item_id'] = df_jobs['item_id'].astype(str)
+
+        # Drop rows without start time or item_id
+        df_jobs = df_jobs.dropna(subset=['job_start_time', 'item_id'])
+        
+        # Sort for merge_asof
+        df_jobs = df_jobs.sort_values('job_start_time')
+
+        # 3. Perform Merge
+        # We want to keep all activities, and find the nearest job execution
+        try:
+            merged_df = pd.merge_asof(
+                df_activities,
+                df_jobs,
+                left_on='start_time',
+                right_on='job_start_time',
+                by='item_id',
+                tolerance=pd.Timedelta('5min'),
+                direction='nearest',
+                suffixes=('', '_job')
+            )
+            
+            # 4. Enrich Data
+            
+            # Update Status: If Job Failed, mark Activity as Failed
+            # (Activity logs often say "Completed" even if the internal job failed)
+            mask_job_failed = merged_df['job_status'] == 'Failed'
+            merged_df.loc[mask_job_failed, 'status'] = 'Failed'
+            
+            # Enrich Failure Reason
+            # If activity doesn't have a failure reason, take it from the job
+            if 'failure_reason' not in merged_df.columns:
+                merged_df['failure_reason'] = None
+            
+            merged_df['failure_reason'] = merged_df['failure_reason'].fillna(merged_df['job_failure_reason'])
+            
+            # Create explicit error_message column if not exists
+            if 'error_message' not in merged_df.columns:
+                merged_df['error_message'] = merged_df['failure_reason']
+            else:
+                merged_df['error_message'] = merged_df['error_message'].fillna(merged_df['failure_reason'])
+
+            # Enrich User (if job has invoker info)
+            # Note: Job history often doesn't have user info, but sometimes 'invoker' field exists
+            if 'job_invoker' in merged_df.columns:
+                merged_df['submitted_by'] = merged_df['submitted_by'].fillna(merged_df['job_invoker'])
+
+            # Fill remaining NaNs in key columns to avoid serialization issues
+            merged_df['status'] = merged_df['status'].fillna('Unknown')
+            
+            self.logger.info(f"Smart Merge Complete. Enriched {len(merged_df)} activities.")
+            
+            # Convert back to list of dicts
+            # Handle datetime serialization by converting to ISO format strings
+            for col in ['start_time', 'end_time', 'creation_time', 'job_start_time', 'job_end_time']:
+                if col in merged_df.columns:
+                    merged_df[col] = merged_df[col].apply(lambda x: x.isoformat() if pd.notnull(x) else None)
+
+            return merged_df.to_dict(orient='records')
+
+        except Exception as e:
+            self.logger.error(f"Smart Merge failed: {e}")
+            self.logger.warning("Falling back to original activities list")
+            return activities
 
     def _build_historical_dataset(self, activities: List[Dict[str, Any]], start_date: datetime, end_date: datetime, days: int) -> Dict[str, Any]:
         workspace_lookup: Dict[str, Dict[str, Any]] = {}
