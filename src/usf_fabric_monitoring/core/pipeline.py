@@ -76,15 +76,26 @@ class MonitorHubPipeline:
             # We use a separate directory for item details, but we can pass it if needed.
             # The default is exports/fabric_item_details, which matches what we load later.
             details_output_dir = self.output_directory / "fabric_item_details"
-            details_result = run_item_details_extraction(
-                output_dir=str(details_output_dir)
-            )
+            
+            # Check for recent detailed job extraction (8-hour cache logic)
+            details_cache_valid = self._check_recent_job_details_extraction(details_output_dir)
+            
+            if details_cache_valid:
+                self.logger.info("✅ Using cached detailed job data (within 8 hours)")
+                details_result = {"status": "success", "cached": True, "jobs_count": "cached"}
+            else:
+                details_result = run_item_details_extraction(
+                    output_dir=str(details_output_dir)
+                )
             
             if details_result.get("status") != "success":
                 self.logger.warning(f"Detailed job extraction failed: {details_result.get('message')}")
                 # We proceed, but warn that failure data might be incomplete
             else:
-                self.logger.info(f"✅ Extracted {details_result.get('jobs_count', 0)} new job records")
+                if details_result.get("cached"):
+                    self.logger.info("✅ Using cached detailed job records")
+                else:
+                    self.logger.info(f"✅ Extracted {details_result.get('jobs_count', 0)} new job records")
 
             print("\n" + "="*40)
             print("✅ Extraction Complete. Starting Analysis...")
@@ -258,6 +269,38 @@ class MonitorHubPipeline:
         extraction_dir = self.output_directory / "raw_data"
         extraction_dir.mkdir(parents=True, exist_ok=True)
         return extraction_dir
+
+    def _check_recent_job_details_extraction(self, details_output_dir: Path, hours_threshold: int = 8) -> bool:
+        """Check if we have recent detailed job data within the threshold."""
+        try:
+            if not details_output_dir.exists():
+                return False
+            
+            # Find all jobs_*.json files
+            job_files = list(details_output_dir.glob("jobs_*.json"))
+            if not job_files:
+                return False
+            
+            # Get the most recent file by modification time - using sorted to avoid max() key issues
+            job_files_with_time = [(f, f.stat().st_mtime) for f in job_files]
+            job_files_with_time.sort(key=lambda x: x[1], reverse=True)  # Sort by time, newest first
+            most_recent_file, _ = job_files_with_time[0]
+            
+            # Check if it's within the threshold
+            file_time = datetime.fromtimestamp(most_recent_file.stat().st_mtime)
+            current_time = datetime.now()
+            hours_old = (current_time - file_time).total_seconds() / 3600
+            
+            if hours_old <= hours_threshold:
+                self.logger.info(f"Found recent job details file: {most_recent_file.name} ({hours_old:.1f} hours old)")
+                return True
+            else:
+                self.logger.info(f"Most recent job details file is {hours_old:.1f} hours old (threshold: {hours_threshold}h)")
+                return False
+        
+        except Exception as e:
+            self.logger.warning(f"Error checking job details cache: {e}")
+            return False
 
     def _load_detailed_jobs(self) -> List[Dict[str, Any]]:
         """Load all detailed jobs exports"""
