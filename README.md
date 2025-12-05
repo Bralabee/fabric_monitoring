@@ -2,9 +2,8 @@
 
 A comprehensive Python-based solution for monitoring, analyzing, and governing Microsoft Fabric workspaces. This project provides tools for historical activity analysis (Monitor Hub) and automated security group enforcement.
 
-
-
-- **Cloud Deployment**: Docker containerization and Azure deployment templates- **Performance Optimization**: Further improvements to Smart Merge efficiency- **Enhanced Lineage**: Expanded lineage extraction beyond Mirrored Databases- **Automated Alerting**: Teams webhooks and email notifications for critical failures### [0.1.16] - Planned## Upcoming Features---- Initial Makefile automation- Conda environment management- Basic CSV report generation- Lineage extraction capabilities  - Workspace access enforcement- Historical data extraction from Microsoft Fabric APIsInitial development versions with core functionality:### [0.1.0 - 0.1.9] - 2024-12-01 to 2024-12-03## Previous Versions---- Enhanced module organization- Package structure improvements### Changed## [0.1.10] - 2024-12-03- Improved data processing capabilities- Initial implementation of enhanced pipeline architecture### Added## [0.1.11] - 2024-12-03- Improved logging for debugging and monitoring- Enhanced error handling in data extraction processes### Added## [0.1.12] - 2024-12-04- Updated environment configuration handling- Resolved import path issues in core modules### Fixed## [0.1.13] - 2024-12-04  - Minor improvements to logging and error handling- Updated package dependencies and build configuration### Changed## [0.1.14] - 2024-12-04---- Enhanced validation ensures data quality before analysis- Offline testing capabilities available out of the box- Duration fixes are automatically enabled in the core pipeline#### For New Deployments4. **Review Logs**: Check for "Duration fix: restored duration data" messages confirming fix application3. **Validate Reports**: Re-generate reports to benefit from enhanced timing data2. **Test Offline**: Use `make test-comparative` to see the improvement in your data1. **Update Package**: Install version 0.1.15 for duration fix benefits#### For Existing Users### 🚀 Migration Guide- **Report Generation**: Valid CSV reports with enhanced timing insights- **Timing Accuracy**: Precise duration calculations using job execution data- **Duration Recovery Rate**: 100% success when job details available#### Validation Results```    enhanced_activity['duration_seconds'] = calculate_duration(start_time, job_end_time)    # Recalculate duration with restored end time    enhanced_activity['end_time'] = job_end_timeif pd.isna(activity_end_time) and pd.notna(job_end_time):# Core innovation: Job-based end time restoration```python#### Smart Merge Algorithm### 🔧 Technical Implementation Details- Updated method signatures with detailed parameter documentation- Added comprehensive logging for duration fix operations- Enhanced inline code documentation for Smart Merge logic#### Technical Documentation- Updated recent updates section with breakthrough details- Enhanced deployment guide with current version information- Added offline analysis capabilities- Updated key features to highlight Smart Merge technology#### README Enhancements### 📚 Documentation Updates- `make test-all`: Run comprehensive test suite- `make test-complete-pipeline`: Test complete end-to-end pipeline- `make test-comparative`: Test before/after duration fix comparison- `make test-offline`: Test offline analysis capabilities  - `make test-duration-fix`: Test duration calculation fixes#### Makefile Enhancements- `test_complete_pipeline.py`: End-to-end pipeline validation with report generation- `test_comparative_analysis.py`: Before/after comparison demonstrating fix impact- `test_offline_analysis.py`: Offline analysis using existing data files- `test_duration_fix.py`: Core duration calculation fix validation#### Test Files Added### 🧪 New Testing Infrastructure- **Logging Performance**: Structured logging provides clear visibility into processing steps and outcomes- **Memory Management**: Efficient handling of large datasets during merge operations- **Smart Merge Logic**: Optimized activity-job correlation using pandas merge_asof for temporal matching#### Processing Efficiency- **Report Quality**: Enhanced CSV reports now include accurate performance metrics and timing-based insights- **Analysis Depth**: Enabled comprehensive failure analysis with precise timing insights- **Timing Data Availability**: Improved from 0% to 100% valid duration data when job details are available#### Analysis Capabilities### 📊 Performance Improvements- **Report Generation**: Resolved report generation failures caused by missing timing calculations- **Performance Insights**: Restored capability to identify long-running operations and performance bottlenecks- **Failure Analysis**: Fixed inability to perform meaningful failure timing analysis due to missing duration data#### Analysis Reliability- **Timing Accuracy**: Corrected duration calculations that were returning zero due to missing end time data- **Schema Mapping**: Resolved column mapping issues between CSV data structure and data loader expectations- **Missing Duration Data**: Fixed critical issue where 100% of activity records lacked `end_time` and `duration_seconds`#### Data Quality Issues### 🐛 Bug Fixes- **Mock Data Generation**: Realistic job detail generation for testing duration fix scenarios- **End-to-End Pipeline Validation**: Comprehensive test covering data loading → duration fixes → analysis → report generation- **Comparative Analysis**: Before/after testing that demonstrates the impact of duration fixes (0% → 100% timing data recovery)- **Offline Analysis Testing**: Complete test suite that validates functionality using existing CSV data without API calls#### Testing & Validation Framework- **Backward Compatibility**: Graceful fallback when job details are unavailable- **Improvement Logging**: Detailed logging of duration restoration statistics for monitoring and validation- **Non-negative Validation**: Ensures duration calculations are always non-negative with proper error handling- **Duration Calculation Fix**: Added comprehensive logic to restore missing `end_time` from job data#### Core Pipeline Improvements  - **Intelligent Correlation**: Activities are matched with job details using temporal proximity and item ID correlation- **Enhanced Pipeline**: Core `MonitorHubPipeline._merge_activities()` method now includes sophisticated duration calculation fixes- **100% Data Recovery**: Successfully restores missing timing data from job `endTimeUtc` when activity `end_time` is missing (which was 100% of cases)- **Revolutionary Duration Recovery**: Implemented comprehensive Smart Merge functionality that correlates activity logs with detailed job execution data#### Smart Merge Technology### 🔧 Major Enhancements## [0.1.15] - 2024-12-04 - Duration Fix Breakthroughand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+> **Current Version: 0.2.0** - Advanced Analytics & Smart Merge Technology  
+> See [CHANGELOG.md](CHANGELOG.md) for detailed release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
 ## 🚀 Key Features
 
 ### 1. Monitor Hub Analysis (`monitor_hub_pipeline.py`)
@@ -168,28 +167,33 @@ usf_fabric_monitoring/
 └── requirements.txt        # Pip dependencies
 ```
 
-## ⚠️ Recent Updates (v0.1.15 - Duration Fix Breakthrough)
+## ⚠️ Recent Updates (v0.2.0 - Advanced Analytics Release)
 
-The system has undergone major enhancements to address critical timing data issues:
+The system has undergone major enhancements with advanced analytics capabilities:
 
-### 🔧 **Smart Merge Technology (v0.1.15)**
-- **Duration Recovery**: Revolutionary fix that restores 100% missing timing data by correlating activities with job execution details
+### 🔧 **Smart Merge Technology**
+- **Duration Recovery**: Revolutionary algorithm that restores 100% of missing timing data by correlating activities with job execution details
 - **Enhanced Pipeline**: Core `MonitorHubPipeline` now includes comprehensive duration calculation fixes
 - **Offline Validation**: Complete test suite validates functionality without API calls
 - **Backward Compatibility**: Gracefully handles scenarios with missing job details
 
-### 📊 **API Compliance & Performance**
-- **28-Day Limit**: Historical extraction is capped at 28 days (API limit compliant)
-- **Pagination**: Robust handling for days with >5,000 events using `continuationUri`
-- **Rate Limiting**: Built-in throttling to prevent 429 errors
-- **Smart Merge**: Intelligent correlation of activity logs with detailed job execution data
+### 📊 **Advanced Analytics & Visualization**
+- **16+ Visualizations**: Comprehensive dashboard with interactive Plotly charts
+- **Executive Dashboard**: High-level KPIs and trends for leadership reporting
+- **Performance Insights**: Deep analysis of long-running operations and bottlenecks
+- **Failure Analysis**: Detailed error tracking with root cause identification
 
-### 🧪 **Comprehensive Testing**
-- **Offline Analysis**: Test complete pipeline functionality with existing data
+### 📚 **Documentation & Governance**
+- **Comprehensive Project Analysis**: Complete gap assessment and improvement roadmap ([PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md))
+- **Contribution Guidelines**: Standardized development workflow and coding standards ([CONTRIBUTING.md](CONTRIBUTING.md))
+- **Security Policy**: Best practices and vulnerability reporting procedures ([SECURITY.md](SECURITY.md))
+
+### 🧪 **Testing & Quality**
+- **Test Coverage**: Enhanced test suite with offline analysis capabilities
 - **Comparative Analysis**: Before/after validation of duration fixes
 - **End-to-End Validation**: Complete pipeline testing from data loading to report generation
 
-See `CHANGELOG.md` for detailed release notes.
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ## ☁️ Deployment to Microsoft Fabric
 
@@ -205,7 +209,7 @@ To run this solution directly within a Microsoft Fabric Notebook:
 2.  **Upload to Fabric**:
     -   Navigate to your Fabric Workspace.
     -   Create a **Fabric Environment** (or use an existing one).
-    -   In the "Public Libraries" or "Custom Libraries" section, upload the `.whl` file you just built.
+    -   In the "Public Libraries" or "Custom Libraries" section, upload the `.whl` file (e.g., `usf_fabric_monitoring-0.2.0-py3-none-any.whl`).
     -   Save and Publish the Environment.
 
 3.  **Configure the Notebook**:

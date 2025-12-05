@@ -311,7 +311,7 @@ class HistoricalAnalysisEngine:
         failure_analysis["top_failing_items"] = failing_items.to_dict(orient="records")
         
         # Failure trends over time
-        failed_activities["date"] = pd.to_datetime(failed_activities["start_time"], format='mixed', errors='coerce', utc=True).dt.date
+        failed_activities.loc[:, "date"] = pd.to_datetime(failed_activities["start_time"], format='mixed', errors='coerce', utc=True).dt.date
         daily_failures = failed_activities.groupby("date").size().to_dict()
         failure_analysis["failure_trends"] = {str(k): v for k, v in daily_failures.items()}
         
