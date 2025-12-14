@@ -44,7 +44,15 @@ def setup_logging():
     )
 
 
-def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None, activity_types=None):
+def extract_historical_data(
+    start_date,
+    end_date,
+    output_dir,
+    workspace_ids=None,
+    activity_types=None,
+    *,
+    tenant_wide: bool = True,
+):
     """
     Extract activity data for a date range from Microsoft Fabric APIs.
     
@@ -118,7 +126,7 @@ def extract_historical_data(start_date, end_date, output_dir, workspace_ids=None
                     date=current_date,
                     workspace_ids=workspace_ids,
                     activity_types=activity_types,
-                    tenant_wide=True  # Try Admin API first, auto-fallback to member-only if denied
+                    tenant_wide=tenant_wide  # Admin API first when True; member-only when False
                 )
                 
                 if daily_activities:

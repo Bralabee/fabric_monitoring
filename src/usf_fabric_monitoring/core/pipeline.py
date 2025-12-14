@@ -40,7 +40,7 @@ class MonitorHubPipeline:
         
         self.logger.info("Monitor Hub Pipeline initialized")
     
-    def run_complete_analysis(self, days: int = 90) -> Dict[str, Any]:
+    def run_complete_analysis(self, days: int = 90, *, tenant_wide: bool = True) -> Dict[str, Any]:
         """
         Run complete Monitor Hub analysis pipeline
         
@@ -61,7 +61,8 @@ class MonitorHubPipeline:
             extraction_result = run_historical_extraction(
                 start_date=start_date,
                 end_date=end_date,
-                output_dir=str(extraction_dir)
+                output_dir=str(extraction_dir),
+                tenant_wide=tenant_wide,
             )
 
             if extraction_result.get("status") != "success":
@@ -97,9 +98,10 @@ class MonitorHubPipeline:
                 else:
                     self.logger.info(f"✅ Extracted {details_result.get('jobs_count', 0)} new job records")
 
-            print("\n" + "="*40)
-            print("✅ Extraction Complete. Starting Analysis...")
-            print("="*40 + "\n")
+            if os.getenv("USF_FABRIC_MONITORING_SHOW_PROGRESS", "1") == "1":
+                print("\n" + "=" * 40)
+                print("✅ Extraction Complete. Starting Analysis...")
+                print("=" * 40 + "\n")
 
             self.logger.info("Step 2: Loading enriched activity exports")
             activities = load_activities_from_directory(str(extraction_dir))

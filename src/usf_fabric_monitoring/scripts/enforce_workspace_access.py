@@ -28,15 +28,16 @@ sys.path.insert(0, str(Path(__file__).parents[2]))
 from usf_fabric_monitoring.core.workspace_access_enforcer import WorkspaceAccessEnforcer, WorkspaceAccessError
 from usf_fabric_monitoring.core.logger import setup_logging
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+# repo_root/src/usf_fabric_monitoring/scripts/enforce_workspace_access.py -> repo_root
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Enforce security group assignment across Microsoft Fabric workspaces"
     )
-    default_targets = PROJECT_ROOT / "config" / "workspace_access_targets.json"
-    default_suppress = PROJECT_ROOT / "config" / "workspace_access_suppressions.json"
+    default_targets = REPO_ROOT / "config" / "workspace_access_targets.json"
+    default_suppress = REPO_ROOT / "config" / "workspace_access_suppressions.json"
     default_output = Path(os.getenv("EXPORT_DIRECTORY", "exports/monitor_hub_analysis"))
 
     parser.add_argument(

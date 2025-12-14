@@ -38,11 +38,11 @@ We transformed the local scripts into a distributable format.
     pip install build
     python -m build
     ```
-3.  This generates a `.whl` file in the `dist/` folder (e.g., `usf_fabric_monitoring-0.1.0-py3-none-any.whl`).
+3.  This generates a `.whl` file in the `dist/` folder (e.g., `usf_fabric_monitoring-0.2.0-py3-none-any.whl`).
 
 ### Phase 2: Configure Fabric Environment
 1.  In your Fabric Workspace, create a new **Environment** (e.g., `Monitoring_Env`).
-2.  **Public Libraries**: Add `azure-identity`, `pandas`, `requests`, `python-dotenv`.
+2.  **Public Libraries**: Add `azure-identity`, `pandas`, `requests`, `python-dotenv` (and `jsonschema` if you want to run config validation in-notebook).
 3.  **Custom Libraries**: Upload the `.whl` file generated in Phase 1.
 4.  **Publish** the environment.
 
@@ -65,6 +65,8 @@ The system requires a Service Principal to authenticate with Microsoft Fabric AP
 | `AZURE_CLIENT_SECRET` | The Client Secret for authentication. |
 | `AZURE_TENANT_ID` | Your Azure Tenant ID. |
 
+Legacy aliases (supported): `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID`.
+
 ### How to Configure in Fabric
 **Option 1: Lakehouse .env (Recommended for Speed)**
 1.  Create a file named `.env` locally with the variables above.
@@ -81,13 +83,18 @@ The system requires a Service Principal to authenticate with Microsoft Fabric AP
 ## 📘 Notebook Usage Guide
 
 ### 1. Monitor Hub Analysis (`Monitor_Hub_Analysis.ipynb`)
-**Goal**: Extract 90 days of history, analyze trends, and find failures.
+**Goal**: Extract recent history (default 7 days; capped at 28 days by API limits), analyze trends, and find failures.
 *   **Input**: None (uses API).
-*   **Output**: CSV Reports saved to `/lakehouse/default/Files/monitor_hub_analysis/`.
+*   **Output**: CSV Reports saved to `/lakehouse/default/Files/exports/monitor_hub_analysis/`.
 *   **Key Reports**:
     *   `activities_master.csv`: Raw log of every event.
     *   `failure_analysis.csv`: Top failing items and errors.
     *   `user_performance.csv`: Most active users and their success rates.
+
+**Defaults & Limits** (override via `.env`):
+- `DEFAULT_ANALYSIS_DAYS` (default `7`)
+- `MAX_HISTORICAL_DAYS` (default `28`)
+- `EXPORT_DIRECTORY` (default `exports/monitor_hub_analysis`)
 
 ### 2. Workspace Access Enforcement (`Workspace_Access_Enforcement.ipynb`)
 **Goal**: Ensure specific security groups (e.g., "Fabric Admins") are Admins on *every* workspace.
@@ -103,6 +110,11 @@ The system requires a Service Principal to authenticate with Microsoft Fabric AP
 ### "No matching distribution found for usf_fabric_monitoring"
 *   **Cause**: The notebook is trying to `pip install` a package that doesn't exist on the public internet.
 *   **Fix**: Remove the `%pip install` line. Ensure the **Environment** is attached to the notebook. The environment provides the package.
+
+### Useful CLI entry points (local or Fabric terminals)
+- `usf-monitor-hub --days 14 --member-only --output-dir exports/monitor_hub_analysis`
+- `usf-enforce-access --help`
+- `usf-validate-config`
 
 ### "401 Client Error: Unauthorized" during Analysis
 *   **Cause**: The Service Principal can see *that* a workspace exists (Tenant Admin rights) but cannot see *inside* it (Workspace Member rights).

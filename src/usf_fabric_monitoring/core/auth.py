@@ -199,19 +199,24 @@ def create_authenticator_from_env() -> FabricAuthenticator:
     """
     Create authenticator from environment variables.
     
-    Expected environment variables:
+    Expected environment variables (preferred):
     - AZURE_TENANT_ID
-    - AZURE_CLIENT_ID  
+    - AZURE_CLIENT_ID
     - AZURE_CLIENT_SECRET
+
+    Backward-compatible aliases (optional):
+    - TENANT_ID
+    - CLIENT_ID
+    - CLIENT_SECRET
     
     If variables are missing, returns an authenticator that uses DefaultAzureCredential.
     
     Returns:
         Configured FabricAuthenticator instance
     """
-    tenant_id = os.getenv("AZURE_TENANT_ID")
-    client_id = os.getenv("AZURE_CLIENT_ID")
-    client_secret = os.getenv("AZURE_CLIENT_SECRET")
+    tenant_id = os.getenv("AZURE_TENANT_ID") or os.getenv("TENANT_ID")
+    client_id = os.getenv("AZURE_CLIENT_ID") or os.getenv("CLIENT_ID")
+    client_secret = os.getenv("AZURE_CLIENT_SECRET") or os.getenv("CLIENT_SECRET")
     
     if not all([tenant_id, client_id, client_secret]):
         logging.getLogger(__name__).info("Environment variables for Service Principal not found. Using DefaultAzureCredential.")

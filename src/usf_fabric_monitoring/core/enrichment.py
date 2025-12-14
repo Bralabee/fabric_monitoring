@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -17,13 +19,37 @@ def _load_inference_rules() -> Dict[str, Any]:
         return _INFERENCE_RULES
 
     try:
-        # config/inference_rules.json is two levels up from src/core
-        config_path = Path(__file__).resolve().parents[2] / "config" / "inference_rules.json"
-        if config_path.exists():
+        config_name = "inference_rules.json"
+        candidates = []
+
+        # Highest priority: explicit override
+        override_dir = os.getenv("USF_FABRIC_MONITORING_CONFIG_DIR")
+        if override_dir:
+            candidates.append(Path(override_dir) / config_name)
+
+        # Common dev layout: repo_root/config
+        candidates.append(Path(__file__).resolve().parents[3] / "config" / config_name)
+
+        # Fallback: current working directory/config
+        candidates.append(Path.cwd() / "config" / config_name)
+
+        config_path = next((p for p in candidates if p.exists()), None)
+        if not config_path:
+            _INFERENCE_RULES = {}
+        else:
             with open(config_path, "r", encoding="utf-8") as f:
                 _INFERENCE_RULES = json.load(f)
-        else:
-            _INFERENCE_RULES = {}
+
+            # Validate (warn-only) to avoid silent misconfiguration.
+            try:
+                from usf_fabric_monitoring.core.config_validation import validate_data, SCHEMAS_BY_FILENAME
+
+                errors = validate_data(SCHEMAS_BY_FILENAME["inference_rules.json"], _INFERENCE_RULES)
+                if errors:
+                    logger = logging.getLogger(__name__)
+                    logger.warning("Inference rules config validation warnings (%s): %s", config_path, errors)
+            except Exception:
+                pass
     except Exception:
         _INFERENCE_RULES = {}
 

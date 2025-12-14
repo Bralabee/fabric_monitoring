@@ -3,7 +3,7 @@
 A comprehensive Python-based solution for monitoring, analyzing, and governing Microsoft Fabric workspaces. This project provides tools for historical activity analysis (Monitor Hub) and automated security group enforcement.
 
 > **Current Version: 0.2.0** - Advanced Analytics & Smart Merge Technology  
-> See [CHANGELOG.md](CHANGELOG.md) for detailed release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
+> See [CHANGELOG.md](CHANGELOG.md) for release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
 ## 🚀 Key Features
 
 ### 1. Monitor Hub Analysis (`monitor_hub_pipeline.py`)
@@ -63,7 +63,9 @@ This project uses a `Makefile` to simplify environment management.
     ```bash
     cp .env.template .env
     ```
-    *Ensure you set `FABRIC_TOKEN`, `TENANT_ID`, and other auth details.*
+    Authentication options:
+    - Recommended: set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` (Service Principal)
+    - Alternative: rely on `DefaultAzureCredential` (Managed Identity / Azure CLI login / Fabric notebook identity)
 
 ## ⚙️ Configuration
 
@@ -164,7 +166,7 @@ usf_fabric_monitoring/
 │       └── scripts/        # Entry point scripts (monitor_hub_pipeline.py, etc.)
 ├── Makefile                # Command automation
 ├── environment.yml         # Conda environment definition
-└── requirements.txt        # Pip dependencies
+└── pyproject.toml           # Python package metadata + pip dependencies
 ```
 
 ## ⚠️ Recent Updates (v0.2.0 - Advanced Analytics Release)
@@ -204,7 +206,7 @@ To run this solution directly within a Microsoft Fabric Notebook:
     ```bash
     make build
     ```
-    This will generate a file like `dist/usf_fabric_monitoring-0.1.15-py3-none-any.whl`.
+    This will generate a file like `dist/usf_fabric_monitoring-<version>-py3-none-any.whl`.
 
 2.  **Upload to Fabric**:
     -   Navigate to your Fabric Workspace.

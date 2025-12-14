@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
+import pytest
+
 # Load environment variables
 load_dotenv()
 
@@ -16,7 +18,11 @@ from usf_fabric_monitoring.core.auth import FabricAuthenticator, create_authenti
 from usf_fabric_monitoring.core.extractor import FabricDataExtractor
 from usf_fabric_monitoring.core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 
+@pytest.mark.integration
 def test_pipeline():
+    if not (os.getenv("AZURE_TENANT_ID") and os.getenv("AZURE_CLIENT_ID") and os.getenv("AZURE_CLIENT_SECRET")):
+        pytest.skip("Missing AZURE_* service principal env vars; skipping integration test.")
+
     print("🚀 Testing Monitor Hub Pipeline Components")
     
     # Test 1: Authentication
@@ -26,11 +32,9 @@ def test_pipeline():
         if auth.validate_credentials():
             print("   ✅ Authentication successful")
         else:
-            print("   ❌ Authentication failed")
-            return False
+            pytest.fail("Authentication failed")
     except Exception as e:
-        print(f"   ❌ Authentication error: {str(e)}")
-        return False
+        pytest.fail(f"Authentication error: {str(e)}")
     
     # Test 2: Data extraction (small test)
     print("\n2. Testing data extraction...")
@@ -53,8 +57,7 @@ def test_pipeline():
         print(f"   ✅ Found {len(workspaces)} member workspaces")
         
     except Exception as e:
-        print(f"   ❌ Extraction failed: {str(e)}")
-        return False
+        pytest.fail(f"Extraction failed: {str(e)}")
     
     # Test 3: Report generation
     print("\n3. Testing report generation...")
@@ -146,14 +149,9 @@ def test_pipeline():
             print(f"   📄 {report_name}: {file_name}")
             
     except Exception as e:
-        print(f"   ❌ Report generation failed: {str(e)}")
-        return False
+        pytest.fail(f"Report generation failed: {str(e)}")
     
     print("\n✅ All tests passed!")
     print("\n📁 Check the exports/test_reports directory for generated files.")
     
-    return True
-
-if __name__ == "__main__":
-    success = test_pipeline()
-    exit(0 if success else 1)
+    assert True

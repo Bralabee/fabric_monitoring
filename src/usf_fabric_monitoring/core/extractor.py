@@ -26,7 +26,6 @@ from .enrichment import (
     extract_user_from_metadata,
     infer_domain,
     infer_location,
-    infer_location,
     normalize_user,
     normalize_status,
 )
@@ -68,6 +67,14 @@ class FabricDataExtractor:
         self._workspace_items_cache: Dict[str, Dict[str, Dict[str, Any]]] = {}
         self._workspace_lookup: Dict[str, Dict[str, Any]] = {}
         self._cached_tenant_workspaces: Optional[List[Dict[str, Any]]] = None
+
+    def _emit_progress(self, message: str, *, end: str = "\n") -> None:
+        if os.getenv("USF_FABRIC_MONITORING_SHOW_PROGRESS", "1") != "1":
+            return
+        try:
+            print(message, end=end, flush=True)
+        except Exception:
+            return
     
     def get_workspaces(self, tenant_wide: bool = False, exclude_personal: bool = True) -> List[Dict[str, Any]]:
         """
@@ -129,7 +136,7 @@ class FabricDataExtractor:
                         
                     retry_after = int(response.headers.get('Retry-After', 60))
                     self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
-                    print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
+                    self._emit_progress(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r')
                     time.sleep(retry_after + 1)
                     continue
                 
@@ -144,14 +151,14 @@ class FabricDataExtractor:
             
             workspaces.extend(items)
             self.logger.info(f"Retrieved {len(items)} workspaces (total: {len(workspaces)})")
-            print(f"   ⏳ Retrieved {len(workspaces)} workspaces...", end='\r', flush=True)
+            self._emit_progress(f"   ⏳ Retrieved {len(workspaces)} workspaces...", end='\r')
             
             if len(items) < page_size:
                 break
             
             skip += page_size
         
-        print(f"   ✅ Retrieved {len(workspaces)} workspaces total.          ")
+        self._emit_progress(f"   ✅ Retrieved {len(workspaces)} workspaces total.          ")
         self.logger.info(f"Total tenant-wide workspaces retrieved: {len(workspaces)}")
         
         # Cache the result

@@ -1,8 +1,6 @@
-
 import sys
-import os
-import shutil
 from pathlib import Path
+
 import pandas as pd
 
 # Add src to path
@@ -10,12 +8,9 @@ sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
 from usf_fabric_monitoring.core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 
-def test_compute_report():
-    output_dir = "exports/test_compute_report"
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-        
-    reporter = MonitorHubCSVReporter(output_dir)
+
+def test_compute_report(tmp_path: Path):
+    reporter = MonitorHubCSVReporter(str(tmp_path))
     
     activities = [
         {
@@ -56,29 +51,15 @@ def test_compute_report():
         }
     ]
     
-    print("Generating report...")
     filepath = reporter._generate_compute_analysis_report(activities)
-    print(f"Report generated at: {filepath}")
-    
-    if os.path.exists(filepath):
-        print("✅ File exists")
-        df = pd.read_csv(filepath)
-        print("Columns:", df.columns.tolist())
-        print("Rows:", len(df))
-        
-        # Check content
-        row1 = df[df["Item Name"] == "Daily Processing"].iloc[0]
-        assert row1["Total Runs"] == 2
-        assert row1["Failed Runs"] == 1
-        assert row1["Failure Rate %"] == 50.0
-        
-        row2 = df[df["Item Name"] == "Analysis NB"].iloc[0]
-        assert row2["Total Runs"] == 1
-        assert row2["Failed Runs"] == 0
-        
-        print("✅ Content verification passed")
-    else:
-        print("❌ File not found")
+    assert filepath
+    df = pd.read_csv(filepath)
 
-if __name__ == "__main__":
-    test_compute_report()
+    row1 = df[df["Item Name"] == "Daily Processing"].iloc[0]
+    assert row1["Total Runs"] == 2
+    assert row1["Failed Runs"] == 1
+    assert row1["Failure Rate %"] == 50.0
+
+    row2 = df[df["Item Name"] == "Analysis NB"].iloc[0]
+    assert row2["Total Runs"] == 1
+    assert row2["Failed Runs"] == 0

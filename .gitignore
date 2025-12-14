@@ -22,6 +22,9 @@ monitor_hub_pipeline.log
 # Exported datasets
 exports/
 
+# Generated artifacts (test outputs, run summaries, etc.)
+artifacts/
+
 # Build caches
 *.egg-info/
 .eggs/

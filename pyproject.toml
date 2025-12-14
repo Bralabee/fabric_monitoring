@@ -33,6 +33,11 @@ dependencies = [
     "fastparquet"
 ]
 
+[project.scripts]
+usf-monitor-hub = "usf_fabric_monitoring.scripts.monitor_hub_pipeline:main"
+usf-enforce-access = "usf_fabric_monitoring.scripts.enforce_workspace_access:main"
+usf-validate-config = "usf_fabric_monitoring.scripts.validate_config:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest",
@@ -51,3 +56,10 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: requires Fabric/Azure credentials and may call real APIs",
+]
+addopts = "-m 'not integration'"
