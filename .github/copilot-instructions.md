@@ -1,39 +1,31 @@
 # GitHub Copilot Instructions for USF Fabric Monitoring
 
-This repository hosts the **USF Fabric Monitoring System**, a Python-based governance and observability solution for Microsoft Fabric.
+This repo is a **library-first** Microsoft Fabric monitoring/governance toolkit. Keep core logic in `src/usf_fabric_monitoring/`; scripts/notebooks should be thin wrappers.
 
-## 🏗 Architecture & Core Concepts
-- **Library-First Design**: The core logic resides in the `usf_fabric_monitoring` Python package (`src/`). Notebooks in `notebooks/` are "thin wrappers" that import this package.
-- **Smart Merge Technology**: A critical feature in `historical_analyzer.py` that correlates activity logs with detailed job execution data to recover missing duration metrics (100% data recovery goal).
-- **Environment Agnostic**: Code runs both locally (simulating OneLake via `exports/`) and in Fabric Environments. Use `core.utils.resolve_path` for all file I/O.
-- **Configuration**: Controlled via `.env` (secrets) and JSON files in `config/` (business logic like `inference_rules.json`).
+## Architecture (big picture)
+- **Monitor Hub (end-to-end)**: `core/pipeline.py:MonitorHubPipeline` runs extraction → loads/enriches → writes reports.
+  - Activity extraction: `scripts/extract_historical_data.py` (per-day exports; respects `MAX_HISTORICAL_DAYS`)
+  - Job details enrichment: `scripts/extract_fabric_item_details.py` (8-hour cache; merged in `MonitorHubPipeline._merge_activities()`)
+  - Outputs: defaults to `EXPORT_DIRECTORY=exports/monitor_hub_analysis`; pipeline persists a Parquet “source of truth” under the output directory.
+- **Workspace governance**: access enforcement lives in `core/workspace_access_enforcer.py` and script entrypoints under `src/usf_fabric_monitoring/scripts/`.
+- **Fabric vs local paths**: always route output/data paths through `core/utils.py:resolve_path()` so relative paths land under OneLake (`/lakehouse/default/Files`) in Fabric.
 
-## 🛠 Critical Workflows
-- **Environment Management**: ALWAYS use `make` commands.
-  - `make create`: Setup conda environment.
-  - `make monitor-hub`: Run the main analysis pipeline.
-  - `make enforce-access`: Run workspace security enforcement.
-- **Testing**: Run `make test` or `make test-all` (includes duration fix validation).
-- **Build & Deploy**:
-  1. `python -m build` to generate `.whl`.
-  2. Upload `.whl` to Fabric Environment.
-  3. Attach Environment to Notebooks.
+## Workflows (preferred commands)
+- Use the `Makefile` (environment-aware wrappers): `make create`, `make install`, `make monitor-hub`, `make enforce-access`, `make extract-lineage`, `make validate-config`, `make test-smoke`, `make build`.
+- CLI entrypoints (see `pyproject.toml`): `usf-monitor-hub`, `usf-enforce-access`, `usf-validate-config`.
+- Most scripts support env-driven config (see `.env.template` + `README.md`).
 
-## 📝 Coding Conventions
-- **Path Handling**: NEVER hardcode paths. Use `resolve_path()` to ensure compatibility between local Linux filesystems and Fabric OneLake (`/lakehouse/default/Files`).
-- **Logging**: Use `core.logger.setup_logging`. Do not use `print()` for operational logs.
-- **Type Hinting**: Required for all `core/` modules.
-- **Pandas**: Avoid `SettingWithCopyWarning` by using `.loc` for assignments.
-- **Secrets**: Load from `os.getenv()`. Supports both `.env` files and Azure Key Vault integration.
+## Repo conventions
+- **Paths**: don’t hardcode `/lakehouse/...` in library code; use `resolve_path("exports/... ")` and accept `OUTPUT_DIR`/`EXPORT_DIRECTORY` overrides.
+- **Logging**: use `core/logger.py:setup_logging` (rotating files under `logs/`; optional stdout; progress printing gated by `USF_FABRIC_MONITORING_SHOW_PROGRESS`).
+- **Config JSONs**: business rules live in `config/` (e.g., `inference_rules.json`, `workspace_access_targets.json`, `workspace_access_suppressions.json`). Update schemas + run `make validate-config`.
+- **Tests**: unit tests live in `tests/` and are safe/offline; heavier validation scripts live in `tools/dev_tests/` and are run via Make targets.
+- **Notebooks**: `notebooks/Monitor_Hub_Analysis.ipynb` is designed to be safe-by-default (verification cells should avoid API/auth imports).
 
-## 🔗 Key Components
-- **`MonitorHubPipeline`** (`core/pipeline.py`): The main orchestrator for analysis.
-- **`HistoricalAnalysisEngine`** (`core/historical_analyzer.py`): Implements the Smart Merge logic.
-- **`WorkspaceAccessEnforcer`** (`core/workspace_access_enforcer.py`): Handles security group compliance.
-- **`Monitor_Hub_Analysis.ipynb`**: The production entry point for users.
-- **`Monitor_Hub_Analysis_Advanced.ipynb`**: For offline/deep-dive analysis.
+## Auth/Secrets
+- Prefer `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` from `.env` (see `.env.template`).
+- Fabric identity fallbacks are supported in `core/auth.py` (Fabric `notebookutils` → Azure Identity). If Azure SDK deps are missing, token acquisition should fail with a clear error (don’t silently succeed).
 
-## 🚨 Common Pitfalls
-- **API Limits**: The system respects the 28-day historical limit of Fabric APIs.
-- **Schema Validation**: Ensure `config/*.json` files match expected schemas (currently implicit).
-- **Notebook State**: Notebooks rely on the attached Fabric Environment. Ensure the `.whl` is updated in the environment after code changes.
+## Quick commands (for agents)
+- Smoke check: `make test-smoke` (or `python -m pytest -q tests/test_basic_imports.py`).
+- Run pipeline (tenant-wide): `make monitor-hub DAYS=7` (member-only via `MEMBER_ONLY=1`; see `src/usf_fabric_monitoring/scripts/monitor_hub_pipeline.py`).

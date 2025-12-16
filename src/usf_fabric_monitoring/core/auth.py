@@ -11,8 +11,19 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
 import requests
-from azure.identity import ClientSecretCredential, DefaultAzureCredential
-from azure.core.exceptions import ClientAuthenticationError
+
+try:
+    from azure.identity import ClientSecretCredential, DefaultAzureCredential
+    from azure.core.exceptions import ClientAuthenticationError
+    _AZURE_SDK_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    ClientSecretCredential = None
+    DefaultAzureCredential = None
+
+    class ClientAuthenticationError(Exception):
+        pass
+
+    _AZURE_SDK_AVAILABLE = False
 
 
 class FabricAuthenticator:
@@ -45,14 +56,30 @@ class FabricAuthenticator:
         if self.tenant_id and self.client_id and self.client_secret:
             masked_id = f"{self.client_id[:4]}...{self.client_id[-4:]}" if len(self.client_id) > 8 else "********"
             self.logger.info(f"Using Service Principal credentials (Client ID: {masked_id})")
-            self.credential = ClientSecretCredential(
-                tenant_id=self.tenant_id,
-                client_id=self.client_id,
-                client_secret=self.client_secret
-            )
+
+            if not _AZURE_SDK_AVAILABLE:
+                self.credential = None
+            else:
+                self.credential = ClientSecretCredential(
+                    tenant_id=self.tenant_id,
+                    client_id=self.client_id,
+                    client_secret=self.client_secret
+                )
         else:
             self.logger.info("No Service Principal provided. Using DefaultAzureCredential/Notebook Identity.")
-            self.credential = DefaultAzureCredential()
+
+            if not _AZURE_SDK_AVAILABLE:
+                self.credential = None
+            else:
+                self.credential = DefaultAzureCredential()
+
+    def _require_azure_sdk(self) -> None:
+        if _AZURE_SDK_AVAILABLE:
+            return
+        raise ClientAuthenticationError(
+            "Azure SDK dependencies are not installed. Install 'azure-identity' (and its dependencies) "
+            "or run inside a Fabric notebook environment that provides 'notebookutils' identity."
+        )
     
     def get_fabric_token(self, force_refresh: bool = False) -> str:
         """
@@ -64,6 +91,7 @@ class FabricAuthenticator:
         # 1. Try Explicit Service Principal (Priority)
         if self.client_id and self.client_secret:
             self.logger.info("Acquiring Fabric API access token via Explicit Service Principal")
+            self._require_azure_sdk()
             # We do NOT catch exceptions here. If explicit credentials are provided but fail,
             # we should raise the error rather than silently falling back to a different identity.
             token = self.credential.get_token("https://api.fabric.microsoft.com/.default")
@@ -88,6 +116,7 @@ class FabricAuthenticator:
             
         # 3. Try Azure Identity (Default/Managed Identity fallback)
         try:
+            self._require_azure_sdk()
             self.logger.info("Acquiring Fabric API access token via DefaultAzureCredential")
             token = self.credential.get_token("https://api.fabric.microsoft.com/.default")
             
@@ -111,6 +140,7 @@ class FabricAuthenticator:
         # 1. Try Explicit Service Principal (Priority)
         if self.client_id and self.client_secret:
             self.logger.info("Acquiring Power BI API access token via Explicit Service Principal")
+            self._require_azure_sdk()
             # We do NOT catch exceptions here. If explicit credentials are provided but fail,
             # we should raise the error rather than silently falling back to a different identity.
             token = self.credential.get_token("https://analysis.windows.net/powerbi/api/.default")
@@ -134,6 +164,7 @@ class FabricAuthenticator:
 
         # 3. Try Azure Identity (Default/Managed Identity fallback)
         try:
+            self._require_azure_sdk()
             self.logger.info("Acquiring Power BI API access token via DefaultAzureCredential")
             token = self.credential.get_token("https://analysis.windows.net/powerbi/api/.default")
             
