@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.4 (December 2025) - Workspace Name Enrichment Release
+
+### Added
+- **Workspace Name Enrichment** - `StarSchemaBuilder` now automatically enriches activity data with workspace names
+  - New method `_load_workspace_lookup()` searches for workspace parquet files in common locations
+  - New method `_enrich_activities_with_workspace_names()` joins workspace names to activities before dimension build
+  - Constructor accepts optional `workspace_lookup_path` parameter for explicit workspace file location
+  - Searches: explicit path → `exports/monitor_hub_analysis/parquet/workspaces_*.parquet` → `notebooks/monitor_hub_analysis/parquet/`
+
+- **Expanded Notebook Analytics** - Added 8 new sample analytical queries:
+  - Top 10 Most Frequently Used Items
+  - Activity by Hour of Day (Peak Usage Analysis)
+  - Top 10 Most Active Users
+  - Activity Volume by Day of Week
+  - Environment Comparison (DEV vs TEST vs UAT vs PRD)
+  - Item Category Distribution
+  - Long-Running Activities Analysis
+  - Cross-Workspace Usage Patterns
+  - Monthly Trend Analysis
+
+### Fixed
+- **"Top 10 Most Active Workspaces"** query now shows actual workspace names instead of "Unknown"
+  - Root cause: Source CSV only had `workspace_id` GUID, not `workspace_name`
+  - Solution: Auto-enrichment joins workspace names from separate workspace extraction
+  - Result: 961,773 of 968,766 activities (99%) now have proper workspace names
+
+- **Query Logic Fix** - Changed aggregation pattern to aggregate by SK first, then join for names
+  - Previous approach caused duplicate rows due to direct merge before groupby
+  - New approach: `groupby('workspace_sk')` → `merge(dim_ws)` for accurate counts
+
+### Verified
+- `dim_workspace` now has 158 records with actual workspace names (was 159 all "Unknown")
+- Environment inference working correctly (DEV, TEST, UAT, PRD patterns detected)
+- 24 workspaces still "Unknown" (deleted workspaces or cross-tenant references)
+
+---
+
 ## 0.3.3 (December 2025) - Data Cleanup & Verification Release
 
 ### Fixed

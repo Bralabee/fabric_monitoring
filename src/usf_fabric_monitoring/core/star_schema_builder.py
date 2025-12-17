@@ -1055,9 +1055,12 @@ class StarSchemaBuilder:
     def __init__(
         self,
         output_directory: Optional[str] = None,
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
+        workspace_lookup_path: Optional[str] = None
     ):
         self.logger = logger or setup_logging(name="star_schema_builder")
+        self.workspace_lookup_path = workspace_lookup_path
+        self._workspace_lookup: Optional[Dict[str, str]] = None
         self.output_directory = resolve_path(
             output_directory or os.getenv("STAR_SCHEMA_OUTPUT_DIR", "exports/star_schema")
         )
@@ -1085,6 +1088,92 @@ class StarSchemaBuilder:
         
         self.fact_activity: Optional[pd.DataFrame] = None
         self.fact_daily_metrics: Optional[pd.DataFrame] = None
+    
+    def _load_workspace_lookup(self) -> Dict[str, str]:
+        """
+        Load workspace ID to name mapping from parquet files.
+        
+        Searches for workspace parquet files in common locations:
+        1. Explicit path provided to constructor
+        2. exports/monitor_hub_analysis/parquet/workspaces_*.parquet
+        3. notebooks/monitor_hub_analysis/parquet/workspaces_*.parquet
+        
+        Returns:
+            Dict mapping workspace_id to displayName
+        """
+        if self._workspace_lookup is not None:
+            return self._workspace_lookup
+            
+        self._workspace_lookup = {}
+        
+        # Locations to search for workspace files
+        search_paths = []
+        
+        if self.workspace_lookup_path:
+            search_paths.append(Path(self.workspace_lookup_path))
+        
+        # Common export locations
+        base_paths = [
+            resolve_path("exports/monitor_hub_analysis/parquet"),
+            resolve_path("notebooks/monitor_hub_analysis/parquet"),
+        ]
+        
+        for base_path in base_paths:
+            if base_path.exists():
+                # Find the most recent workspaces file
+                ws_files = sorted(base_path.glob("workspaces_*.parquet"), reverse=True)
+                if ws_files:
+                    search_paths.append(ws_files[0])
+        
+        # Load from first available file
+        for ws_path in search_paths:
+            if ws_path.exists():
+                try:
+                    df = pd.read_parquet(ws_path)
+                    # Handle different column name conventions
+                    id_col = 'id' if 'id' in df.columns else 'workspace_id'
+                    name_col = 'displayName' if 'displayName' in df.columns else 'workspace_name'
+                    
+                    if id_col in df.columns and name_col in df.columns:
+                        self._workspace_lookup = dict(zip(df[id_col], df[name_col]))
+                        self.logger.info(f"Loaded {len(self._workspace_lookup)} workspace names from {ws_path}")
+                        return self._workspace_lookup
+                except Exception as e:
+                    self.logger.warning(f"Could not load workspace lookup from {ws_path}: {e}")
+        
+        self.logger.warning("No workspace lookup file found - workspace names will default to 'Unknown'")
+        return self._workspace_lookup
+    
+    def _enrich_activities_with_workspace_names(
+        self,
+        activities: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Enrich activity records with workspace_name from lookup.
+        
+        Args:
+            activities: List of activity dictionaries
+            
+        Returns:
+            List of enriched activity dictionaries with workspace_name populated
+        """
+        workspace_lookup = self._load_workspace_lookup()
+        
+        if not workspace_lookup:
+            self.logger.warning("No workspace lookup available - workspace_name will be 'Unknown'")
+            return activities
+        
+        enriched_count = 0
+        for activity in activities:
+            ws_id = activity.get("workspace_id")
+            if ws_id and ws_id in workspace_lookup:
+                activity["workspace_name"] = workspace_lookup[ws_id]
+                enriched_count += 1
+            elif not activity.get("workspace_name"):
+                activity["workspace_name"] = "Unknown"
+        
+        self.logger.info(f"Enriched {enriched_count} of {len(activities)} activities with workspace names")
+        return activities
     
     def _load_existing_dimension(self, name: str) -> Optional[pd.DataFrame]:
         """Load existing dimension from Parquet if available."""
@@ -1130,6 +1219,10 @@ class StarSchemaBuilder:
         self.logger.info(f"Mode: {'Incremental' if incremental else 'Full Refresh'}")
         self.logger.info(f"Input activities: {len(activities)}")
         self.logger.info("="*60)
+        
+        # Enrich activities with workspace names from lookup
+        self.logger.info("Pre-processing: Enriching activities with workspace names...")
+        activities = self._enrich_activities_with_workspace_names(activities)
         
         results = {
             "status": "success",
