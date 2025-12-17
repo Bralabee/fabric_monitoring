@@ -2,14 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.3.8 (December 2025) - Job History Activity Types Fix
+## 0.3.8 (December 2025) - Job History Activity Types Fix & Smart Merge Validation
 
 ### Fixed
 - **Critical: Activity Types for Failures** - Failed activities now show correct type instead of "Unknown"
   - Root cause: `ActivityTypeDimensionBuilder.ACTIVITY_TYPES` was hardcoded with only Audit Log activity types
   - Job History activity types (Pipeline, PipelineRunNotebook, Refresh, Publish, RunNotebookInteractive) were missing
   - Fix: Added 9 new activity types to dimension builder: Pipeline, PipelineRunNotebook, Refresh, Publish, RunNotebookInteractive, DataflowGen2, SparkJob, ScheduledNotebook, OneLakeShortcut
-  - Result: 1,237 failures now correctly distributed (Pipeline=973, PipelineRunNotebook=176, Refresh=81, Publish=4, RunNotebookInteractive=3)
+
+### Validated (Production Run - December 17, 2025)
+- **Smart Merge Pipeline** - Complete 28-day extraction validated with fresh data:
+  - Total Activities: 1,286,374
+  - Failed Activities: 6,218 (correctly captured)
+  - Success Rate: 99.52%
+  - Workspaces: 512
+  - Users: 1,506
+  - Item Types: 24
+  - Activity Types: 46 (12 with failures, 34 with 0 failures)
+
+- **Failure Distribution by Activity Type**:
+  | Activity Type | Succeeded | Failed | Failure % |
+  |--------------|-----------|--------|----------|
+  | ReadArtifact | 379,588 | 3,019 | 0.79% |
+  | RunArtifact | 92,139 | 2,336 | 2.47% |
+  | UpdateArtifact | 26,540 | 251 | 0.94% |
+  | MountStorageByMssparkutils | 17,596 | 191 | 1.07% |
+  | ViewSparkAppLog | 69,926 | 159 | 0.23% |
+  | StartRunNotebook | 9,747 | 115 | 1.17% |
+  | StopNotebookSession | 10,189 | 110 | 1.07% |
+  | + 5 more activity types with failures |
+
+- **Smart Merge Enrichment Stats**:
+  - Activities enriched: 1,416,701
+  - Missing end times fixed: 95,352
+  - Duration data restored: 90,409 records
+  - Total detailed jobs loaded: 15,952
 
 ### Enhanced
 - **Notebook Cell 20 (Activity Type Analysis)** - Now shows both volume and failures

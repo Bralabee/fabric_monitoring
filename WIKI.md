@@ -106,7 +106,7 @@ Legacy aliases (supported): `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID`.
 
 ### 3. Star Schema Builder (`Fabric_Star_Schema_Builder.ipynb`) ⭐ NEW
 **Goal**: Transform Monitor Hub raw data into a Kimball-style star schema for analytics.
-*   **Input**: CSV/Parquet from Monitor Hub Analysis pipeline.
+*   **Input**: Parquet from Monitor Hub Analysis pipeline (preferred - has complete data with failures)
 *   **Output**: 
     *   7 dimension tables (`dim_date`, `dim_time`, `dim_workspace`, `dim_item`, `dim_user`, `dim_activity_type`, `dim_status`)
     *   2 fact tables (`fact_activity`, `fact_daily_metrics`)
@@ -115,11 +115,21 @@ Legacy aliases (supported): `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID`.
     *   Incremental loading with high-water mark tracking
     *   SCD Type 2 support for slowly changing dimensions
     *   Pre-aggregated daily metrics for dashboards
+    *   Auto-enrichment of workspace names from separate workspace parquet
+*   **Validated Metrics (Dec 2025)**: 1.28M activities, 6,218 failures correctly tracked, 46 activity types
 *   **Use Case**: Build semantic models, Power BI reports, or run SQL analytics directly on star schema tables.
 
 ---
 
 ## 🔧 Troubleshooting
+
+### Understanding Failure Data
+*   **Why do some activity types show 0 failures?** - This is CORRECT behavior
+    *   Activity Events API entries (ReadArtifact, CreateFile, ViewReport, etc.) are **audit log entries** - they record that an event happened
+    *   These entries always return status="Succeeded" because the audit action itself succeeded
+    *   Only Job History API entries (Pipeline, RunArtifact, StartRunNotebook) can have actual failures
+*   **12 activity types can fail**: ReadArtifact, RunArtifact, UpdateArtifact, MountStorageByMssparkutils, ViewSparkAppLog, StartRunNotebook, StopNotebookSession, CreateCheckpoint, CancelRunningArtifact, ViewSparkApplication, ViewSparkAppInputOutput
+*   **34 activity types always succeed**: CreateFile, RenameFileOrDirectory, ViewReport, etc. (audit log operations)
 
 ### "No matching distribution found for usf_fabric_monitoring"
 *   **Cause**: The notebook is trying to `pip install` a package that doesn't exist on the public internet.

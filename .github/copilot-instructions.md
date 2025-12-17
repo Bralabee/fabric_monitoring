@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions for USF Fabric Monitoring
 
-**Version**: 0.3.8 | **Library-first** Microsoft Fabric monitoring/governance toolkit.
+**Version**: 0.3.8 (Validated Dec 2025) | **Library-first** Microsoft Fabric monitoring/governance toolkit.
 Core logic in `src/usf_fabric_monitoring/`; scripts/notebooks are thin wrappers.
 
 ## Architecture
@@ -14,26 +14,36 @@ Monitor Hub API → extraction → Smart Merge (jobs+activities) → Parquet →
    - Extracts activity events + job details → merges via Smart Merge → writes parquet
    - Output: `exports/monitor_hub_analysis/parquet/activities_*.parquet` (28 columns, source of truth)
    - Legacy CSV: `activities_master_*.csv` (19 columns, incomplete - avoid)
+   - **Validated**: 1.28M activities, 6,218 failures (99.52% success rate)
 
 2. **Star Schema Builder** (`core/star_schema_builder.py`)
    - Transforms raw activities → Kimball dimensional model
    - **Critical function**: `build_star_schema_from_pipeline_output()` - use this, NOT `StarSchemaBuilder` directly
    - Output: `exports/star_schema/*.parquet` (dim_date, dim_time, dim_workspace, dim_item, dim_user, dim_activity_type, dim_status, fact_activity, fact_daily_metrics)
+   - **Validated**: 46 activity types (12 with failures, 34 audit-log only)
 
 3. **Workspace Governance** (`core/workspace_access_enforcer.py`)
    - Enforces security group assignments to workspaces
 
 ### Smart Merge Algorithm
 The Smart Merge correlates two data sources to enrich activity data:
-- **Activity Events API**: High-volume audit log (ReadArtifact, CreateFile) - has `start_time` but no failure details
-- **Job History API**: Lower-volume job executions (Pipeline, Refresh) - has `end_time`, `failure_reason`, `duration`
+- **Activity Events API**: High-volume audit log (ReadArtifact, CreateFile, ViewReport) - ALL return status="Succeeded" because audit entries record that an event happened, not whether it "succeeded"
+- **Job History API**: Lower-volume job executions (Pipeline, Notebook, Dataflow) - HAS actual failure data with `end_time`, `failure_reason`, `duration`
+
+**Key Insight**: Activity Events API entries CANNOT fail by design - they are audit log entries. Only Job History API entries can have failures.
 
 Merge logic in `MonitorHubPipeline._merge_activities()`:
 1. Extract activities from Activity Events API (per-day, paginated)
 2. Extract job details from Job History API (8-hour cache)
-3. Match by `activity_id` or `item_id + timestamp proximity`
+3. Match by `item_id` + `merge_asof` with 5-minute timestamp tolerance
 4. Enrich with duration, status, failure_reason from job history
 5. Write merged result to `parquet/activities_*.parquet`
+
+**Smart Merge Stats (Dec 2025 validation run)**:
+- Activities enriched: 1,416,701
+- Missing end times fixed: 95,352
+- Duration data restored: 90,409 records
+- Total detailed jobs loaded: 15,952
 
 ### Workspace Name Enrichment
 The `StarSchemaBuilder` auto-enriches activities with workspace names:
@@ -46,11 +56,30 @@ The `StarSchemaBuilder` auto-enriches activities with workspace names:
 
 ### Critical Data Patterns
 
-**Activity Types**: Two sources with different schemas:
-- **Audit Log activities** (ReadArtifact, CreateFile, etc.): High volume, always succeed
-- **Job History activities** (Pipeline, PipelineRunNotebook, Refresh, Publish): Lower volume, can fail
+**Activity Types**: Two sources with different failure behavior:
+- **Audit Log activities** (ReadArtifact, CreateFile, ViewReport, RenameFileOrDirectory, etc.): 
+  - High volume (1M+ per month)
+  - ALL return status="Succeeded" - this is CORRECT behavior, not a bug
+  - These entries record "user X did action Y" - the action always "succeeds" in being recorded
+  - 34 activity types fall in this category
+  
+- **Job History activities** (Pipeline, RunArtifact, StartRunNotebook, etc.): 
+  - Lower volume (tens of thousands per month)
+  - CAN have failures with actual failure_reason
   - Have `end_time` but NULL `start_time` - star schema uses `end_time` fallback
   - Have `workspace_name` but NULL `workspace_id` - star schema uses name-based lookup
+  - 12 activity types can have failures
+
+**Validated Failure Distribution (Dec 2025)**:
+| Activity Type | Failed | Failure % |
+|--------------|--------|-----------|
+| ReadArtifact | 3,019 | 0.79% |
+| RunArtifact | 2,336 | 2.47% |
+| UpdateArtifact | 251 | 0.94% |
+| MountStorageByMssparkutils | 191 | 1.07% |
+| ViewSparkAppLog | 159 | 0.23% |
+| StartRunNotebook | 115 | 1.17% |
+| StopNotebookSession | 110 | 1.07% |
 
 **Counting Pattern** - ALWAYS use `record_count` sum, NOT `activity_id` count:
 ```python

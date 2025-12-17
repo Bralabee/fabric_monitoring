@@ -2,7 +2,7 @@
 
 A comprehensive Python-based solution for monitoring, analyzing, and governing Microsoft Fabric workspaces. This project provides tools for historical activity analysis (Monitor Hub), automated security group enforcement, and star schema analytics for business intelligence.
 
-> **Current Version: 0.3.8** - Star Schema Analytics Release  
+> **Current Version: 0.3.8** - Smart Merge Validated Release (6,218 failures correctly tracked across 46 activity types)  
 > See [CHANGELOG.md](CHANGELOG.md) for release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
 ## 🚀 Key Features
 
@@ -194,8 +194,10 @@ This release introduces powerful star schema analytics capabilities:
 - **Delta Lake DDL**: Auto-generated scripts for Fabric deployment
 
 ### 🔧 **Smart Merge Technology** (from v0.2.0)
-- **Duration Recovery**: Revolutionary algorithm that restores 100% of missing timing data by correlating activities with job execution details
-- **Enhanced Pipeline**: Core `MonitorHubPipeline` now includes comprehensive duration calculation fixes
+- **Dual API Correlation**: Combines Activity Events API (audit log) with Job History API (job executions) using `merge_asof` by `item_id` + 5-minute timestamp tolerance
+- **Failure Detection**: Activity Events report ALL status="Succeeded" (audit entries can't fail), while Job History provides actual failure data for job executions
+- **Duration Recovery**: Restores missing timing data by matching activities with detailed job execution records
+- **Validated Metrics (Dec 2025)**: 1.28M activities, 6,218 failures (99.52% success), 512 workspaces, 46 activity types
 - **Offline Validation**: Complete test suite validates functionality without API calls
 - **Backward Compatibility**: Gracefully handles scenarios with missing job details
 
