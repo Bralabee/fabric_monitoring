@@ -2,7 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.3.2 (January 2025) - Coverage Expansion Release
+## 0.3.3 (December 2025) - Data Cleanup & Verification Release
+
+### Fixed
+- **Data Cleanup** - Removed obsolete CSV files without Smart Merge failure data
+  - Kept only timestamp `20251203_212443` files which contain correct failure tracking
+  - Cleaned up parquet and job history files to match
+  - Resolved issue where incremental loads were mixing old (no failures) with new data
+
+- **Star Schema Verification** - Confirmed correct failure capture after full refresh
+  - 1,238 failures correctly tracked in `fact_activity` table
+  - Daily metrics now show accurate failure counts per day
+  - Success rate calculations working correctly (99.94% overall)
+
+### Verified Working
+- Smart Merge pipeline correctly enriches activities with job failure status
+- Star Schema Builder derives `is_failed` from `status` column (Failed/Cancelled/Error → 1)
+- Notebook auto-selects CSV file with failures when multiple available
+- Daily Activity Trend shows proper failure counts
+
+---
+
+## 0.3.2 (December 2025) - Coverage Expansion Release
 
 ### Fixed
 - **Expanded Activity Type Coverage** - `ACTIVITY_TYPES` dictionary now covers 61 activity types (was 19)
