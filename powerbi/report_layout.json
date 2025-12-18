@@ -1,0 +1,695 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "USF Fabric Monitoring Dashboard"
+  },
+  "config": {
+    "version": "0.3.8",
+    "author": "Sanmi Ibitoye",
+    "email": "Sanmi.Ibitoye@leit.ltd",
+    "lastUpdated": "2025-12-18",
+    "description": "Power BI dashboard for Microsoft Fabric monitoring analytics built on star schema"
+  },
+  "report": {
+    "name": "USF Fabric Monitoring Dashboard",
+    "description": "Comprehensive monitoring dashboard displaying activity trends, failure analysis, and operational metrics from Microsoft Fabric Monitor Hub data",
+    "pages": [
+      {
+        "name": "Executive Overview",
+        "displayName": "Executive Overview",
+        "ordinal": 0,
+        "displayOption": "FitToPage",
+        "layout": {
+          "width": 1280,
+          "height": 720
+        },
+        "visuals": [
+          {
+            "name": "Title",
+            "type": "textbox",
+            "position": { "x": 20, "y": 10, "width": 600, "height": 40 },
+            "config": {
+              "text": "USF Fabric Monitoring Dashboard",
+              "fontFamily": "Segoe UI Semibold",
+              "fontSize": 24,
+              "fontColor": "#0078D4"
+            }
+          },
+          {
+            "name": "DateSlicer",
+            "type": "slicer",
+            "position": { "x": 1000, "y": 10, "width": 260, "height": 50 },
+            "config": {
+              "field": "dim_date[full_date]",
+              "slicerType": "Between",
+              "defaultValue": "Last 28 days"
+            }
+          },
+          {
+            "name": "KPI_TotalActivities",
+            "type": "card",
+            "position": { "x": 20, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Total Activities]",
+              "title": "Total Activities",
+              "format": "#,##0",
+              "calloutValueFontSize": 32,
+              "categoryLabelFontSize": 12
+            }
+          },
+          {
+            "name": "KPI_FailedActivities",
+            "type": "card",
+            "position": { "x": 230, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Failed Activities]",
+              "title": "Failed Activities",
+              "format": "#,##0",
+              "calloutValueFontSize": 32,
+              "conditionalFormatting": {
+                "backgroundColor": {
+                  "measure": "[Failure Count Color]"
+                }
+              }
+            }
+          },
+          {
+            "name": "KPI_SuccessRate",
+            "type": "card",
+            "position": { "x": 440, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Success Rate]",
+              "title": "Success Rate",
+              "format": "0.00%",
+              "calloutValueFontSize": 32,
+              "conditionalFormatting": {
+                "fontColor": {
+                  "rules": [
+                    { "value": 99, "operator": ">=", "color": "#107C10" },
+                    { "value": 95, "operator": ">=", "color": "#FFB900" },
+                    { "value": 0, "operator": ">=", "color": "#E81123" }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "name": "KPI_ActiveUsers",
+            "type": "card",
+            "position": { "x": 650, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Active Users]",
+              "title": "Active Users",
+              "format": "#,##0",
+              "calloutValueFontSize": 32
+            }
+          },
+          {
+            "name": "KPI_ActiveWorkspaces",
+            "type": "card",
+            "position": { "x": 860, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Active Workspaces]",
+              "title": "Active Workspaces",
+              "format": "#,##0",
+              "calloutValueFontSize": 32
+            }
+          },
+          {
+            "name": "ActivityTrendChart",
+            "type": "lineChart",
+            "position": { "x": 20, "y": 170, "width": 1240, "height": 200 },
+            "config": {
+              "title": "Activity Trend",
+              "xAxis": {
+                "field": "dim_date[full_date]",
+                "title": "Date"
+              },
+              "yAxis": [
+                {
+                  "measure": "[Total Activities]",
+                  "title": "Total Activities",
+                  "color": "#0078D4",
+                  "lineStyle": "solid"
+                },
+                {
+                  "measure": "[Failed Activities]",
+                  "title": "Failed Activities",
+                  "color": "#E81123",
+                  "lineStyle": "dashed",
+                  "secondaryAxis": true
+                }
+              ],
+              "legend": { "show": true, "position": "top" },
+              "dataLabels": { "show": false }
+            }
+          },
+          {
+            "name": "ActivityByTypeChart",
+            "type": "barChart",
+            "position": { "x": 20, "y": 380, "width": 600, "height": 320 },
+            "config": {
+              "title": "Activity by Type",
+              "yAxis": {
+                "field": "dim_activity_type[activity_type]",
+                "title": "Activity Type"
+              },
+              "xAxis": {
+                "measure": "[Total Activities]",
+                "title": "Count"
+              },
+              "sort": { "by": "measure", "order": "descending" },
+              "topN": 15,
+              "dataLabels": { "show": true, "position": "outside" },
+              "conditionalFormatting": {
+                "dataBar": {
+                  "measure": "[Failure Rate]",
+                  "colorScale": {
+                    "min": { "value": 0, "color": "#107C10" },
+                    "mid": { "value": 2.5, "color": "#FFB900" },
+                    "max": { "value": 5, "color": "#E81123" }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "ActivityByWorkspaceChart",
+            "type": "barChart",
+            "position": { "x": 640, "y": 380, "width": 620, "height": 320 },
+            "config": {
+              "title": "Activity by Workspace",
+              "yAxis": {
+                "field": "dim_workspace[workspace_name]",
+                "title": "Workspace"
+              },
+              "xAxis": {
+                "measure": "[Total Activities]",
+                "title": "Count"
+              },
+              "legend": {
+                "field": "dim_workspace[environment]",
+                "show": true
+              },
+              "sort": { "by": "measure", "order": "descending" },
+              "topN": 10,
+              "dataLabels": { "show": true, "position": "outside" }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Operational Details",
+        "displayName": "Operational Details",
+        "ordinal": 1,
+        "displayOption": "FitToPage",
+        "layout": {
+          "width": 1280,
+          "height": 720
+        },
+        "visuals": [
+          {
+            "name": "Title",
+            "type": "textbox",
+            "position": { "x": 20, "y": 10, "width": 400, "height": 40 },
+            "config": {
+              "text": "Operational Analysis",
+              "fontFamily": "Segoe UI Semibold",
+              "fontSize": 24,
+              "fontColor": "#0078D4"
+            }
+          },
+          {
+            "name": "EnvironmentSlicer",
+            "type": "slicer",
+            "position": { "x": 800, "y": 10, "width": 200, "height": 50 },
+            "config": {
+              "field": "dim_workspace[environment]",
+              "slicerType": "Dropdown",
+              "multiSelect": true
+            }
+          },
+          {
+            "name": "DateSlicer2",
+            "type": "slicer",
+            "position": { "x": 1010, "y": 10, "width": 250, "height": 50 },
+            "config": {
+              "field": "dim_date[full_date]",
+              "slicerType": "Between"
+            }
+          },
+          {
+            "name": "ActivityByHourChart",
+            "type": "columnChart",
+            "position": { "x": 20, "y": 70, "width": 600, "height": 280 },
+            "config": {
+              "title": "Activity by Hour of Day",
+              "xAxis": {
+                "field": "dim_time[hour_24]",
+                "title": "Hour"
+              },
+              "yAxis": {
+                "measure": "[Total Activities]",
+                "title": "Activities"
+              },
+              "legend": {
+                "field": "dim_time[is_business_hours]",
+                "show": true
+              },
+              "dataLabels": { "show": false }
+            }
+          },
+          {
+            "name": "ActivityByDayOfWeekChart",
+            "type": "columnChart",
+            "position": { "x": 640, "y": 70, "width": 620, "height": 280 },
+            "config": {
+              "title": "Activity by Day of Week",
+              "xAxis": {
+                "field": "dim_date[day_of_week_name]",
+                "title": "Day",
+                "sortOrder": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+              },
+              "yAxis": {
+                "measure": "[Total Activities]",
+                "title": "Activities"
+              },
+              "dataLabels": { "show": true }
+            }
+          },
+          {
+            "name": "TopUsersTable",
+            "type": "table",
+            "position": { "x": 20, "y": 360, "width": 600, "height": 340 },
+            "config": {
+              "title": "Top Users",
+              "columns": [
+                { "field": "dim_user[user_principal_name]", "title": "User", "width": 250 },
+                { "measure": "[Total Activities]", "title": "Activities", "format": "#,##0" },
+                { "measure": "[Failed Activities]", "title": "Failures", "format": "#,##0" },
+                { "measure": "[Active Workspaces]", "title": "Workspaces", "format": "#,##0" }
+              ],
+              "sort": { "by": "[Total Activities]", "order": "descending" },
+              "topN": 15,
+              "alternateRowColors": true
+            }
+          },
+          {
+            "name": "TopItemsTable",
+            "type": "table",
+            "position": { "x": 640, "y": 360, "width": 620, "height": 340 },
+            "config": {
+              "title": "Top Items",
+              "columns": [
+                { "field": "dim_item[item_name]", "title": "Item", "width": 200 },
+                { "field": "dim_item[item_type]", "title": "Type", "width": 100 },
+                { "measure": "[Total Activities]", "title": "Activities", "format": "#,##0" },
+                { "measure": "[Failure Rate]", "title": "Failure %", "format": "0.00%" }
+              ],
+              "sort": { "by": "[Total Activities]", "order": "descending" },
+              "topN": 15,
+              "alternateRowColors": true,
+              "conditionalFormatting": {
+                "column": "Failure %",
+                "colorScale": {
+                  "min": { "value": 0, "color": "#107C10" },
+                  "max": { "value": 5, "color": "#E81123" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Failure Analysis",
+        "displayName": "Failure Analysis",
+        "ordinal": 2,
+        "displayOption": "FitToPage",
+        "layout": {
+          "width": 1280,
+          "height": 720
+        },
+        "visuals": [
+          {
+            "name": "Title",
+            "type": "textbox",
+            "position": { "x": 20, "y": 10, "width": 300, "height": 40 },
+            "config": {
+              "text": "Failure Analysis",
+              "fontFamily": "Segoe UI Semibold",
+              "fontSize": 24,
+              "fontColor": "#E81123"
+            }
+          },
+          {
+            "name": "DateSlicer3",
+            "type": "slicer",
+            "position": { "x": 1010, "y": 10, "width": 250, "height": 50 },
+            "config": {
+              "field": "dim_date[full_date]",
+              "slicerType": "Between"
+            }
+          },
+          {
+            "name": "KPI_FailedTotal",
+            "type": "card",
+            "position": { "x": 20, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Failed Activities]",
+              "title": "Failed Activities",
+              "format": "#,##0",
+              "calloutValueFontSize": 36,
+              "backgroundColor": "#FDE7E9"
+            }
+          },
+          {
+            "name": "KPI_FailureRate",
+            "type": "card",
+            "position": { "x": 230, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Failure Rate]",
+              "title": "Failure Rate",
+              "format": "0.00%",
+              "calloutValueFontSize": 36,
+              "backgroundColor": "#FDE7E9"
+            }
+          },
+          {
+            "name": "FailureTrendChart",
+            "type": "areaChart",
+            "position": { "x": 450, "y": 60, "width": 810, "height": 150 },
+            "config": {
+              "title": "Failure Trend",
+              "xAxis": {
+                "field": "dim_date[full_date]",
+                "title": ""
+              },
+              "yAxis": {
+                "measure": "[Failed Activities]",
+                "title": "Failures"
+              },
+              "color": "#E81123",
+              "fillOpacity": 0.3,
+              "dataLabels": { "show": false }
+            }
+          },
+          {
+            "name": "FailuresByTypeDonut",
+            "type": "donutChart",
+            "position": { "x": 20, "y": 170, "width": 400, "height": 280 },
+            "config": {
+              "title": "Failures by Activity Type",
+              "legend": {
+                "field": "dim_activity_type[activity_type]",
+                "position": "right"
+              },
+              "values": {
+                "measure": "[Failed Activities]"
+              },
+              "dataLabels": { "show": true, "format": "#,##0" },
+              "innerRadius": 50
+            }
+          },
+          {
+            "name": "FailuresByWorkspaceChart",
+            "type": "barChart",
+            "position": { "x": 440, "y": 220, "width": 400, "height": 230 },
+            "config": {
+              "title": "Failures by Workspace",
+              "yAxis": {
+                "field": "dim_workspace[workspace_name]",
+                "title": "Workspace"
+              },
+              "xAxis": {
+                "measure": "[Failed Activities]",
+                "title": "Failures"
+              },
+              "sort": { "by": "measure", "order": "descending" },
+              "topN": 10,
+              "color": "#E81123",
+              "dataLabels": { "show": true }
+            }
+          },
+          {
+            "name": "FailuresByEnvironmentChart",
+            "type": "barChart",
+            "position": { "x": 860, "y": 220, "width": 400, "height": 230 },
+            "config": {
+              "title": "Failures by Environment",
+              "yAxis": {
+                "field": "dim_workspace[environment]",
+                "title": "Environment"
+              },
+              "xAxis": {
+                "measure": "[Failed Activities]",
+                "title": "Failures"
+              },
+              "color": "#E81123",
+              "dataLabels": { "show": true }
+            }
+          },
+          {
+            "name": "FailureDetailsMatrix",
+            "type": "matrix",
+            "position": { "x": 20, "y": 460, "width": 1240, "height": 240 },
+            "config": {
+              "title": "Failure Details by Type and Environment",
+              "rows": {
+                "field": "dim_activity_type[activity_type]",
+                "title": "Activity Type"
+              },
+              "columns": {
+                "field": "dim_workspace[environment]",
+                "title": "Environment"
+              },
+              "values": [
+                { "measure": "[Failed Activities]", "title": "Failures", "format": "#,##0" },
+                { "measure": "[Failure Rate]", "title": "Rate %", "format": "0.00%" }
+              ],
+              "subtotals": { "row": true, "column": true },
+              "conditionalFormatting": {
+                "colorScale": {
+                  "min": { "value": 0, "color": "#FFFFFF" },
+                  "max": { "value": 100, "color": "#E81123" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Duration Analysis",
+        "displayName": "Duration Analysis",
+        "ordinal": 3,
+        "displayOption": "FitToPage",
+        "layout": {
+          "width": 1280,
+          "height": 720
+        },
+        "visuals": [
+          {
+            "name": "Title",
+            "type": "textbox",
+            "position": { "x": 20, "y": 10, "width": 400, "height": 40 },
+            "config": {
+              "text": "Duration & Performance Analysis",
+              "fontFamily": "Segoe UI Semibold",
+              "fontSize": 24,
+              "fontColor": "#0078D4"
+            }
+          },
+          {
+            "name": "KPI_TotalDuration",
+            "type": "card",
+            "position": { "x": 20, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Total Duration Hours]",
+              "title": "Total Duration (hrs)",
+              "format": "#,##0.0",
+              "calloutValueFontSize": 32
+            }
+          },
+          {
+            "name": "KPI_AvgDuration",
+            "type": "card",
+            "position": { "x": 230, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Avg Duration Minutes]",
+              "title": "Avg Duration (min)",
+              "format": "#,##0.0",
+              "calloutValueFontSize": 32
+            }
+          },
+          {
+            "name": "KPI_LongRunning",
+            "type": "card",
+            "position": { "x": 440, "y": 60, "width": 200, "height": 100 },
+            "config": {
+              "measure": "[Long Running Activities]",
+              "title": "Long Running (>1hr)",
+              "format": "#,##0",
+              "calloutValueFontSize": 32
+            }
+          },
+          {
+            "name": "DurationByTypeChart",
+            "type": "barChart",
+            "position": { "x": 20, "y": 170, "width": 600, "height": 260 },
+            "config": {
+              "title": "Total Duration by Activity Type",
+              "yAxis": {
+                "field": "dim_activity_type[activity_type]",
+                "title": "Activity Type"
+              },
+              "xAxis": {
+                "measure": "[Total Duration Hours]",
+                "title": "Hours"
+              },
+              "sort": { "by": "measure", "order": "descending" },
+              "topN": 10,
+              "dataLabels": { "show": true, "format": "#,##0.0" }
+            }
+          },
+          {
+            "name": "AvgDurationByTypeChart",
+            "type": "barChart",
+            "position": { "x": 640, "y": 170, "width": 620, "height": 260 },
+            "config": {
+              "title": "Average Duration by Activity Type",
+              "yAxis": {
+                "field": "dim_activity_type[activity_type]",
+                "title": "Activity Type"
+              },
+              "xAxis": {
+                "measure": "[Avg Duration Minutes]",
+                "title": "Minutes"
+              },
+              "sort": { "by": "measure", "order": "descending" },
+              "topN": 10,
+              "dataLabels": { "show": true, "format": "#,##0.0" }
+            }
+          },
+          {
+            "name": "LongRunningTable",
+            "type": "table",
+            "position": { "x": 20, "y": 440, "width": 1240, "height": 260 },
+            "config": {
+              "title": "Long Running Activities (>1 hour)",
+              "columns": [
+                { "field": "dim_item[item_name]", "title": "Item", "width": 250 },
+                { "field": "dim_item[item_type]", "title": "Type", "width": 100 },
+                { "field": "dim_workspace[workspace_name]", "title": "Workspace", "width": 200 },
+                { "measure": "[Max Duration Hours]", "title": "Max Duration (hrs)", "format": "#,##0.00" },
+                { "measure": "[Total Activities]", "title": "Occurrences", "format": "#,##0" },
+                { "field": "dim_status[status_code]", "title": "Status", "width": 80 }
+              ],
+              "filter": {
+                "measure": "[Long Running Activities]",
+                "operator": ">",
+                "value": 0
+              },
+              "sort": { "by": "[Max Duration Hours]", "order": "descending" },
+              "alternateRowColors": true
+            }
+          }
+        ]
+      }
+    ],
+    "theme": {
+      "name": "USF Fabric Monitoring Theme",
+      "dataColors": [
+        "#0078D4",
+        "#E81123",
+        "#107C10",
+        "#FFB900",
+        "#8764B8",
+        "#00BCF2",
+        "#E3008C",
+        "#00CC6A",
+        "#5C2D91",
+        "#B4009E"
+      ],
+      "background": "#FFFFFF",
+      "foreground": "#252423",
+      "tableAccent": "#0078D4",
+      "good": "#107C10",
+      "neutral": "#FFB900",
+      "bad": "#E81123",
+      "visualStyles": {
+        "card": {
+          "calloutValue": {
+            "fontFamily": "Segoe UI Semibold",
+            "fontSize": 28
+          },
+          "categoryLabel": {
+            "fontFamily": "Segoe UI",
+            "fontSize": 12
+          }
+        },
+        "table": {
+          "header": {
+            "fontFamily": "Segoe UI Semibold",
+            "backgroundColor": "#0078D4",
+            "fontColor": "#FFFFFF"
+          }
+        }
+      }
+    },
+    "dataModel": {
+      "tables": [
+        {
+          "name": "fact_activity",
+          "description": "Main fact table containing all activity records",
+          "columns": [
+            "activity_sk", "date_sk", "time_sk", "workspace_sk", "item_sk",
+            "user_sk", "activity_type_sk", "status_sk", "activity_id",
+            "start_time", "end_time", "duration_seconds", "is_failed",
+            "is_long_running", "record_count"
+          ]
+        },
+        {
+          "name": "fact_daily_metrics",
+          "description": "Pre-aggregated daily metrics for fast dashboard loading"
+        },
+        {
+          "name": "dim_date",
+          "description": "Date dimension with calendar attributes"
+        },
+        {
+          "name": "dim_time",
+          "description": "Time dimension with hour and period attributes"
+        },
+        {
+          "name": "dim_workspace",
+          "description": "Workspace dimension with environment classification"
+        },
+        {
+          "name": "dim_item",
+          "description": "Item dimension (notebooks, pipelines, etc.)"
+        },
+        {
+          "name": "dim_user",
+          "description": "User dimension with principal names"
+        },
+        {
+          "name": "dim_activity_type",
+          "description": "Activity type dimension with categories"
+        },
+        {
+          "name": "dim_status",
+          "description": "Status dimension (Succeeded, Failed, etc.)"
+        }
+      ],
+      "relationships": [
+        { "from": "fact_activity[date_sk]", "to": "dim_date[date_sk]", "type": "many-to-one" },
+        { "from": "fact_activity[time_sk]", "to": "dim_time[time_sk]", "type": "many-to-one" },
+        { "from": "fact_activity[workspace_sk]", "to": "dim_workspace[workspace_sk]", "type": "many-to-one" },
+        { "from": "fact_activity[item_sk]", "to": "dim_item[item_sk]", "type": "many-to-one" },
+        { "from": "fact_activity[user_sk]", "to": "dim_user[user_sk]", "type": "many-to-one" },
+        { "from": "fact_activity[activity_type_sk]", "to": "dim_activity_type[activity_type_sk]", "type": "many-to-one" },
+        { "from": "fact_activity[status_sk]", "to": "dim_status[status_sk]", "type": "many-to-one" }
+      ]
+    }
+  }
+}
