@@ -2,7 +2,7 @@
 
 A comprehensive Python-based solution for monitoring, analyzing, and governing Microsoft Fabric workspaces. This project provides tools for historical activity analysis (Monitor Hub), automated security group enforcement, and star schema analytics for business intelligence.
 
-> **Current Version: 0.3.8** - Smart Merge Validated Release (6,218 failures correctly tracked across 46 activity types)  
+> **Current Version: 0.3.9** - Spark-Compatible Parquet Release (microsecond timestamps for Fabric Delta tables)  
 > See [CHANGELOG.md](CHANGELOG.md) for release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
 ## 🚀 Key Features
 
@@ -229,7 +229,7 @@ To run this solution directly within a Microsoft Fabric Notebook:
     ```bash
     make build
     ```
-    This will generate a file like `dist/usf_fabric_monitoring-0.3.0-py3-none-any.whl`.
+    This will generate a file like `dist/usf_fabric_monitoring-0.3.9-py3-none-any.whl`.
 
 2.  **Upload to Fabric**:
     -   Navigate to your Fabric Workspace.

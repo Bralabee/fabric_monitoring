@@ -38,7 +38,7 @@ We transformed the local scripts into a distributable format.
     pip install build
     python -m build
     ```
-3.  This generates a `.whl` file in the `dist/` folder (e.g., `usf_fabric_monitoring-0.3.0-py3-none-any.whl`).
+3.  This generates a `.whl` file in the `dist/` folder (e.g., `usf_fabric_monitoring-0.3.9-py3-none-any.whl`).
 
 ### Phase 2: Configure Fabric Environment
 1.  In your Fabric Workspace, create a new **Environment** (e.g., `Monitoring_Env`).

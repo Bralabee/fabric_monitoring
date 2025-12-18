@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.9 (December 2025) - Spark-Compatible Parquet & Fabric Path Fixes
+
+### Fixed
+- **Critical: Parquet Timestamp Format** - Fixed `Illegal Parquet type: INT64 (TIMESTAMP(NANOS,true))` error
+  - Root cause: Pandas writes timestamps with nanosecond precision by default, but Spark in Fabric only supports microsecond precision
+  - Fix: Added `coerce_timestamps='us'` and `allow_truncated_timestamps=True` to all `to_parquet()` calls
+  - Affected files: `star_schema_builder.py`, `pipeline.py`
+  - Result: `fact_activity` parquet now converts to Delta tables without errors
+
+- **Fabric Path Detection** - Improved path handling in Microsoft Fabric notebooks
+  - Root cause: `resolve_path()` relies on `/lakehouse/default` existence check, which fails in Spark executor context
+  - Fix: Added robust `is_fabric_env()` function with multiple environment indicators
+  - Notebook 2A now uses explicit `/lakehouse/default/Files` paths in Fabric environment
+  - Added `convert_to_spark_path()` helper for Spark-compatible relative paths
+
+- **Notebook 1 Spark CSV Loading** - Fixed 400 Bad Request when loading CSV in Fabric
+  - Root cause: `glob.glob()` returns local mount paths, but Spark needs relative paths from Lakehouse root
+  - Fix: Added `convert_to_spark_path()` to transform `/lakehouse/default/Files/...` to `Files/...`
+
+### Changed
+- All parquet files now use microsecond timestamp precision for Spark/Fabric compatibility
+- Notebook 2A configuration cell now explicitly detects and handles Fabric environment
+- Delta table conversion cell uses Spark-compatible paths
+
+---
+
 ## 0.3.8 (December 2025) - Job History Activity Types Fix & Smart Merge Validation
 
 ### Fixed
