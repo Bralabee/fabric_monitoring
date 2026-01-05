@@ -37,3 +37,13 @@ dist/
 build/
 notebooks/monitor_hub_analysis/
 *.log*
+
+# Web app artifacts
+webapp/frontend/node_modules/
+webapp/frontend/dist/
+webapp/frontend/.vite/
+webapp/backend/__pycache__/
+webapp/backend/app/__pycache__/
+webapp/backend/app/**/__pycache__/
+webapp/backend/tests/__pycache__/
+webapp/backend/.pytest_cache/

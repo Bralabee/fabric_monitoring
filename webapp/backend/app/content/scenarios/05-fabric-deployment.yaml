@@ -1,0 +1,475 @@
+# Fabric Deployment Scenario
+# Based on WIKI.md and FABRIC_DEPLOYMENT.md
+
+id: fabric-deployment
+title: Deploying to Microsoft Fabric
+description: Learn how to deploy the monitoring system to run natively within Microsoft Fabric. Build packages, configure environments, and run notebooks in your Fabric workspace.
+difficulty: advanced
+estimated_duration_minutes: 40
+category: deployment
+order: 5
+
+prerequisites:
+  - Completed "Getting Started" scenario
+  - Access to a Microsoft Fabric workspace
+  - Fabric capacity (at least F2 for development)
+
+learning_outcomes:
+  - Build and package the monitoring system as a wheel
+  - Create and configure a Fabric Environment
+  - Deploy notebooks to Fabric workspace
+  - Configure secrets in Fabric securely
+
+tags:
+  - deployment
+  - fabric
+  - environment
+  - notebooks
+  - packaging
+  - lakehouse
+
+related_scenarios:
+  - getting-started
+  - monitor-hub-analysis
+  - star-schema-analytics
+
+steps:
+  - id: overview
+    title: Understanding Fabric Deployment
+    type: info
+    content: |
+      The USF Fabric Monitoring system is designed to run natively within Microsoft Fabric, 
+      not just locally. This guide covers the deployment process.
+      
+      **Architecture:**
+      ```
+      Local Development → Build .whl Package → Upload to Fabric Environment
+                                                    ↓
+      Fabric Notebooks ← Import from Package ← Attach Environment
+                ↓
+      Read/Write ← OneLake (Lakehouse) → Delta Tables
+      ```
+      
+      **Key Components:**
+      
+      1. **Python Package (.whl)** - The monitoring system bundled as a library
+      2. **Fabric Environment** - Managed runtime with dependencies
+      3. **Thin Notebooks** - Minimal code that imports and runs the library
+      4. **Lakehouse** - Storage for outputs (Parquet/Delta tables)
+      
+      **Why this architecture?**
+      - Version control for your monitoring logic
+      - Consistent execution across environments
+      - Easy updates - just rebuild and upload new .whl
+      - No copy-pasting code into notebooks
+    tips:
+      - This approach is more maintainable than embedding code in notebooks
+      - Environments can be shared across multiple workspaces
+
+  - id: build-package
+    title: Build the Python Package
+    type: command
+    content: |
+      First, build the monitoring system as a distributable wheel package.
+    code:
+      language: bash
+      content: |
+        # Ensure environment is activated
+        conda activate fabric-monitoring
+        
+        # Install build tool if needed
+        pip install build
+        
+        # Build the package
+        python -m build
+        
+        # List the generated files
+        ls -la dist/
+    expected_output: |
+      Building wheel...
+      Successfully built usf_fabric_monitoring-0.3.16-py3-none-any.whl
+      
+      dist/
+      total 120K
+      -rw-r--r-- 1 user user  45K usf_fabric_monitoring-0.3.16-py3-none-any.whl
+      -rw-r--r-- 1 user user  38K usf_fabric_monitoring-0.3.16.tar.gz
+    duration_minutes: 2
+    tips:
+      - The .whl file is what you'll upload to Fabric
+      - Version number comes from pyproject.toml
+
+  - id: create-fabric-environment
+    title: Create Fabric Environment
+    type: info
+    content: |
+      Now create a Fabric Environment to host your package and dependencies.
+      
+      **Steps in Fabric Portal:**
+      
+      1. Go to your Fabric Workspace
+      2. Click **+ New** → **More options** → **Environment**
+      3. Name it `Monitoring_Env` (or your preferred name)
+      4. Click **Create**
+      
+      **Configure Public Libraries:**
+      
+      In the Environment settings, add these public libraries:
+      - `azure-identity`
+      - `pandas`
+      - `requests`
+      - `python-dotenv`
+      - `pyarrow`
+      - `jsonschema` (optional, for config validation)
+      
+      **Configure Custom Libraries:**
+      
+      1. Go to **Custom libraries** tab
+      2. Click **Upload**
+      3. Select your `dist/usf_fabric_monitoring-0.3.16-py3-none-any.whl`
+      4. Click **Publish** to apply changes
+      
+      Publishing may take 2-5 minutes.
+    tips:
+      - Environment names can't be changed after creation
+      - Publish is required after any library changes
+      - You can have multiple environments for different purposes
+    warnings:
+      - Make sure to click Publish after adding libraries
+      - Wait for publish to complete before using the environment
+
+  - id: create-lakehouse
+    title: Create a Lakehouse
+    type: info
+    content: |
+      Create a Lakehouse to store your monitoring outputs.
+      
+      **Steps in Fabric Portal:**
+      
+      1. Go to your Fabric Workspace
+      2. Click **+ New** → **Lakehouse**
+      3. Name it `Monitoring_Lakehouse`
+      4. Click **Create**
+      
+      **Folder Structure:**
+      
+      After creation, set up this folder structure in the Files section:
+      
+      ```
+      Files/
+      ├── .env                          # Credentials file
+      ├── exports/
+      │   ├── monitor_hub_analysis/
+      │   │   └── parquet/
+      │   └── star_schema/
+      └── config/
+          ├── inference_rules.json
+          └── workspace_access_targets.json
+      ```
+      
+      **Upload Config Files:**
+      
+      1. Go to your Lakehouse → Files
+      2. Create the folder structure above
+      3. Upload your local config files
+    tips:
+      - The Files section supports folders for organization
+      - Tables section will contain your Delta tables
+      - Use the Lakehouse SQL endpoint for Power BI connections
+
+  - id: configure-secrets
+    title: Configure Secrets in Fabric
+    type: config
+    content: |
+      Your Azure credentials need to be accessible in Fabric. You have two options:
+      
+      **Option 1: Lakehouse .env File (Simpler)**
+      
+      1. Create a `.env` file locally with your credentials:
+         ```
+         AZURE_TENANT_ID=your-tenant-id
+         AZURE_CLIENT_ID=your-client-id
+         AZURE_CLIENT_SECRET=your-client-secret
+         ```
+      
+      2. Upload to: `Monitoring_Lakehouse/Files/.env`
+      
+      3. In notebooks, load with:
+         ```python
+         from dotenv import load_dotenv
+         load_dotenv("/lakehouse/default/Files/.env")
+         ```
+      
+      **Option 2: Azure Key Vault (More Secure)**
+      
+      1. Store secrets in Azure Key Vault
+      2. Create a Cloud Connection in Fabric to Key Vault
+      3. In notebooks, retrieve secrets:
+         ```python
+         from azure.identity import DefaultAzureCredential
+         from azure.keyvault.secrets import SecretClient
+         
+         vault_url = "https://your-keyvault.vault.azure.net/"
+         credential = DefaultAzureCredential()
+         client = SecretClient(vault_url=vault_url, credential=credential)
+         
+         tenant_id = client.get_secret("AZURE-TENANT-ID").value
+         ```
+    tips:
+      - Lakehouse .env is faster for development
+      - Key Vault is recommended for production
+      - Never hardcode secrets in notebooks
+    warnings:
+      - .env files in OneLake are visible to workspace members
+      - Use Key Vault for sensitive production environments
+
+  - id: deploy-notebooks
+    title: Deploy Notebooks
+    type: info
+    content: |
+      Import the project notebooks into your Fabric workspace.
+      
+      **Available Notebooks:**
+      
+      | Notebook | Purpose |
+      |----------|---------|
+      | `Monitor_Hub_Analysis.ipynb` | Run activity extraction |
+      | `Workspace_Access_Enforcement.ipynb` | Audit/enforce access |
+      | `Fabric_Star_Schema_Builder.ipynb` | Build star schema |
+      
+      **Steps:**
+      
+      1. Go to your Fabric Workspace
+      2. Click **+ New** → **Import notebook**
+      3. Browse to `notebooks/` folder in your local project
+      4. Select and import each notebook
+      
+      **Attach Environment:**
+      
+      For each notebook:
+      1. Open the notebook
+      2. Click the **Environment** dropdown in the toolbar
+      3. Select `Monitoring_Env`
+      4. The notebook will restart with the new environment
+    tips:
+      - Notebooks remember their attached environment
+      - You can run notebooks manually or schedule them
+      - Consider creating a master orchestration notebook
+
+  - id: notebook-configuration
+    title: Configure Notebook Settings
+    type: code
+    content: |
+      Each notebook needs a configuration cell to set up paths. Here's the standard pattern:
+    code:
+      language: python
+      filename: notebook_config.py
+      content: |
+        # Cell 1: Configuration (run first)
+        import os
+        import sys
+        
+        # Detect Fabric environment
+        IS_FABRIC = os.path.exists("/lakehouse/default")
+        
+        if IS_FABRIC:
+            # Fabric paths
+            BASE_PATH = "/lakehouse/default/Files"
+            sys.path.insert(0, f"{BASE_PATH}/usf_fabric_monitoring/src")
+            
+            # Load credentials
+            from dotenv import load_dotenv
+            load_dotenv(f"{BASE_PATH}/.env")
+            
+            # Set output paths
+            EXPORT_DIR = f"{BASE_PATH}/exports/monitor_hub_analysis"
+            STAR_SCHEMA_DIR = f"{BASE_PATH}/exports/star_schema"
+        else:
+            # Local development paths
+            BASE_PATH = "."
+            EXPORT_DIR = "exports/monitor_hub_analysis"
+            STAR_SCHEMA_DIR = "exports/star_schema"
+        
+        print(f"Environment: {'Fabric' if IS_FABRIC else 'Local'}")
+        print(f"Export directory: {EXPORT_DIR}")
+    tips:
+      - This pattern works both locally and in Fabric
+      - The notebook will auto-detect its environment
+
+  - id: run-monitor-hub
+    title: Running Monitor Hub in Fabric
+    type: code
+    content: |
+      Here's how to run the Monitor Hub pipeline in a Fabric notebook:
+    code:
+      language: python
+      filename: Monitor_Hub_Analysis.ipynb
+      content: |
+        # Cell 1: Configuration (from previous step)
+        # ... configuration code ...
+        
+        # Cell 2: Import and run pipeline
+        import importlib
+        from usf_fabric_monitoring.core import pipeline
+        importlib.reload(pipeline)  # Pick up code changes
+        
+        # Run the pipeline
+        hub = pipeline.MonitorHubPipeline(
+            days=7,
+            output_directory=EXPORT_DIR
+        )
+        results = hub.run()
+        
+        print(f"Activities extracted: {results['total_activities']:,}")
+        print(f"Duration: {results['duration_seconds']:.1f} seconds")
+        
+        # Cell 3: View results
+        import pandas as pd
+        from pathlib import Path
+        
+        parquet_files = list(Path(EXPORT_DIR, "parquet").glob("activities_*.parquet"))
+        if parquet_files:
+            df = pd.read_parquet(parquet_files[0])
+            display(df.head())
+    tips:
+      - Use importlib.reload() to pick up package updates
+      - Results are saved to the Lakehouse automatically
+
+  - id: convert-to-delta
+    title: Convert to Delta Tables
+    type: code
+    content: |
+      After building the star schema, convert Parquet files to Delta tables for SQL access:
+    code:
+      language: python
+      filename: Convert_to_Delta.ipynb
+      content: |
+        # Cell: Convert star schema to Delta tables
+        from pyspark.sql import SparkSession
+        spark = SparkSession.builder.getOrCreate()
+        
+        SCHEMA_DIR = "/lakehouse/default/Files/exports/star_schema"
+        
+        # List of tables to convert
+        tables = [
+            "dim_date", "dim_time", "dim_workspace", "dim_item",
+            "dim_user", "dim_activity_type", "dim_status",
+            "fact_activity", "fact_daily_metrics"
+        ]
+        
+        for table_name in tables:
+            parquet_path = f"{SCHEMA_DIR}/{table_name}.parquet"
+            
+            # Read parquet
+            df = spark.read.parquet(parquet_path)
+            
+            # Write as Delta table
+            df.write.mode("overwrite").format("delta").saveAsTable(table_name)
+            
+            print(f"✅ Created Delta table: {table_name} ({df.count():,} rows)")
+        
+        # Verify tables are accessible
+        spark.sql("SHOW TABLES").show()
+    expected_output: |
+      ✅ Created Delta table: dim_date (28 rows)
+      ✅ Created Delta table: dim_time (96 rows)
+      ✅ Created Delta table: dim_workspace (512 rows)
+      ...
+      ✅ Created Delta table: fact_activity (1,286,374 rows)
+    tips:
+      - Delta tables appear in the Tables section of your Lakehouse
+      - They're accessible via SQL endpoint for Power BI
+      - mode("overwrite") replaces existing tables
+
+  - id: scheduling
+    title: Scheduling Notebooks
+    type: info
+    content: |
+      You can schedule notebooks to run automatically in Fabric.
+      
+      **To Schedule a Notebook:**
+      
+      1. Open your notebook in Fabric
+      2. Click **Schedule** in the toolbar
+      3. Configure the schedule:
+         - Frequency: Daily, Weekly, etc.
+         - Time: Choose when to run
+         - Timeout: Set maximum run duration
+      4. Click **Apply**
+      
+      **Recommended Schedule:**
+      
+      | Notebook | Frequency | Time | Notes |
+      |----------|-----------|------|-------|
+      | Monitor Hub | Daily | 6:00 AM | Capture yesterday's activities |
+      | Star Schema | Daily | 7:00 AM | After Monitor Hub completes |
+      | Access Enforcement | Weekly | Monday 8:00 AM | Weekly compliance check |
+      
+      **Monitoring Runs:**
+      
+      - View run history in the **Monitoring Hub** of Fabric
+      - Failed runs send notifications to workspace admins
+      - Set up alerts for continuous monitoring
+    tips:
+      - Stagger schedules to avoid resource contention
+      - Monitor Hub should always run before Star Schema
+
+  - id: troubleshooting
+    title: Fabric-Specific Troubleshooting
+    type: info
+    content: |
+      **"No matching distribution found for usf_fabric_monitoring"**
+      - Remove `%pip install usf_fabric_monitoring` from notebook
+      - The package comes from the Environment, not PyPI
+      
+      **"ModuleNotFoundError: No module named 'usf_fabric_monitoring'"**
+      - Environment not attached to notebook
+      - Environment not published after adding .whl
+      - Package path not in sys.path
+      
+      **Blobfuse/mount errors**
+      - Some Fabric operations have path limitations
+      - Use Spark for reading/writing instead of pandas when seeing mount errors
+      
+      **Slow notebook startup**
+      - First run after environment change is slow
+      - Subsequent runs are faster due to caching
+      
+      **Permission errors reading Lakehouse**
+      - Ensure notebook has access to the Lakehouse
+      - Check workspace role permissions
+    tips:
+      - Always check that the Environment is attached
+      - Use `print(sys.path)` to verify package paths
+
+  - id: next-steps
+    title: What's Next?
+    type: info
+    content: |
+      🎉 **You've completed Fabric Deployment!**
+      
+      **Key takeaways:**
+      - Package your code as a .whl for version control
+      - Use Fabric Environments for dependency management
+      - Delta tables enable SQL and Power BI access
+      - Schedule notebooks for automated monitoring
+      
+      **Production Checklist:**
+      
+      - [ ] Package built and uploaded to Environment
+      - [ ] Environment published with all dependencies
+      - [ ] Lakehouse created with folder structure
+      - [ ] Secrets configured (Key Vault for production)
+      - [ ] Notebooks imported and attached to Environment
+      - [ ] Delta tables created in Lakehouse
+      - [ ] Schedules configured for automation
+      - [ ] Alerts set up for failure notifications
+      
+      **Next Steps:**
+      
+      1. **Build Power BI Dashboard**
+         - Connect to Lakehouse SQL endpoint
+         - Use star schema tables
+      
+      2. **Set up Alerting**
+         - See ENHANCEMENTS.md for alerting options
+         - Consider Teams webhooks or Azure Monitor

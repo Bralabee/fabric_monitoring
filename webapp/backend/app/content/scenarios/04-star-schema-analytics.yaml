@@ -1,0 +1,435 @@
+# Star Schema Analytics Scenario
+# Based on FABRIC_DEPLOYMENT.md and star_schema_builder.py functionality
+
+id: star-schema-analytics
+title: Star Schema Analytics
+description: Transform Monitor Hub activity data into a Kimball-style dimensional model for Power BI dashboards and SQL analytics. Build 7 dimension tables and 2 fact tables for comprehensive analytics.
+difficulty: advanced
+estimated_duration_minutes: 35
+category: analytics
+order: 4
+
+prerequisites:
+  - Completed "Monitor Hub Analysis" scenario
+  - Activities parquet files in exports/monitor_hub_analysis/parquet/
+  - Understanding of dimensional modeling concepts (helpful but not required)
+
+learning_outcomes:
+  - Build a complete star schema from Monitor Hub data
+  - Understand dimension and fact table structures
+  - Deploy star schema to Microsoft Fabric Lakehouses
+  - Create Power BI semantic models from star schema tables
+
+tags:
+  - analytics
+  - star-schema
+  - dimensional-modeling
+  - power-bi
+  - delta-lake
+  - lakehouse
+
+related_scenarios:
+  - monitor-hub-analysis
+  - fabric-deployment
+  - getting-started
+
+steps:
+  - id: overview
+    title: Understanding the Star Schema
+    type: info
+    content: |
+      The Star Schema Builder transforms raw Monitor Hub activity data into a proper 
+      dimensional model following the Kimball methodology.
+      
+      **Why Star Schema?**
+      - Optimized for analytical queries
+      - Easy to understand and maintain
+      - Perfect for Power BI semantic models
+      - Supports incremental loading
+      
+      **Schema Structure:**
+      
+      ```
+                        ┌─────────────┐
+                        │  dim_date   │
+                        └──────┬──────┘
+                               │
+      ┌─────────────┐   ┌──────┴──────┐   ┌─────────────┐
+      │ dim_workspace│───│fact_activity│───│  dim_user   │
+      └─────────────┘   └──────┬──────┘   └─────────────┘
+                               │
+                        ┌──────┴──────┐
+                        │  dim_item   │
+                        └─────────────┘
+      ```
+      
+      **Tables Generated:**
+      - 7 Dimension tables: `dim_date`, `dim_time`, `dim_workspace`, `dim_item`, `dim_user`, `dim_activity_type`, `dim_status`
+      - 2 Fact tables: `fact_activity`, `fact_daily_metrics`
+    tips:
+      - Star schemas are the foundation of most BI solutions
+      - Each dimension provides a way to filter and group facts
+
+  - id: schema-details
+    title: Understanding the Tables
+    type: info
+    content: |
+      **Dimension Tables:**
+      
+      | Table | Purpose | Key Columns |
+      |-------|---------|-------------|
+      | `dim_date` | Calendar attributes | date_sk, full_date, day_of_week, month_name, quarter |
+      | `dim_time` | Time-of-day attributes | time_sk, hour_24, time_period (Morning, Afternoon, etc.) |
+      | `dim_workspace` | Workspace metadata | workspace_sk, workspace_name, capacity_id, platform |
+      | `dim_item` | Item (artifact) details | item_sk, item_name, item_type, is_fabric_native |
+      | `dim_user` | User identities | user_sk, user_id, user_name, domain |
+      | `dim_activity_type` | Activity classifications | activity_type_sk, activity_type, category |
+      | `dim_status` | Success/failure states | status_sk, status_code, status_description |
+      
+      **Fact Tables:**
+      
+      | Table | Purpose | Grain |
+      |-------|---------|-------|
+      | `fact_activity` | Individual activities | One row per activity event |
+      | `fact_daily_metrics` | Pre-aggregated metrics | One row per workspace/day |
+      
+      **Important Column Patterns:**
+      - `*_sk` columns are surrogate keys (integers)
+      - Use `record_count` sum for counting (not `activity_id` count!)
+      - `dim_status.status_code` values: "Succeeded", "Failed", "Unknown"
+    tips:
+      - Pre-aggregated fact_daily_metrics is great for dashboard performance
+      - Platform column in dim_workspace distinguishes Fabric vs Power BI items
+
+  - id: quick-start-build
+    title: Build Star Schema
+    type: command
+    content: |
+      Let's build the star schema from your Monitor Hub data. Make sure you've run 
+      `make monitor-hub` first to have activity data available.
+    code:
+      language: bash
+      content: |
+        # Ensure environment is activated
+        conda activate fabric-monitoring
+        
+        # Build star schema (incremental mode)
+        make star-schema
+    expected_output: |
+      Building Star Schema
+      ====================
+      Input: exports/monitor_hub_analysis/parquet
+      Output: exports/star_schema
+      Mode: incremental
+      
+      Loading activities... 1,286,374 records
+      Loading workspace lookup... 512 workspaces
+      
+      Building dimensions...
+      - dim_date: 28 records
+      - dim_time: 96 records
+      - dim_workspace: 512 records
+      - dim_item: 15,234 records
+      - dim_user: 1,506 records
+      - dim_activity_type: 46 records
+      - dim_status: 3 records
+      
+      Building facts...
+      - fact_activity: 1,286,374 records
+      - fact_daily_metrics: 14,336 records
+      
+      ✅ Star schema built successfully in 45.2 seconds
+      Output: exports/star_schema/
+    duration_minutes: 5
+    tips:
+      - Incremental mode only processes new data since last run
+      - Use `FULL_REFRESH=1` to rebuild from scratch
+
+  - id: full-refresh-build
+    title: Full Refresh Build
+    type: command
+    content: |
+      If you need to completely rebuild the star schema (e.g., after data corrections):
+    code:
+      language: bash
+      content: |
+        # Full refresh - rebuild everything
+        make star-schema FULL_REFRESH=1
+        
+        # With custom output directory
+        make star-schema FULL_REFRESH=1 OUTPUT_DIR=exports/star_schema_v2
+    tips:
+      - Full refresh takes longer but ensures clean data
+      - Delete exports/star_schema/ manually if you see duplicate data issues
+    warnings:
+      - Full refresh will overwrite existing star schema files
+
+  - id: output-structure
+    title: Understanding the Output
+    type: info
+    content: |
+      After building, you'll find these files in `exports/star_schema/`:
+      
+      ```
+      exports/star_schema/
+      ├── dim_date.parquet
+      ├── dim_time.parquet
+      ├── dim_workspace.parquet
+      ├── dim_item.parquet
+      ├── dim_user.parquet
+      ├── dim_activity_type.parquet
+      ├── dim_status.parquet
+      ├── fact_activity.parquet
+      ├── fact_daily_metrics.parquet
+      ├── _metadata/
+      │   ├── high_water_mark.json    # Last processed timestamp
+      │   └── schema_version.json     # Schema version info
+      └── ddl/
+          └── delta_tables.sql        # SQL statements for Lakehouse
+      ```
+      
+      **Parquet File Compatibility:**
+      - Files use microsecond timestamp precision (not nanosecond)
+      - Surrogate keys are `Int64` type (nullable integer)
+      - Ready for direct import to Fabric Delta tables
+    tips:
+      - The _metadata folder tracks incremental loading state
+      - DDL folder contains ready-to-use SQL for Fabric
+
+  - id: view-ddl
+    title: View DDL Statements
+    type: command
+    content: |
+      You can view the DDL statements needed to create Delta tables in Fabric:
+    code:
+      language: bash
+      content: |
+        # Print DDL statements to terminal
+        make star-schema-ddl
+        
+        # Or view the file directly
+        cat exports/star_schema/ddl/delta_tables.sql
+    expected_output: |
+      -- Star Schema DDL for Microsoft Fabric Lakehouse
+      
+      CREATE TABLE IF NOT EXISTS dim_date (
+        date_sk BIGINT,
+        full_date DATE,
+        day_of_week STRING,
+        day_of_week_number INT,
+        month_name STRING,
+        month_number INT,
+        quarter INT,
+        year INT,
+        is_weekend BOOLEAN
+      );
+      
+      CREATE TABLE IF NOT EXISTS fact_activity (
+        activity_sk BIGINT,
+        date_sk BIGINT,
+        time_sk BIGINT,
+        workspace_sk BIGINT,
+        item_sk BIGINT,
+        user_sk BIGINT,
+        activity_type_sk BIGINT,
+        status_sk BIGINT,
+        duration_seconds DOUBLE,
+        record_count INT
+      );
+      -- ... more tables
+
+  - id: analyze-with-python
+    title: Analyze Star Schema with Python
+    type: code
+    content: |
+      You can analyze the star schema locally using Python:
+    code:
+      language: python
+      filename: analyze_star_schema.py
+      content: |
+        import pandas as pd
+        from pathlib import Path
+        
+        # Load star schema tables
+        schema_dir = Path("exports/star_schema")
+        
+        fact = pd.read_parquet(schema_dir / "fact_activity.parquet")
+        dim_workspace = pd.read_parquet(schema_dir / "dim_workspace.parquet")
+        dim_status = pd.read_parquet(schema_dir / "dim_status.parquet")
+        dim_date = pd.read_parquet(schema_dir / "dim_date.parquet")
+        
+        print(f"Fact records: {len(fact):,}")
+        
+        # Join fact with dimensions for analysis
+        # ⚠️ IMPORTANT: Use record_count sum, NOT row count
+        
+        # Activity by workspace (CORRECT way)
+        workspace_stats = (
+            fact
+            .merge(dim_workspace, on="workspace_sk")
+            .groupby("workspace_name")
+            .agg(activity_count=("record_count", "sum"))
+            .sort_values("activity_count", ascending=False)
+            .head(10)
+        )
+        print("\nTop 10 Workspaces by Activity:")
+        print(workspace_stats)
+        
+        # Failure rate by day
+        daily_failures = (
+            fact
+            .merge(dim_status, on="status_sk")
+            .merge(dim_date, on="date_sk")
+            .groupby(["full_date", "status_code"])
+            .agg(count=("record_count", "sum"))
+            .unstack(fill_value=0)
+        )
+        print("\nDaily Activity by Status:")
+        print(daily_failures)
+    tips:
+      - Always use record_count sum for counting - activity_id is NULL for 99% of records
+      - Join fact tables with dimensions using surrogate keys (*_sk)
+
+  - id: fabric-notebook-usage
+    title: Using Star Schema in Fabric Notebooks
+    type: code
+    content: |
+      To use the star schema builder directly in a Fabric notebook:
+    code:
+      language: python
+      filename: Fabric_Star_Schema_Builder.ipynb
+      content: |
+        # Cell 1: Setup (run once)
+        import sys
+        sys.path.insert(0, "/lakehouse/default/Files/usf_fabric_monitoring/src")
+        
+        import importlib
+        import usf_fabric_monitoring.core.star_schema_builder as ssb_module
+        importlib.reload(ssb_module)  # Pick up any code changes
+        
+        # Cell 2: Build star schema
+        result = ssb_module.build_star_schema_from_pipeline_output(
+            pipeline_output_dir='/lakehouse/default/Files/exports/monitor_hub_analysis',
+            output_directory='/lakehouse/default/Files/exports/star_schema',
+            incremental=False  # Use False to prevent duplicate accumulation
+        )
+        
+        print(f"Build completed in {result['duration_seconds']:.2f}s")
+        print(f"Dimensions built: {len(result['dimensions_built'])}")
+        print(f"Facts built: {len(result['facts_built'])}")
+        
+        # Cell 3: Convert to Delta tables
+        from pyspark.sql import SparkSession
+        spark = SparkSession.builder.getOrCreate()
+        
+        schema_dir = "/lakehouse/default/Files/exports/star_schema"
+        
+        for table_name in ["dim_date", "dim_time", "dim_workspace", "dim_item", 
+                          "dim_user", "dim_activity_type", "dim_status",
+                          "fact_activity", "fact_daily_metrics"]:
+            df = spark.read.parquet(f"{schema_dir}/{table_name}.parquet")
+            df.write.mode("overwrite").format("delta").saveAsTable(table_name)
+            print(f"Created Delta table: {table_name}")
+    tips:
+      - Use importlib.reload() to pick up code changes without restarting
+      - Set incremental=False for cleaner rebuilds in notebooks
+
+  - id: power-bi-integration
+    title: Building Power BI Reports
+    type: info
+    content: |
+      Once your star schema is deployed as Delta tables in Fabric, you can:
+      
+      **Option 1: Direct Lake Mode (Recommended)**
+      1. Create a new semantic model in Fabric
+      2. Connect to the Lakehouse SQL endpoint
+      3. Import the star schema tables
+      4. Define relationships using surrogate keys
+      5. Create measures for KPIs
+      
+      **Option 2: Import Mode**
+      1. Open Power BI Desktop
+      2. Connect to Fabric Lakehouse
+      3. Import all star schema tables
+      4. Create relationships and measures
+      
+      **Suggested Measures:**
+      ```dax
+      // Total Activities
+      Total Activities = SUM(fact_activity[record_count])
+      
+      // Success Rate
+      Success Rate = 
+        DIVIDE(
+          CALCULATE(SUM(fact_activity[record_count]), 
+                   dim_status[status_code] = "Succeeded"),
+          SUM(fact_activity[record_count])
+        )
+      
+      // Daily Average
+      Daily Avg Activities = 
+        AVERAGEX(VALUES(dim_date[full_date]), 
+                 CALCULATE(SUM(fact_activity[record_count])))
+      ```
+      
+      **Recommended Visualizations:**
+      - Activity trend over time (line chart)
+      - Failure rate by workspace (bar chart)
+      - Activity heatmap by hour and day
+      - Top users by activity volume
+    tips:
+      - Direct Lake mode provides real-time data without import
+      - Use pre-aggregated fact_daily_metrics for dashboard cards
+
+  - id: troubleshooting
+    title: Troubleshooting Star Schema Issues
+    type: info
+    content: |
+      **"Illegal Parquet type: INT64 (TIMESTAMP(NANOS,true))"**
+      - Fixed in v0.3.9 - timestamps now use microsecond precision
+      - If still seeing this, rebuild with `make star-schema FULL_REFRESH=1`
+      
+      **Direct Lake relationship errors (data type mismatch)**
+      - Fixed in v0.3.10 - surrogate keys are now `Int64` type
+      - Ensure both fact and dimension use matching types
+      
+      **Activities showing as "Unknown" type**
+      - Activity type not in dimension builder's type list
+      - Job History types were added in v0.3.8
+      - Check `ActivityTypeDimensionBuilder.ACTIVITY_TYPES` list
+      
+      **Duplicate records in fact table**
+      - Use `incremental=False` or delete exports/star_schema before rebuild
+      - Incremental mode can accumulate duplicates if run multiple times
+      
+      **Missing workspace names**
+      - Star schema enriches from workspaces parquet
+      - Ensure `exports/monitor_hub_analysis/parquet/workspaces_*.parquet` exists
+    tips:
+      - When in doubt, delete exports/star_schema/ and rebuild from scratch
+      - Check CHANGELOG.md for version-specific fixes
+
+  - id: next-steps
+    title: What's Next?
+    type: info
+    content: |
+      🎉 **You've completed Star Schema Analytics!**
+      
+      **Key takeaways:**
+      - Star schema enables efficient analytical queries
+      - Use `record_count` sum for counting, not row counts
+      - Direct Lake mode provides real-time dashboards
+      - Incremental loading keeps data fresh
+      
+      **Recommended next steps:**
+      
+      1. **Deploy to Fabric** - Run everything in Fabric notebooks
+         - Guide: "Fabric Deployment"
+      
+      2. **Build Power BI Dashboard** - Visualize your metrics
+         - Connect to Lakehouse SQL endpoint
+         - Use the star schema tables
+      
+      3. **Schedule Regular Updates** - Keep data fresh
+         - Run Monitor Hub daily
+         - Run Star Schema after each extraction

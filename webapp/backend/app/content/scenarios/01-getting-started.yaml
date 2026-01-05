@@ -1,0 +1,319 @@
+# Getting Started Scenario
+# Based on actual project requirements from README.md and WIKI.md
+
+id: getting-started
+title: Getting Started with Fabric Monitoring
+description: Learn how to install, configure, and set up the USF Fabric Monitoring system from scratch. This guide covers prerequisites, environment setup, and your first successful run.
+difficulty: beginner
+estimated_duration_minutes: 25
+category: getting-started
+order: 1
+
+prerequisites: []
+
+learning_outcomes:
+  - Understand the system's purpose and architecture
+  - Install and configure the conda environment
+  - Set up Azure credentials for authentication
+  - Verify the installation with a smoke test
+
+tags:
+  - installation
+  - setup
+  - prerequisites
+  - conda
+  - environment
+  - credentials
+
+related_scenarios:
+  - monitor-hub-analysis
+  - workspace-access-enforcement
+
+steps:
+  - id: overview
+    title: What is USF Fabric Monitoring?
+    type: info
+    content: |
+      The **USF Fabric Monitoring System** is a comprehensive Python-based solution for monitoring, 
+      analyzing, and governing Microsoft Fabric workspaces.
+      
+      **Key Capabilities:**
+      
+      - **Monitor Hub Analysis**: Extract up to 28 days of activity data with Smart Merge technology
+      - **Workspace Access Enforcement**: Ensure security groups maintain correct permissions
+      - **Star Schema Analytics**: Build dimensional models for Power BI dashboards
+      - **Lineage Extraction**: Track data sources for Mirrored Databases
+      
+      The system is designed as a **deployable Python package** that can run locally or within 
+      Microsoft Fabric Environments (notebooks).
+    tips:
+      - This guide assumes you're starting fresh with no prior setup
+      - All commands will be run from your terminal
+
+  - id: prerequisites-check
+    title: Check Prerequisites
+    type: checkpoint
+    content: |
+      Before proceeding, ensure you have the following installed on your system:
+      
+      **Required:**
+      - Python 3.11 or higher
+      - Conda (Miniconda or Anaconda)
+      - Git
+      
+      **Azure Requirements:**
+      - An Azure Service Principal with Fabric Admin permissions
+      - Access to the Power BI Activity Events API
+      
+      Let's verify your prerequisites:
+    code:
+      language: bash
+      content: |
+        # Check Python version (should be 3.11+)
+        python --version
+        
+        # Check Conda is installed
+        conda --version
+        
+        # Check Git is installed
+        git --version
+    expected_output: |
+      Python 3.11.x
+      conda 24.x.x
+      git version 2.x.x
+    checkpoint_question: Do you have Python 3.11+, Conda, and Git installed?
+    warnings:
+      - If Python version is below 3.11, you'll need to upgrade before continuing
+
+  - id: clone-repository
+    title: Clone the Repository
+    type: command
+    content: |
+      First, navigate to your preferred projects directory and clone the repository.
+      
+      If you already have the repository, you can skip this step and navigate to the project folder.
+    code:
+      language: bash
+      content: |
+        # Navigate to your projects directory
+        cd ~/projects
+        
+        # Clone the repository
+        git clone <repository-url> usf_fabric_monitoring
+        
+        # Navigate into the project
+        cd usf_fabric_monitoring
+    tips:
+      - Replace `<repository-url>` with the actual repository URL
+      - If you downloaded the project as a ZIP, extract it and navigate to the folder instead
+
+  - id: create-environment
+    title: Create the Conda Environment
+    type: command
+    content: |
+      The project uses a Makefile to simplify environment management. Let's create the conda 
+      environment with all required dependencies.
+      
+      This will install:
+      - Python 3.11
+      - pandas, numpy, plotly for data analysis
+      - azure-identity for authentication
+      - pyarrow for Parquet file handling
+      - And many more packages defined in `environment.yml`
+    code:
+      language: bash
+      content: |
+        # Create the conda environment
+        make create
+    expected_output: |
+      Creating conda environment: fabric-monitoring
+      ✅ Environment fabric-monitoring created successfully!
+      Activate with: conda activate fabric-monitoring
+    duration_minutes: 5
+    tips:
+      - This may take 3-5 minutes depending on your internet connection
+      - If the environment already exists, you'll see a message suggesting to use `make update` instead
+
+  - id: activate-environment
+    title: Activate the Environment
+    type: command
+    content: |
+      After creating the environment, you need to activate it. This ensures all commands 
+      use the correct Python version and packages.
+      
+      **CRITICAL**: Always activate this environment before running any project commands.
+    code:
+      language: bash
+      content: |
+        # Activate the environment
+        conda activate fabric-monitoring
+        
+        # Verify you're in the correct environment
+        conda env list
+    expected_output: |
+      # conda environments:
+      #
+      base                     /home/user/miniconda3
+      fabric-monitoring     *  /home/user/miniconda3/envs/fabric-monitoring
+    tips:
+      - The asterisk (*) indicates the active environment
+      - Your terminal prompt may also change to show `(fabric-monitoring)`
+    warnings:
+      - Running commands without activating the environment will cause import errors
+
+  - id: install-package
+    title: Install the Package (Editable Mode)
+    type: command
+    content: |
+      Install the project package in editable mode. This allows you to use the CLI commands 
+      (`usf-monitor-hub`, `usf-enforce-access`, etc.) and makes any code changes immediately available.
+    code:
+      language: bash
+      content: |
+        # Install package in editable mode
+        make install
+    expected_output: |
+      Installing usf_fabric_monitoring...
+      Successfully installed usf_fabric_monitoring-0.3.16
+    tips:
+      - Editable mode (`pip install -e .`) means you don't need to reinstall after code changes
+
+  - id: configure-credentials
+    title: Configure Azure Credentials
+    type: config
+    content: |
+      The system uses Azure Service Principal credentials to authenticate with Microsoft Fabric 
+      and Power BI APIs. You need to create a `.env` file with your credentials.
+      
+      **Step 1**: Copy the template file
+      **Step 2**: Edit with your actual credentials
+      
+      Your Service Principal needs:
+      - **Fabric Administrator** role (for tenant-wide monitoring)
+      - Access to the **Power BI Activity Events API**
+    code:
+      language: bash
+      content: |
+        # Copy the template
+        cp .env.template .env
+        
+        # Edit with your preferred editor
+        nano .env   # or: code .env, vim .env
+    tips:
+      - Never commit your .env file to version control (it's in .gitignore)
+      - You can also use Azure CLI login or Managed Identity as fallback options
+
+  - id: env-file-contents
+    title: Understanding the .env File
+    type: info
+    content: |
+      Your `.env` file should contain these essential variables:
+      
+      ```
+      # Required: Azure Service Principal Credentials
+      AZURE_TENANT_ID=your-tenant-id-here
+      AZURE_CLIENT_ID=your-client-id-here
+      AZURE_CLIENT_SECRET=your-client-secret-here
+      
+      # Optional: Customize behavior
+      MAX_HISTORICAL_DAYS=28
+      DEFAULT_ANALYSIS_DAYS=7
+      EXPORT_DIRECTORY=exports/monitor_hub_analysis
+      ```
+      
+      **Where to find these values:**
+      
+      1. Go to **Azure Portal** → **Azure Active Directory** → **App Registrations**
+      2. Find or create your Service Principal
+      3. Copy the **Application (client) ID** → `AZURE_CLIENT_ID`
+      4. Copy the **Directory (tenant) ID** → `AZURE_TENANT_ID`
+      5. Go to **Certificates & secrets** → Create a new secret → `AZURE_CLIENT_SECRET`
+    warnings:
+      - Keep your client secret secure - never share it or commit it to Git
+      - Secrets expire - note the expiration date and rotate before it expires
+
+  - id: verify-setup
+    title: Verify Your Setup
+    type: command
+    content: |
+      Let's run a quick test to verify everything is configured correctly.
+      
+      This validates:
+      - Configuration files are present and valid
+      - Package imports work correctly
+      - Environment variables are set
+    code:
+      language: bash
+      content: |
+        # Validate configuration files
+        make validate-config
+        
+        # Run smoke tests (quick import tests)
+        make test-smoke
+    expected_output: |
+      Validating configuration files...
+      ✅ All configuration files valid
+      
+      Running smoke tests...
+      test_imports.py::test_core_imports PASSED
+      test_imports.py::test_cli_imports PASSED
+    tips:
+      - If validation fails, check that config/*.json files exist
+      - If smoke tests fail, ensure the conda environment is activated
+
+  - id: check-environment-status
+    title: Check Environment Status
+    type: command
+    content: |
+      You can always check the status of your environment using the Makefile:
+    code:
+      language: bash
+      content: |
+        # Show environment status
+        make status
+    expected_output: |
+      Environment Status: fabric-monitoring
+      ----------------------------------------
+      ✅ Environment exists
+      
+      Python version:
+      Python 3.11.x
+      
+      Installed packages:
+      Package                  Version
+      ----------------------  ---------
+      usf-fabric-monitoring    0.3.16
+      pandas                   2.x.x
+      azure-identity           1.x.x
+
+  - id: next-steps
+    title: What's Next?
+    type: info
+    content: |
+      🎉 **Congratulations!** You've successfully set up the USF Fabric Monitoring system.
+      
+      **Recommended next steps:**
+      
+      1. **Run Monitor Hub Analysis** - Extract activity data from your Fabric tenant
+         - Guide: "Monitor Hub Analysis"
+         - Command: `make monitor-hub DAYS=7`
+      
+      2. **Enforce Workspace Access** - Ensure security compliance
+         - Guide: "Workspace Access Enforcement"
+         - Command: `make enforce-access MODE=assess`
+      
+      3. **Build Star Schema** - Create dimensional models for analytics
+         - Guide: "Star Schema Analytics"
+         - Command: `make star-schema`
+      
+      **Quick Reference - Available Commands:**
+      ```bash
+      make help           # Show all available commands
+      make monitor-hub    # Run Monitor Hub extraction
+      make enforce-access # Workspace access enforcement
+      make star-schema    # Build star schema
+      make test           # Run tests
+      ```
+    tips:
+      - Run `make help` anytime to see all available commands
+      - Keep your conda environment activated when working with the project

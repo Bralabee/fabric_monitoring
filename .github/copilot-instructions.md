@@ -172,3 +172,47 @@ result = ssb_module.build_star_schema_from_pipeline_output(
 3. **Missing activity types**: `ActivityTypeDimensionBuilder.ACTIVITY_TYPES` is hardcoded - add new types there
 4. **Failures showing as Unknown**: Check if activity type exists in dimension; job history types added in v0.3.8
 5. **Wrong counts**: Use `('record_count', 'sum')` not `('activity_id', 'count')` - 99% of activity_ids are NULL
+
+## Interactive Web Guide (`webapp/`)
+
+The project includes an interactive web application for learning and utilizing the monitoring toolkit.
+
+### Architecture
+- **Backend**: FastAPI (Python) - `webapp/backend/`
+  - REST API for scenarios, search, and progress tracking
+  - Content stored in YAML files under `app/content/scenarios/`
+  - Models in `app/models.py` (Pydantic v2)
+- **Frontend**: React + TypeScript + Tailwind CSS - `webapp/frontend/`
+  - shadcn/ui component patterns
+  - React Query for data fetching
+  - Progress tracking with local state
+
+### Quick Start
+```bash
+cd webapp
+make install    # Install backend + frontend dependencies
+make dev        # Start both servers (backend: 8001, frontend: 5173)
+```
+
+### Development
+```bash
+# Backend only
+cd webapp/backend && pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8001
+
+# Frontend only
+cd webapp/frontend && npm install && npm run dev
+
+# Tests
+cd webapp/backend && pytest tests/ -v
+cd webapp/frontend && npm run build  # Type checking
+```
+
+### Content Structure
+Scenario YAML files in `webapp/backend/app/content/scenarios/`:
+- `01-getting-started.yaml` - Environment setup, credentials
+- `02-monitor-hub-analysis.yaml` - Activity extraction, Smart Merge
+- `03-workspace-access-enforcement.yaml` - Security compliance
+- `04-star-schema-analytics.yaml` - Dimensional modeling
+- `05-fabric-deployment.yaml` - Package build, Fabric Environment
+- `06-troubleshooting.yaml` - Common issues and solutions

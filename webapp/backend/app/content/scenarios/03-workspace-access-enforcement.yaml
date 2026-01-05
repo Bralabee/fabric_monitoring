@@ -1,0 +1,399 @@
+# Workspace Access Enforcement Scenario
+# Based on WORKSPACE_ACCESS_ENFORCEMENT.md and actual project functionality
+
+id: workspace-access-enforcement
+title: Workspace Access Enforcement
+description: Learn how to audit and enforce security group access to Microsoft Fabric workspaces. Ensure compliance by verifying that required principals maintain correct roles across all workspaces.
+difficulty: intermediate
+estimated_duration_minutes: 25
+category: governance
+order: 3
+
+prerequisites:
+  - Completed "Getting Started" scenario
+  - Azure credentials configured in .env
+  - Service Principal with Fabric Admin permissions
+  - Configuration files in config/ directory
+
+learning_outcomes:
+  - Understand the difference between assess and enforce modes
+  - Audit workspace access compliance across your tenant
+  - Configure target security groups and suppression lists
+  - Safely enforce access changes with approval workflows
+
+tags:
+  - governance
+  - security
+  - compliance
+  - access-control
+  - workspaces
+  - enforcement
+
+related_scenarios:
+  - getting-started
+  - monitor-hub-analysis
+  - troubleshooting
+
+steps:
+  - id: overview
+    title: Understanding Workspace Access Enforcement
+    type: info
+    content: |
+      The Workspace Access Enforcement tool ensures that required security groups maintain 
+      correct permissions across all Microsoft Fabric workspaces.
+      
+      **Use Cases:**
+      - Ensure "Fabric Admins" group has Admin role on all workspaces
+      - Verify compliance after workspace creation
+      - Detect and remediate access drift
+      - Generate compliance reports for auditing
+      
+      **Two Modes:**
+      
+      | Mode | Description | Makes Changes? |
+      |------|-------------|----------------|
+      | `assess` | Dry-run audit of current permissions | No |
+      | `enforce` | Apply changes to fix permission gaps | Yes (with confirmation) |
+      
+      **Safety Features:**
+      - Explicit assess/enforce checkpoint prevents accidental changes
+      - Suppression list to exclude sandbox workspaces
+      - Pre-enforcement metrics show blast radius
+      - API fallback from Fabric to Power BI endpoints
+    tips:
+      - Always run `assess` mode first to understand the scope of changes
+      - Use `enforce` only after reviewing the assessment results
+
+  - id: configuration-overview
+    title: Understanding Configuration Files
+    type: info
+    content: |
+      The enforcement tool uses two configuration files in the `config/` directory:
+      
+      **1. `workspace_access_targets.json`** - Defines required principals
+      ```json
+      {
+        "targets": [
+          {
+            "principal_id": "00000000-0000-0000-0000-000000000000",
+            "principal_type": "Group",
+            "display_name": "Fabric Administrators",
+            "target_role": "Admin"
+          },
+          {
+            "principal_id": "11111111-1111-1111-1111-111111111111",
+            "principal_type": "Group", 
+            "display_name": "Data Engineers",
+            "target_role": "Contributor"
+          }
+        ]
+      }
+      ```
+      
+      **2. `workspace_access_suppressions.json`** - Workspaces to skip
+      ```json
+      {
+        "suppressions": [
+          {
+            "workspace_id": "sandbox-workspace-id",
+            "reason": "Development sandbox"
+          },
+          {
+            "workspace_name": "Lab-*",
+            "reason": "Lab workspaces excluded"
+          }
+        ]
+      }
+      ```
+    tips:
+      - Use Azure AD to find group object IDs
+      - Workspace name patterns support wildcards (*)
+      - Add sandbox/lab workspaces to suppressions to reduce noise
+
+  - id: configure-targets
+    title: Configure Target Security Groups
+    type: config
+    content: |
+      Before running enforcement, configure which security groups should have access to workspaces.
+      
+      **Step 1:** Find your Azure AD Group Object IDs
+      - Go to Azure Portal → Azure Active Directory → Groups
+      - Search for your security group
+      - Copy the Object ID
+      
+      **Step 2:** Edit the targets configuration
+    code:
+      language: bash
+      content: |
+        # Open the targets configuration
+        nano config/workspace_access_targets.json
+    tips:
+      - You can have multiple targets with different roles
+      - Common roles are "Admin", "Member", "Contributor", "Viewer"
+      - The principal_type should be "Group" for security groups, "User" for individual users
+
+  - id: run-assessment
+    title: Run Access Assessment
+    type: command
+    content: |
+      Let's run an assessment to see the current state of workspace access. 
+      This is a dry-run that makes no changes.
+    code:
+      language: bash
+      content: |
+        # Ensure environment is activated
+        conda activate fabric-monitoring
+        
+        # Run assessment mode
+        make enforce-access MODE=assess CSV_SUMMARY=1
+    expected_output: |
+      Workspace Access Enforcement - Assess Mode
+      ==========================================
+      Target principals: 2
+      
+      Scanning workspaces...
+      Evaluated: 512 workspaces
+      
+      Summary:
+      --------
+      Compliant:    485 (94.7%)
+      Non-compliant: 22 (4.3%)
+      Suppressed:     5 (1.0%)
+      
+      Non-compliant workspaces:
+      - Sales-Analytics: Missing "Fabric Administrators" (Admin)
+      - HR-Reports: Missing "Fabric Administrators" (Admin)
+      ...
+      
+      Results saved to:
+      - exports/monitor_hub_analysis/workspace_access_enforcement_20250104_143022.json
+      - exports/monitor_hub_analysis/workspace_access_enforcement_20250104_143022.csv
+    duration_minutes: 3
+    tips:
+      - CSV_SUMMARY=1 generates a spreadsheet-friendly report
+      - Review the JSON output for detailed findings
+
+  - id: understanding-results
+    title: Understanding Assessment Results
+    type: info
+    content: |
+      The assessment produces a JSON file with detailed findings:
+      
+      ```json
+      {
+        "summary": {
+          "total_workspaces": 512,
+          "compliant": 485,
+          "non_compliant": 22,
+          "suppressed": 5,
+          "run_timestamp": "2025-01-04T14:30:22Z"
+        },
+        "findings": [
+          {
+            "workspace_id": "abc-123",
+            "workspace_name": "Sales-Analytics",
+            "status": "non_compliant",
+            "missing_principals": [
+              {
+                "principal_id": "xxx",
+                "display_name": "Fabric Administrators",
+                "target_role": "Admin"
+              }
+            ],
+            "action_required": "add_principal"
+          }
+        ]
+      }
+      ```
+      
+      **Status Types:**
+      - compliant - All required principals have correct roles
+      - non_compliant - Missing principals or wrong roles
+      - role_mismatch - Principal exists but has wrong role (needs manual fix)
+      - suppressed - Workspace is in suppression list
+    warnings:
+      - role_mismatch findings need manual attention - the tool won't demote roles
+
+  - id: limit-scope
+    title: Limiting Scope for Testing
+    type: command
+    content: |
+      For testing or when you want to focus on specific workspaces, you can limit the scope:
+    code:
+      language: bash
+      content: |
+        # Limit to first 10 workspaces
+        make enforce-access MODE=assess MAX_WORKSPACES=10
+        
+        # Target specific workspaces by ID or name
+        python -m usf_fabric_monitoring.scripts.enforce_workspace_access \
+          --mode assess \
+          --workspace "Sales-Analytics" \
+          --workspace "00000000-0000-0000-0000-000000000001"
+    tips:
+      - Use MAX_WORKSPACES for quick testing
+      - Workspace names are case-sensitive
+
+  - id: api-preference
+    title: API Preference Configuration
+    type: info
+    content: |
+      The tool can use either Fabric APIs or Power BI APIs for workspace operations.
+      
+      **Options:**
+      - `auto` (default) - Try Fabric API first, fall back to Power BI
+      - `fabric` - Use only Fabric API
+      - `powerbi` - Use only Power BI Admin API (more stable)
+      
+      **When to use Power BI API:**
+      - If Fabric API returns 404 errors
+      - For legacy Power BI workspaces
+      - When Fabric API is unstable
+    code:
+      language: bash
+      content: |
+        # Use Power BI API for stability
+        make enforce-access MODE=assess API_PREFERENCE=powerbi
+    tips:
+      - Power BI API is generally more stable for access management
+      - "You can set this permanently in .env: FABRIC_ENFORCER_API_PREFERENCE=powerbi"
+
+  - id: enforcement-mode
+    title: Running Enforcement Mode
+    type: command
+    content: |
+      After reviewing the assessment and confirming the findings are accurate, 
+      you can run enforcement to apply changes.
+      
+      **IMPORTANT:** This mode makes actual changes to workspace permissions!
+    code:
+      language: bash
+      content: |
+        # Review assessment one more time
+        make enforce-access MODE=assess CSV_SUMMARY=1
+        
+        # If satisfied, run enforcement with explicit confirmation
+        make enforce-access MODE=enforce CONFIRM=1
+    expected_output: |
+      Workspace Access Enforcement - Enforce Mode
+      ===========================================
+      
+      ⚠️  WARNING: This will modify workspace permissions!
+      
+      Pending changes:
+      - Add "Fabric Administrators" (Admin) to 22 workspaces
+      
+      Proceeding with enforcement...
+      
+      [1/22] Sales-Analytics: Added Fabric Administrators (Admin) ✅
+      [2/22] HR-Reports: Added Fabric Administrators (Admin) ✅
+      ...
+      
+      Enforcement complete:
+      - Successful: 22
+      - Failed: 0
+    duration_minutes: 5
+    warnings:
+      - Always run assess mode first to review changes
+      - The CONFIRM=1 flag is required to proceed
+      - Changes are logged to the audit file
+
+  - id: dry-run-enforcement
+    title: Dry Run Enforcement (Extra Safety)
+    type: command
+    content: |
+      If you want an extra safety layer, you can run enforcement in dry-run mode:
+    code:
+      language: bash
+      content: |
+        # Enforcement dry-run (simulate without applying)
+        python -m usf_fabric_monitoring.scripts.enforce_workspace_access \
+          --mode enforce \
+          --dry-run
+    tips:
+      - Dry-run shows exactly what would happen without making changes
+      - Useful for final verification before actual enforcement
+
+  - id: scheduling-guidance
+    title: Scheduling Regular Enforcement
+    type: info
+    content: |
+      For continuous compliance, run enforcement on a schedule:
+      
+      **Azure Automation / Functions:**
+      ```bash
+      # Daily assessment
+      python -m usf_fabric_monitoring.scripts.enforce_workspace_access --mode assess
+      ```
+      
+      **GitHub Actions:**
+      ```yaml
+      name: Workspace Access Audit
+      on:
+        schedule:
+          - cron: '0 6 * * *'  # Daily at 6 AM
+      jobs:
+        audit:
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v3
+            - name: Run Assessment
+              run: make enforce-access MODE=assess
+            - name: Upload Report
+              uses: actions/upload-artifact@v3
+              with:
+                name: access-report
+                path: exports/monitor_hub_analysis/workspace_access_*.json
+      ```
+      
+      **Operational Recommendations:**
+      - Run assessment daily
+      - Review results weekly
+      - Enforce after approval (not automated)
+    tips:
+      - Don't automate enforcement mode - always have human approval
+      - Keep suppression list updated as new sandbox workspaces are created
+
+  - id: troubleshooting
+    title: Troubleshooting Common Issues
+    type: info
+    content: |
+      **401 Unauthorized errors:**
+      - Service Principal lacks Fabric Admin permissions
+      - Run `make enforce-access MODE=enforce` to add SP to workspaces
+      
+      **"Bad Request" for workspace ID `000000...`:**
+      - This is "My Workspace" (Personal Workspace)
+      - Service Principals cannot access personal workspaces
+      - This is expected and can be ignored
+      
+      **Role mismatch not auto-fixed:**
+      - The tool adds missing principals but won't demote existing roles
+      - Manual intervention required for role changes
+      - This is a safety feature to prevent accidental permission reduction
+    tips:
+      - Check the JSON output for detailed error messages
+      - Use `--verbose` flag for more detailed logging
+
+  - id: next-steps
+    title: What's Next?
+    type: info
+    content: |
+      🎉 **You've completed Workspace Access Enforcement!**
+      
+      **Key takeaways:**
+      - Always run `assess` before `enforce`
+      - Use suppression lists for sandbox workspaces
+      - Schedule regular assessments for continuous compliance
+      - Review `role_mismatch` findings manually
+      
+      **Recommended next steps:**
+      
+      1. **Build Star Schema** - Analyze access patterns over time
+         - Guide: "Star Schema Analytics"
+      
+      2. **Monitor Hub Analysis** - Detect unusual access patterns
+         - Guide: "Monitor Hub Analysis"
+      
+      3. **Set up alerts** - Get notified of compliance drift
+         - See ENHANCEMENTS.md for alerting recommendations

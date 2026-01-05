@@ -1,0 +1,332 @@
+# Monitor Hub Analysis Scenario
+# Based on actual project functionality from README.md, WIKI.md, and copilot-instructions.md
+
+id: monitor-hub-analysis
+title: Monitor Hub Activity Analysis
+description: Extract and analyze Microsoft Fabric activity data using the Monitor Hub pipeline. Learn about Smart Merge technology, activity types, and generating comprehensive reports.
+difficulty: intermediate
+estimated_duration_minutes: 30
+category: monitoring
+order: 2
+
+prerequisites:
+  - Completed "Getting Started" scenario
+  - Azure credentials configured in .env
+  - Service Principal with Fabric Admin permissions
+
+learning_outcomes:
+  - Extract up to 28 days of activity data from your Fabric tenant
+  - Understand Smart Merge technology and dual API correlation
+  - Generate and interpret activity analysis reports
+  - Distinguish between Audit Log activities and Job History activities
+
+tags:
+  - monitoring
+  - activities
+  - smart-merge
+  - reports
+  - analysis
+  - parquet
+
+related_scenarios:
+  - getting-started
+  - star-schema-analytics
+  - troubleshooting
+
+steps:
+  - id: overview
+    title: Understanding Monitor Hub Analysis
+    type: info
+    content: |
+      The Monitor Hub pipeline extracts activity data from Microsoft Fabric using two complementary APIs:
+      
+      **Activity Events API** (Audit Log):
+      - High-volume audit log entries (1M+ per month)
+      - Records user actions: ReadArtifact, CreateFile, ViewReport
+      - ALL entries return `status="Succeeded"` because they're audit records
+      - 34 activity types fall in this category
+      
+      **Job History API**:
+      - Lower-volume job execution records
+      - Pipeline runs, Notebook executions, Dataflow refreshes
+      - CAN have failures with actual `failure_reason`
+      - 12 activity types can have failures
+      
+      **Smart Merge Technology** combines these sources:
+      - Matches activities by `item_id` + 5-minute timestamp tolerance
+      - Enriches audit entries with duration and failure data from Job History
+      - Achieves 100% duration data recovery for job executions
+    tips:
+      - The 28-day limit is an API constraint, not a system limitation
+      - Smart Merge stats are displayed during pipeline execution
+
+  - id: quick-start
+    title: Quick Start - Run Analysis
+    type: command
+    content: |
+      Let's run a basic Monitor Hub analysis for the last 7 days. This is the most common use case.
+      
+      The pipeline will:
+      1. Authenticate with Azure using your .env credentials
+      2. Fetch activities from Activity Events API (per day)
+      3. Fetch job details from Job History API
+      4. Perform Smart Merge to correlate and enrich data
+      5. Write results to Parquet files
+      6. Generate CSV reports
+    code:
+      language: bash
+      content: |
+        # Ensure environment is activated
+        conda activate fabric-monitoring
+        
+        # Run Monitor Hub analysis for 7 days
+        make monitor-hub DAYS=7
+    expected_output: |
+      Starting Monitor Hub Pipeline
+      ==============================
+      Analysis period: 7 days
+      Output directory: exports/monitor_hub_analysis
+      
+      Day 1/7: 2025-01-04 - Fetched 45,231 activities
+      Day 2/7: 2025-01-03 - Fetched 52,108 activities
+      ...
+      
+      Smart Merge Statistics:
+      - Activities enriched: 312,456
+      - Missing end times fixed: 12,345
+      - Duration data restored: 11,234
+      
+      Pipeline completed in 125.3 seconds
+    duration_minutes: 5
+    tips:
+      - Progress updates show real-time activity counts
+      - The first run may take longer as it builds caches
+
+  - id: understanding-output
+    title: Understanding the Output Structure
+    type: info
+    content: |
+      After running the pipeline, you'll find results in `exports/monitor_hub_analysis/`:
+      
+      ```
+      exports/monitor_hub_analysis/
+      ├── parquet/                          # ⭐ Primary output (use these)
+      │   ├── activities_20250104_143022.parquet  # 28 columns, complete data
+      │   ├── workspaces_20250104_143022.parquet  # Workspace metadata
+      │   └── jobs_20250104_143022.parquet        # Job details cache
+      ├── activities_master_20250104.csv    # Legacy CSV (19 columns, avoid)
+      ├── failure_analysis_20250104.csv     # Failed activities summary
+      ├── user_performance_20250104.csv     # User activity metrics
+      └── summary_20250104.json             # Pipeline statistics
+      ```
+      
+      **Important:** The Parquet files in the `parquet/` folder are the **source of truth**. 
+      They contain complete data with all 28 columns including Smart Merge enrichments.
+      
+      The CSV files are for quick viewing but may be incomplete.
+    warnings:
+      - Avoid using `activities_master_*.csv` for analytics - it only has 19 columns
+      - Always use the Parquet files for Star Schema building
+
+  - id: activity-types-explanation
+    title: Understanding Activity Types
+    type: info
+    content: |
+      Not all activity types behave the same way. This is crucial for interpreting results:
+      
+      **Audit Log Activities** (34 types) - Always show "Succeeded":
+      - `ReadArtifact` - User viewed an item
+      - `CreateFile` - User created a file
+      - `ViewReport` - User viewed a report
+      - `RenameFileOrDirectory` - User renamed something
+      - These record "user X did action Y" - the audit record always succeeds
+      
+      **Job History Activities** (12 types) - Can have failures:
+      - `RunArtifact` - Pipeline/Notebook execution
+      - `StartRunNotebook` - Notebook run started
+      - `Pipeline` - Data pipeline execution
+      - `UpdateArtifact` - Item update operation
+      - These are actual job executions with real success/failure states
+      
+      **Validated Failure Distribution (Dec 2025):**
+      
+      | Activity Type | Failed | Failure % |
+      |--------------|--------|-----------|
+      | ReadArtifact | 3,019 | 0.79% |
+      | RunArtifact | 2,336 | 2.47% |
+      | UpdateArtifact | 251 | 0.94% |
+      | StartRunNotebook | 115 | 1.17% |
+    tips:
+      - If you see 0 failures for ViewReport, CreateFile, etc. - that's CORRECT
+      - Focus on Job History activities for actual failure analysis
+
+  - id: customizing-analysis
+    title: Customizing Your Analysis
+    type: command
+    content: |
+      You can customize the analysis with various parameters:
+      
+      **Different time ranges:**
+    code:
+      language: bash
+      content: |
+        # Analyze last 14 days
+        make monitor-hub DAYS=14
+        
+        # Maximum allowed: 28 days (API limit)
+        make monitor-hub DAYS=28
+        
+        # Custom output directory
+        make monitor-hub DAYS=7 OUTPUT_DIR=exports/january_report
+        
+        # Member-only mode (only workspaces where SP is member)
+        make monitor-hub DAYS=7 MEMBER_ONLY=1
+    tips:
+      - Tenant-wide mode (default) scans ALL workspaces
+      - Member-only mode is faster but less comprehensive
+
+  - id: using-cli-directly
+    title: Using the CLI Directly
+    type: command
+    content: |
+      For more control, you can use the CLI entry point directly:
+    code:
+      language: bash
+      content: |
+        # Show all CLI options
+        usf-monitor-hub --help
+        
+        # Run with specific options
+        usf-monitor-hub --days 14 --output-dir exports/custom
+        
+        # Member-only mode via CLI
+        usf-monitor-hub --days 7 --member-only
+    expected_output: |
+      Usage: usf-monitor-hub [OPTIONS]
+      
+      Options:
+        --days INTEGER          Number of days to analyze (max 28)
+        --output-dir TEXT       Output directory for reports
+        --member-only           Only analyze member workspaces
+        --help                  Show this message and exit
+
+  - id: analyzing-results-pandas
+    title: Analyzing Results with Python
+    type: code
+    content: |
+      You can load and analyze the Parquet output programmatically:
+    code:
+      language: python
+      filename: analyze_activities.py
+      content: |
+        import pandas as pd
+        from pathlib import Path
+        
+        # Find latest activities file
+        parquet_dir = Path("exports/monitor_hub_analysis/parquet")
+        activities_files = sorted(parquet_dir.glob("activities_*.parquet"), reverse=True)
+        
+        if not activities_files:
+            raise FileNotFoundError("No activities parquet files found")
+        
+        # Load the most recent file
+        df = pd.read_parquet(activities_files[0])
+        print(f"Loaded {len(df):,} activities from {activities_files[0].name}")
+        
+        # Basic statistics
+        print(f"\nActivity Types: {df['activity_type'].nunique()}")
+        print(f"Unique Users: {df['user_id'].nunique()}")
+        print(f"Unique Workspaces: {df['workspace_id'].nunique()}")
+        
+        # Failure analysis (CORRECT way - use status column)
+        failures = df[df['status'] == 'Failed']
+        print(f"\nTotal Failures: {len(failures):,}")
+        print(f"Success Rate: {(1 - len(failures)/len(df)) * 100:.2f}%")
+        
+        # Top failing activity types
+        print("\nFailures by Activity Type:")
+        print(failures.groupby('activity_type').size().sort_values(ascending=False).head(10))
+    tips:
+      - Use Parquet files for analysis - they have complete data
+      - The `status` column contains "Succeeded" or "Failed"
+      - Check `failure_reason` for failed activities to understand root causes
+
+  - id: smart-merge-details
+    title: Deep Dive - Smart Merge Algorithm
+    type: info
+    content: |
+      The Smart Merge algorithm is the key innovation that makes failure tracking accurate.
+      
+      **How it works:**
+      
+      1. **Extract Activity Events** (per day, paginated)
+         - API: `/v1.0/myorg/admin/activityevents`
+         - Returns all audit log entries for the day
+      
+      2. **Extract Job History** (8-hour cache)
+         - API: `/v1/workspaces/{id}/jobs/{jobId}`
+         - Returns detailed execution data including failures
+      
+      3. **Match and Merge**
+         - Join on `item_id` using `merge_asof`
+         - 5-minute timestamp tolerance
+         - Prefer Job History data when available
+      
+      4. **Enrich**
+         - Add `duration` from Job History
+         - Update `status` with actual failure state
+         - Copy `failure_reason` from job details
+      
+      **Key Insight:** Activity Events are audit logs - they cannot "fail". 
+      Only Job History has actual execution status.
+      
+      **Validated Stats (Dec 2025):**
+      - Activities enriched: 1,416,701
+      - Missing end times fixed: 95,352
+      - Duration data restored: 90,409 records
+      - Total detailed jobs loaded: 15,952
+    tips:
+      - The 5-minute tolerance handles clock skew between APIs
+      - Job History cache reduces redundant API calls
+
+  - id: generating-reports
+    title: Regenerating Reports
+    type: command
+    content: |
+      If you've already extracted data but want to regenerate reports, you can do so 
+      without re-fetching from the API:
+    code:
+      language: bash
+      content: |
+        # Regenerate reports from existing parquet data
+        make generate-reports
+    tips:
+      - Useful if extraction was interrupted but data was saved
+      - Much faster than re-running the full pipeline
+
+  - id: next-steps
+    title: What's Next?
+    type: info
+    content: |
+      🎉 **You've completed Monitor Hub Analysis!**
+      
+      **Key takeaways:**
+      - Use Parquet files (not CSV) for complete data
+      - Audit Log activities always "succeed" - focus on Job History for failures
+      - Smart Merge enriches data with accurate duration and failure information
+      
+      **Recommended next steps:**
+      
+      1. **Build Star Schema** - Create dimensional models for Power BI
+         - Guide: "Star Schema Analytics"
+         - Command: `make star-schema`
+      
+      2. **Enforce Workspace Access** - Ensure security compliance
+         - Guide: "Workspace Access Enforcement"
+      
+      3. **Deploy to Fabric** - Run analysis in Fabric notebooks
+         - Guide: "Fabric Deployment"
+      
+      **Common follow-up questions:**
+      - "Why do some activities show 0 failures?" → See Troubleshooting guide
+      - "How do I build dashboards?" → Star Schema provides the data model

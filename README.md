@@ -44,6 +44,24 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 - **Delta Lake DDL**: Generates deployment scripts for Fabric Lakehouses
 - **CLI & Notebook Options**: Run via `usf-star-schema` command or `notebooks/Fabric_Star_Schema_Builder.ipynb`
 
+### 5. Interactive Web Guide (`webapp/`) 🆕
+A comprehensive, step-by-step interactive guide to help users learn and utilize the USF Fabric Monitoring toolkit.
+
+- **6 Scenario Guides**: Getting Started, Monitor Hub Analysis, Workspace Access Enforcement, Star Schema Analytics, Fabric Deployment, Troubleshooting
+- **Progress Tracking**: Mark steps complete and resume where you left off
+- **Full-Text Search**: Find relevant guides and commands quickly
+- **Dark Mode Support**: Comfortable reading in any lighting
+- **Modern Stack**: FastAPI backend + React/TypeScript frontend with Tailwind CSS
+
+**Quick Start:**
+```bash
+cd webapp
+make install    # Install dependencies
+make dev        # Start both backend (port 8001) and frontend (port 5173)
+```
+
+See [webapp/README.md](webapp/README.md) for detailed setup instructions.
+
 ## 📋 Prerequisites
 
 - **Python 3.11+**
@@ -172,11 +190,16 @@ usf_fabric_monitoring/
 ├── notebooks/              # Jupyter Notebooks for interactive analysis
 │   ├── Monitor_Hub_Analysis.ipynb
 │   ├── Workspace_Access_Enforcement.ipynb
-│   └── Fabric_Star_Schema_Builder.ipynb  ⭐ NEW
+│   └── Fabric_Star_Schema_Builder.ipynb
 ├── src/                    # Source code
 │   └── usf_fabric_monitoring/
 │       ├── core/           # Core logic (pipeline, star_schema_builder, etc.)
 │       └── scripts/        # Entry point scripts
+├── webapp/                 # Interactive Web Guide 🆕
+│   ├── backend/            # FastAPI Python backend
+│   │   └── app/            # API routes, models, content
+│   └── frontend/           # React/TypeScript frontend
+│       └── src/            # UI components, pages
 ├── Makefile                # Command automation
 ├── environment.yml         # Conda environment definition
 └── pyproject.toml          # Python package metadata + pip dependencies

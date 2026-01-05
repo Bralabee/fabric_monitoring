@@ -1,0 +1,528 @@
+# Troubleshooting Scenario
+# Based on WIKI.md troubleshooting section and CHANGELOG.md fixes
+
+id: troubleshooting
+title: Troubleshooting Guide
+description: Solutions for common issues when using the USF Fabric Monitoring system. Find answers to authentication errors, data discrepancies, and deployment problems.
+difficulty: beginner
+estimated_duration_minutes: 15
+category: troubleshooting
+order: 6
+
+prerequisites: []
+
+learning_outcomes:
+  - Diagnose and resolve common authentication errors
+  - Understand why certain activity types show zero failures
+  - Fix parquet and data format issues
+  - Resolve Fabric deployment problems
+
+tags:
+  - troubleshooting
+  - errors
+  - debugging
+  - faq
+  - authentication
+  - failures
+
+related_scenarios:
+  - getting-started
+  - monitor-hub-analysis
+  - fabric-deployment
+
+steps:
+  - id: overview
+    title: Troubleshooting Overview
+    type: info
+    content: |
+      This guide covers the most common issues users encounter and their solutions.
+      
+      **Categories:**
+      - Authentication & Permissions
+      - Activity Data Questions
+      - Star Schema Issues
+      - Fabric Deployment Problems
+      - Environment Setup Issues
+      
+      Use the sidebar or search to jump to specific problems.
+
+  - id: auth-401-unauthorized
+    title: 401 Unauthorized During Analysis
+    type: info
+    content: |
+      **Error:**
+      ```
+      401 Client Error: Unauthorized for url: 
+      https://api.fabric.microsoft.com/v1/workspaces/xxx/...
+      ```
+      
+      **Cause:**
+      The Service Principal can see that a workspace exists (Tenant Admin rights) but cannot 
+      see inside it (Workspace Member rights).
+      
+      **Solutions:**
+      
+      **Option 1: Ignore it** (if you only need high-level stats)
+      - The pipeline will skip inaccessible workspaces
+      - You'll still get data from accessible workspaces
+      
+      **Option 2: Add SP to workspaces**
+      ```bash
+      # Add Service Principal as Admin to all workspaces
+      make enforce-access MODE=enforce CONFIRM=1
+      ```
+      
+      **Option 3: Use tenant-wide API only**
+      - The Activity Events API works with Fabric Admin rights
+      - Member-level APIs require workspace membership
+    tips:
+      - Run access enforcement to grant the SP permissions
+      - Some workspaces may intentionally restrict access
+
+  - id: auth-bad-request-personal
+    title: Bad Request for Personal Workspaces
+    type: info
+    content: |
+      **Error:**
+      ```
+      400 Bad Request for workspace ID 00000000-0000-0000-0000-000000000000
+      ```
+      
+      **Cause:**
+      This UUID represents "My Workspace" (Personal Workspace). Service Principals 
+      cannot access personal workspaces of other users.
+      
+      **Solution:**
+      This is expected behavior and can be safely ignored. Personal workspaces are 
+      excluded from monitoring by design.
+      
+      The pipeline automatically handles this:
+      ```python
+      # Internal handling
+      if workspace_id == "00000000-0000-0000-0000-000000000000":
+          continue  # Skip personal workspace
+      ```
+    tips:
+      - Personal workspaces are always excluded
+      - This is a security feature, not a bug
+
+  - id: auth-credentials-missing
+    title: Missing Credentials Error
+    type: info
+    content: |
+      **Error:**
+      ```
+      ValueError: Missing required credential: AZURE_CLIENT_ID
+      ```
+      
+      **Cause:**
+      The `.env` file is missing or doesn't contain required variables.
+      
+      **Solution:**
+      1. Check that `.env` exists in the project root:
+         ```bash
+         ls -la .env
+         ```
+      
+      2. Verify it contains all required variables:
+         ```bash
+         cat .env | grep -E "^AZURE_"
+         ```
+      
+      3. If missing, create from template:
+         ```bash
+         cp .env.template .env
+         nano .env  # Edit with your credentials
+         ```
+      
+      **Required Variables:**
+      ```
+      AZURE_TENANT_ID=your-tenant-id
+      AZURE_CLIENT_ID=your-client-id
+      AZURE_CLIENT_SECRET=your-client-secret
+      ```
+    tips:
+      - Variables are case-sensitive
+      - No quotes needed around values
+      - Ensure no trailing whitespace
+
+  - id: data-zero-failures
+    title: Why Some Activities Show 0 Failures
+    type: info
+    content: |
+      **Question:**
+      "Why does ViewReport, CreateFile, ReadArtifact show 0 failures?"
+      
+      **Answer:**
+      This is **CORRECT behavior**, not a bug.
+      
+      **Explanation:**
+      
+      Activities come from two different APIs with different behaviors:
+      
+      **Audit Log Activities (34 types):**
+      - ReadArtifact, CreateFile, ViewReport, RenameFileOrDirectory, etc.
+      - These are audit log entries that record "user X did action Y"
+      - The audit entry itself always "succeeds" - it records the event happened
+      - They CANNOT fail by design
+      
+      **Job History Activities (12 types):**
+      - RunArtifact, Pipeline, StartRunNotebook, UpdateArtifact, etc.
+      - These are actual job executions
+      - They CAN fail with real failure_reason data
+      
+      **Activity Types That Can Fail:**
+      - ReadArtifact (reading data can fail)
+      - RunArtifact (execution can fail)
+      - UpdateArtifact (updates can fail)
+      - StartRunNotebook
+      - StopNotebookSession
+      - MountStorageByMssparkutils
+      - ViewSparkAppLog
+      - And 5 more job-related types
+    tips:
+      - Focus failure analysis on Job History activity types
+      - 99%+ success rate is normal for well-managed tenants
+
+  - id: data-activity-unknown
+    title: Activity Type Shows as Unknown
+    type: info
+    content: |
+      **Error:**
+      Activities appear with `activity_type = "Unknown"` in reports.
+      
+      **Cause:**
+      The activity type isn't in the dimension builder's hardcoded list.
+      
+      **Solution:**
+      This was fixed in v0.3.8 which added Job History activity types. To resolve:
+      
+      1. **Update to latest version:**
+         ```bash
+         git pull origin main
+         make install
+         ```
+      
+      2. **Rebuild star schema:**
+         ```bash
+         rm -rf exports/star_schema
+         make star-schema FULL_REFRESH=1
+         ```
+      
+      **If still seeing Unknown:**
+      
+      The activity type may be genuinely new. Check the source data:
+      ```python
+      import pandas as pd
+      df = pd.read_parquet("exports/monitor_hub_analysis/parquet/activities_*.parquet")
+      print(df['activity_type'].value_counts())
+      ```
+      
+      Report new activity types by opening an issue.
+    tips:
+      - v0.3.8 added 9 new activity types from Job History
+      - Unknown types are often from new Fabric features
+
+  - id: data-wrong-counts
+    title: Activity Counts Don't Match
+    type: info
+    content: |
+      **Question:**
+      "My activity counts don't match between different analyses"
+      
+      **Cause:**
+      Using `activity_id` count instead of `record_count` sum.
+      
+      **Explanation:**
+      - `activity_id` is NULL for 99% of granular audit log operations
+      - `record_count` exists for every activity (always = 1)
+      
+      **Wrong Way:**
+      ```python
+      # ❌ This counts non-null activity_ids only
+      stats = df.groupby('workspace_id').agg(count=('activity_id', 'count'))
+      ```
+      
+      **Correct Way:**
+      ```python
+      # ✅ This counts all activities
+      stats = df.groupby('workspace_id').agg(count=('record_count', 'sum'))
+      ```
+      
+      **In Power BI DAX:**
+      ```dax
+      // ✅ Correct
+      Total Activities = SUM(fact_activity[record_count])
+      
+      // ❌ Wrong
+      Total Activities = COUNT(fact_activity[activity_id])
+      ```
+    tips:
+      - Always use record_count for counting
+      - This is documented in copilot-instructions.md
+
+  - id: parquet-timestamp-error
+    title: Parquet Timestamp Error in Spark
+    type: info
+    content: |
+      **Error:**
+      ```
+      Illegal Parquet type: INT64 (TIMESTAMP(NANOS,true))
+      ```
+      
+      **Cause:**
+      Pandas writes timestamps with nanosecond precision, but Spark in Fabric only 
+      supports microsecond precision.
+      
+      **Solution:**
+      This was fixed in v0.3.9. To resolve:
+      
+      1. **Update to latest version:**
+         ```bash
+         git pull origin main
+         make install
+         ```
+      
+      2. **Rebuild data with microsecond precision:**
+         ```bash
+         # Rebuild star schema
+         rm -rf exports/star_schema
+         make star-schema FULL_REFRESH=1
+         ```
+      
+      **Technical Details:**
+      The fix added these parameters to all `to_parquet()` calls:
+      ```python
+      df.to_parquet(
+          path,
+          coerce_timestamps='us',  # Microsecond precision
+          allow_truncated_timestamps=True
+      )
+      ```
+    tips:
+      - This affects Delta table conversion in Fabric
+      - Microsecond precision is sufficient for activity tracking
+
+  - id: parquet-relationship-error
+    title: Direct Lake Relationship Data Type Error
+    type: info
+    content: |
+      **Error:**
+      ```
+      The data types of Direct Lake relationship between foreign key column 
+      'fact_activity'[user_sk](Double) and primary key column 'dim_user'[user_sk](Int64) 
+      are incompatible
+      ```
+      
+      **Cause:**
+      When surrogate keys contain NULL values, pandas converts the column to 
+      `float64` (Double) instead of integer.
+      
+      **Solution:**
+      This was fixed in v0.3.10. Update and rebuild:
+      
+      ```bash
+      git pull origin main
+      make install
+      rm -rf exports/star_schema
+      make star-schema FULL_REFRESH=1
+      ```
+      
+      **Technical Details:**
+      All `*_sk` columns are now explicitly saved as `Int64` (nullable integer):
+      ```python
+      for col in df.columns:
+          if col.endswith('_sk'):
+              df[col] = df[col].astype('Int64')
+      ```
+    tips:
+      - Int64 is pandas nullable integer type
+      - This enables proper relationships in Direct Lake mode
+
+  - id: fabric-module-not-found
+    title: Module Not Found in Fabric
+    type: info
+    content: |
+      **Error:**
+      ```
+      ModuleNotFoundError: No module named 'usf_fabric_monitoring'
+      ```
+      
+      **Cause:**
+      One of:
+      1. Environment not attached to notebook
+      2. Environment not published after adding .whl
+      3. Package path not added to sys.path
+      
+      **Solutions:**
+      
+      **1. Attach Environment:**
+      - Open notebook in Fabric
+      - Click Environment dropdown
+      - Select your monitoring environment
+      
+      **2. Publish Environment:**
+      - Go to Environment settings
+      - Ensure .whl is uploaded
+      - Click **Publish** (wait for completion)
+      
+      **3. Add to sys.path:**
+      If uploading .whl to Files instead of Environment:
+      ```python
+      import sys
+      sys.path.insert(0, "/lakehouse/default/Files/usf_fabric_monitoring/src")
+      ```
+    tips:
+      - Environment method is preferred over sys.path
+      - Check Environment status shows "Published"
+
+  - id: fabric-pip-install-error
+    title: pip Install Error in Fabric
+    type: info
+    content: |
+      **Error:**
+      ```
+      ERROR: Could not find a version that satisfies the requirement usf_fabric_monitoring
+      ```
+      
+      **Cause:**
+      Notebook has `%pip install usf_fabric_monitoring` but the package doesn't exist on PyPI.
+      
+      **Solution:**
+      Remove the pip install line. The package comes from your Fabric Environment, not PyPI.
+      
+      **Wrong:**
+      ```python
+      %pip install usf_fabric_monitoring  # ❌ This won't work
+      ```
+      
+      **Correct:**
+      ```python
+      # No pip install needed - package comes from Environment
+      from usf_fabric_monitoring.core import pipeline
+      ```
+    tips:
+      - Fabric Environments provide custom packages
+      - Never try to pip install internal packages
+
+  - id: env-wrong-python
+    title: Wrong Python Version or Packages
+    type: info
+    content: |
+      **Error:**
+      ```
+      ImportError: cannot import name 'xyz' from 'pandas'
+      ModuleNotFoundError: No module named 'azure'
+      ```
+      
+      **Cause:**
+      Running commands without activating the conda environment.
+      
+      **Solution:**
+      Always activate the environment first:
+      
+      ```bash
+      # Activate environment
+      conda activate fabric-monitoring
+      
+      # Verify you're in the right environment
+      conda env list  # Should show * next to fabric-monitoring
+      
+      # Check Python version
+      python --version  # Should be 3.11+
+      ```
+      
+      **Alternative - Use conda run:**
+      ```bash
+      # Run command in environment without activating
+      conda run -n fabric-monitoring python script.py
+      ```
+    tips:
+      - Your prompt should show (fabric-monitoring) when activated
+      - VS Code may need to be told which interpreter to use
+    warnings:
+      - System Python may have incompatible versions
+
+  - id: env-create-failed
+    title: Environment Creation Failed
+    type: info
+    content: |
+      **Error:**
+      ```
+      ResolvePackageNotFound: - some-package=x.x.x
+      CondaError: Unable to create environment
+      ```
+      
+      **Cause:**
+      Dependency conflict or package not available for your platform.
+      
+      **Solution:**
+      
+      1. **Update conda:**
+         ```bash
+         conda update -n base conda
+         ```
+      
+      2. **Try creating with fewer constraints:**
+         ```bash
+         # Remove existing failed environment
+         conda env remove -n fabric-monitoring
+         
+         # Create fresh
+         make create
+         ```
+      
+      3. **Check internet connectivity:**
+         ```bash
+         ping conda.anaconda.org
+         ```
+      
+      4. **Try alternative channels:**
+         Edit environment.yml to add more channels:
+         ```yaml
+         channels:
+           - conda-forge
+           - defaults
+           - anaconda
+         ```
+    tips:
+      - conda-forge usually has the latest packages
+      - Some packages may need platform-specific versions
+
+  - id: next-steps
+    title: Still Having Issues?
+    type: info
+    content: |
+      If you're still encountering problems:
+      
+      **1. Check the CHANGELOG.md**
+      Many issues have been fixed in recent versions. Make sure you're on the latest:
+      ```bash
+      git pull origin main
+      make install
+      ```
+      
+      **2. Check GitHub Issues**
+      Search existing issues or create a new one with:
+      - Error message (full stack trace)
+      - Steps to reproduce
+      - Environment info (Python version, OS)
+      
+      **3. Review Logs**
+      Check the logs directory for detailed error information:
+      ```bash
+      ls -la logs/
+      cat logs/monitor_hub_pipeline.log
+      ```
+      
+      **4. Run Diagnostics**
+      ```bash
+      make validate-config
+      make test-smoke
+      make status
+      ```
+      
+      **Getting Help:**
+      - Include relevant log output
+      - Specify your version (check pyproject.toml)
+      - Describe what you expected vs what happened
