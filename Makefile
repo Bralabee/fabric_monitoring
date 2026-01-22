@@ -294,7 +294,7 @@ lineage-explorer:
 	@echo "$(GREEN)Starting Fabric Lineage Explorer (http://127.0.0.1:8000)$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
 		echo "$(YELLOW)Press Ctrl+C to stop the server$(NC)"; \
-		conda run --no-capture-output -n $(ENV_NAME) python run_lineage_explorer.py; \
+		conda run --no-capture-output -n $(ENV_NAME) python scripts/run_lineage_explorer.py; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -306,7 +306,7 @@ visualize-lineage:
 	@echo "$(GREEN)Starting Fabric Lineage Explorer instead...$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
 		echo "$(YELLOW)Press Ctrl+C to stop the server$(NC)"; \
-		conda run --no-capture-output -n $(ENV_NAME) python run_lineage_explorer.py; \
+		conda run --no-capture-output -n $(ENV_NAME) python scripts/run_lineage_explorer.py; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
