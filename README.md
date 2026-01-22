@@ -32,8 +32,9 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 
 ### 3. Lineage Extraction (`extract_lineage.py`)
 - **Mirrored Database Analysis**: Scans workspaces for Mirrored Databases.
-- **Source Tracing**: Extracts source connection details (e.g., Snowflake, Azure SQL) and database names.
-- **Inventory Reporting**: Generates a CSV inventory of all mirrored assets and their origins.
+- **Shortcut Analysis**: Extracts OneLake shortcuts within Lakehouses.
+- **Source Tracing**: Extracts source connection details (e.g., Snowflake, Azure SQL, ADLS Gen2, S3) and database names.
+- **Inventory Reporting**: Generates a consolidated CSV inventory of mirrored assets and shortcuts.
 
 ### 4. Star Schema Analytics (`build_star_schema.py`) ⭐ NEW in v0.3.0
 - **Kimball-Style Dimensional Model**: Transforms raw Monitor Hub data into a proper star schema for analytics.

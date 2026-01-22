@@ -114,6 +114,65 @@ class LineageExtractor:
             
         return items
 
+    def get_lakehouses(self, workspace_id):
+        """Fetch Lakehouses in a workspace."""
+        url = f"{self.api_base}/workspaces/{workspace_id}/items?type=Lakehouse"
+        items = []
+        
+        try:
+            while url:
+                response = self.make_request_with_retry("GET", url)
+                if not response or response.status_code != 200:
+                    code = response.status_code if response else "Unknown"
+                    if code != 403: 
+                        self.logger.warning(f"Failed to fetch Lakehouses for {workspace_id}: {code}")
+                    break
+                    
+                data = response.json()
+                items.extend(data.get("value", []))
+                url = data.get("continuationUri")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching Lakehouses for {workspace_id}: {str(e)}")
+            
+        return items
+    def get_lakehouses(self, workspace_id):
+        """Fetch Lakehouses in a workspace."""
+        url = f"{self.api_base}/workspaces/{workspace_id}/items?type=Lakehouse"
+        items = []
+        
+        try:
+            while url:
+                response = self.make_request_with_retry("GET", url)
+                if not response or response.status_code != 200:
+                    code = response.status_code if response else "Unknown"
+                    if code != 403: 
+                        self.logger.warning(f"Failed to fetch Lakehouses for {workspace_id}: {code}")
+                    break
+                    
+                data = response.json()
+                items.extend(data.get("value", []))
+                url = data.get("continuationUri")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching Lakehouses for {workspace_id}: {str(e)}")
+            
+        return items
+
+    def get_shortcuts(self, workspace_id, item_id):
+        """Fetch shortcuts for a specific item (Lakehouse)."""
+        url = f"{self.api_base}/workspaces/{workspace_id}/items/{item_id}/shortcuts"
+        shortcuts = []
+        
+        try:
+            response = self.make_request_with_retry("GET", url)
+            if response and response.status_code == 200:
+                shortcuts = response.json().get("value", [])
+        except Exception as e:
+            self.logger.error(f"Error fetching shortcuts for {item_id}: {str(e)}")
+            
+        return shortcuts
+
     def get_definition(self, workspace_id, item_id):
         """Get definition for a Mirrored Database."""
         url = f"{self.api_base}/workspaces/{workspace_id}/mirroredDatabases/{item_id}/getDefinition"
@@ -156,38 +215,83 @@ class LineageExtractor:
             import time
             time.sleep(0.2)
             
-            # Get Mirrored Databases
-            mirrored_dbs = self.get_mirrored_databases(ws_id)
-            
-            for db in mirrored_dbs:
-                db_id = db["id"]
-                db_name = db.get("displayName", "Unknown")
-                
-                self.logger.info(f"  Found Mirrored DB: {db_name}")
-                
-                definition = self.get_definition(ws_id, db_id)
-                if definition:
-                    parts = definition.get("definition", {}).get("parts", [])
-                    for part in parts:
-                        payload = part.get("payload")
-                        if payload:
-                            decoded = self.decode_payload(payload)
-                            if decoded:
-                                # Extract Source Properties
-                                source_props = decoded.get("SourceProperties", {})
-                                source_type_props = decoded.get("SourceTypeProperties", {})
-                                
-                                lineage_data.append({
-                                    "Workspace Name": ws_name,
-                                    "Workspace ID": ws_id,
-                                    "Item Name": db_name,
-                                    "Item ID": db_id,
-                                    "Source Type": source_props.get("sourceType", "Unknown"),
-                                    "Source Connection": source_props.get("connection", "Unknown"),
-                                    "Source Database": source_props.get("database", "Unknown"),
-                                    "Connection ID": source_type_props.get("connectionIdentifier", "Unknown"),
-                                    "Full Definition": json.dumps(decoded) # For debugging
-                                })
+            # --- 1. Mirrored Databases ---
+            try:
+                mirrored_dbs = self.get_mirrored_databases(ws_id)
+                for db in mirrored_dbs:
+                    db_id = db["id"]
+                    db_name = db.get("displayName", "Unknown")
+                    
+                    self.logger.info(f"  Found Mirrored DB: {db_name}")
+                    
+                    definition = self.get_definition(ws_id, db_id)
+                    if definition:
+                        parts = definition.get("definition", {}).get("parts", [])
+                        for part in parts:
+                            payload = part.get("payload")
+                            if payload:
+                                decoded = self.decode_payload(payload)
+                                if decoded:
+                                    # Extract Source Properties
+                                    source_props = decoded.get("SourceProperties", {})
+                                    source_type_props = decoded.get("SourceTypeProperties", {})
+                                    
+                                    lineage_data.append({
+                                        "Workspace Name": ws_name,
+                                        "Workspace ID": ws_id,
+                                        "Item Name": db_name,
+                                        "Item ID": db_id,
+                                        "Item Type": "MirroredDatabase",
+                                        "Shortcut Name": None,
+                                        "Shortcut Path": None,
+                                        "Source Type": source_props.get("sourceType", "Unknown"),
+                                        "Source Connection": source_props.get("connection", "Unknown"),
+                                        "Source Database": source_props.get("database", "Unknown"),
+                                        "Connection ID": source_type_props.get("connectionIdentifier", "Unknown"),
+                                        "Full Definition": json.dumps(decoded) # For debugging
+                                    })
+            except Exception as e:
+                 self.logger.error(f"Error processing Mirrored DBs in {ws_name}: {e}")
+
+            # --- 2. Lakehouse Shortcuts ---
+            try:
+                lakehouses = self.get_lakehouses(ws_id)
+                if lakehouses:
+                     self.logger.info(f"  Found {len(lakehouses)} Lakehouses, checking shortcuts...")
+
+                for lh in lakehouses:
+                    lh_id = lh["id"]
+                    lh_name = lh.get("displayName", "Unknown")
+                    
+                    shortcuts = self.get_shortcuts(ws_id, lh_id)
+                    
+                    for shortcut in shortcuts:
+                        try:
+                            sc_name = shortcut.get("name", "Unknown")
+                            sc_path = shortcut.get("path", "Unknown")
+                            target = shortcut.get("target", {})
+                            
+                            self.logger.info(f"    Found Shortcut: {sc_name} in {lh_name}")
+                            
+                            lineage_data.append({
+                                "Workspace Name": ws_name,
+                                "Workspace ID": ws_id,
+                                "Item Name": lh_name,
+                                "Item ID": lh_id,
+                                "Item Type": "Lakehouse Shortcut",
+                                "Shortcut Name": sc_name,
+                                "Shortcut Path": sc_path,
+                                "Source Type": target.get("type", "Unknown"),
+                                "Source Connection": target.get("path") or target.get("location") or str(target),
+                                "Source Database": None,
+                                "Connection ID": None,
+                                "Full Definition": json.dumps(shortcut)
+                            })
+                        except Exception as e:
+                             self.logger.warning(f"Error parsing shortcut {sc_name} in {lh_name}: {e}")
+
+            except Exception as e:
+                self.logger.error(f"Error processing Shortcuts in {ws_name}: {e}")
         
         if lineage_data:
             df = pd.DataFrame(lineage_data)
@@ -200,7 +304,9 @@ class LineageExtractor:
             print("\n" + "="*40)
             print("🔗 LINEAGE SUMMARY")
             print("="*40)
-            print(f"Total Mirrored Databases: {len(df)}")
+            print(f"Total Items Found: {len(df)}")
+            print(f"Mirrored Databases: {len(df[df['Item Type'] == 'MirroredDatabase'])}")
+            print(f"Shortcuts: {len(df[df['Item Type'] == 'Lakehouse Shortcut'])}")
             if "Source Type" in df.columns:
                 print("\nTop Source Types:")
                 print(df["Source Type"].value_counts().head().to_string())
@@ -210,7 +316,7 @@ class LineageExtractor:
             self.logger.warning("No lineage data found.")
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract Lineage for Mirrored Databases")
+    parser = argparse.ArgumentParser(description="Extract Lineage for Mirrored Databases and Shortcuts")
     parser.add_argument("--output-dir", default="exports/lineage", help="Output directory")
     args = parser.parse_args()
     
