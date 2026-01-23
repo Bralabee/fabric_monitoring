@@ -656,7 +656,13 @@
             opacity: 0.5;
         }
         
-        .link.highlighted { stroke: var(--accent-blue); stroke-width: 2.5; opacity: 1; }
+        /* Inward arrows (incoming data) - green */
+        .link.inward { stroke: var(--accent-green); opacity: 0.6; }
+        
+        /* Outward arrows (outgoing data) - blue */
+        .link.outward { stroke: var(--accent-blue); opacity: 0.6; }
+        
+        .link.highlighted { stroke-width: 2.5; opacity: 1; }
         .link.dimmed { opacity: 0.1; }
         .link.path-highlighted { stroke: var(--accent-amber); stroke-width: 3; opacity: 1; }
         
@@ -1471,11 +1477,15 @@
             
             this.createSimulation(data, width, height);
             
-            // Links
+            // Links - classify as inward or outward based on selected node
             const links = linkGroup.selectAll('path')
                 .data(data.links)
                 .join('path')
-                .attr('class', 'link')
+                .attr('class', d => {
+                    // Outward: link source is selected/hovered node (data flows out)
+                    // Inward: link target is selected/hovered node (data flows in)
+                    return 'link outward';
+                })
                 .attr('marker-end', 'url(#arrow)')
                 .attr('fill', 'none');
             
@@ -1647,12 +1657,24 @@
                     const sId = typeof d.source === 'object' ? d.source.id : d.source;
                     const tId = typeof d.target === 'object' ? d.target.id : d.target;
                     return sId !== node.id && tId !== node.id;
+                })
+                .classed('inward', d => {
+                    const tId = typeof d.target === 'object' ? d.target.id : d.target;
+                    return tId === node.id;  // Green for arrows coming IN
+                })
+                .classed('outward', d => {
+                    const sId = typeof d.source === 'object' ? d.source.id : d.source;
+                    return sId === node.id;  // Blue for arrows going OUT
                 });
         },
         
         clearHighlight() {
             state.svg.selectAll('.node').classed('highlighted', false).classed('dimmed', false);
-            state.svg.selectAll('.link').classed('highlighted', false).classed('dimmed', false);
+            state.svg.selectAll('.link')
+                .classed('highlighted', false)
+                .classed('dimmed', false)
+                .classed('inward', false)
+                .classed('outward', false);
         },
         
         focusNode(nodeId) {
