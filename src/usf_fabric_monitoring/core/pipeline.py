@@ -1,14 +1,46 @@
 import os
+import sys
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import json
 import pandas as pd
+import importlib.util
 
-# Add src to path for imports if needed, but assuming package structure
-from usf_fabric_monitoring.scripts.extract_historical_data import extract_historical_data as run_historical_extraction
-from usf_fabric_monitoring.scripts.extract_fabric_item_details import run_item_details_extraction
+# Add scripts directory to path for importing extraction scripts
+_project_root = Path(__file__).parent.parent.parent.parent  # core -> usf_fabric_monitoring -> src -> root
+_scripts_dir = _project_root / "scripts"
+if str(_scripts_dir) not in sys.path:
+    sys.path.insert(0, str(_scripts_dir))
+
+# Import extraction functions from scripts directory
+def _import_script_function(script_name: str, func_name: str):
+    """Dynamically import a function from a script in the scripts directory."""
+    script_path = _scripts_dir / f"{script_name}.py"
+    if not script_path.exists():
+        raise ImportError(f"Script not found: {script_path}")
+    spec = importlib.util.spec_from_file_location(script_name, script_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return getattr(module, func_name)
+
+# Lazy-load extraction functions to avoid circular imports
+_run_historical_extraction = None
+_run_item_details_extraction = None
+
+def _get_historical_extraction():
+    global _run_historical_extraction
+    if _run_historical_extraction is None:
+        _run_historical_extraction = _import_script_function("extract_historical_data", "extract_historical_data")
+    return _run_historical_extraction
+
+def _get_item_details_extraction():
+    global _run_item_details_extraction
+    if _run_item_details_extraction is None:
+        _run_item_details_extraction = _import_script_function("extract_fabric_item_details", "run_item_details_extraction")
+    return _run_item_details_extraction
+
 from usf_fabric_monitoring.core.data_loader import load_activities_from_directory
 from usf_fabric_monitoring.core.monitor_hub_reporter_clean import MonitorHubCSVReporter
 from usf_fabric_monitoring.core.logger import setup_logging
@@ -58,6 +90,7 @@ class MonitorHubPipeline:
             extraction_dir = self._prepare_extraction_directory()
 
             self.logger.info("Step 1: Extracting historical activities from Fabric APIs")
+            run_historical_extraction = _get_historical_extraction()
             extraction_result = run_historical_extraction(
                 start_date=start_date,
                 end_date=end_date,
@@ -85,6 +118,7 @@ class MonitorHubPipeline:
                 self.logger.info("✅ Using cached detailed job data (within 8 hours)")
                 details_result = {"status": "success", "cached": True, "jobs_count": "cached"}
             else:
+                run_item_details_extraction = _get_item_details_extraction()
                 details_result = run_item_details_extraction(
                     output_dir=str(details_output_dir)
                 )

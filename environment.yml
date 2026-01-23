@@ -35,3 +35,6 @@ dependencies:
     - delta-spark
     - matplotlib
     - seaborn
+    - fastapi
+    - uvicorn
+    - neo4j

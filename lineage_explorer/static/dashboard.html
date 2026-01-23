@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lineage Statistics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Variables (matching graph view light theme) */
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header (matching graph view) */
+        .header {
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .logo svg { width: 24px; height: 24px; color: var(--accent-blue); }
+
+        /* Main Navigation */
+        .main-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 16px;
+            padding: 4px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .nav-link.active {
+            color: var(--accent-blue);
+            background: var(--bg-secondary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-link svg { width: 16px; height: 16px; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Stat Cards Grid */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent-blue);
+        }
+
+        .stat-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon svg { width: 16px; height: 16px; }
+
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
+        .stat-icon.green { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+        .stat-icon.purple { background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); }
+        .stat-icon.amber { background: rgba(245, 158, 11, 0.1); color: var(--accent-amber); }
+        .stat-icon.cyan { background: rgba(6, 182, 212, 0.1); color: var(--accent-cyan); }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .loading {
+            opacity: 0.5;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+        }
+
+        .chart-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-card h3 svg { width: 18px; height: 18px; }
+
+        .chart-container {
+            height: 256px;
+        }
+
+        /* Table Section */
+        .table-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .table-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-header h3 svg { width: 18px; height: 18px; }
+
+        .search-input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg-tertiary);
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        th.text-right { text-align: right; }
+
+        td {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        td.text-right {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-blue);
+        }
+
+        tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-blue);
+            border-radius: 4px;
+        }
+
+        /* Details Grid */
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .details-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+        }
+
+        .details-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .details-card h3 svg { width: 18px; height: 18px; }
+
+        .details-list {
+            list-style: none;
+        }
+
+        .details-list li {
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Neo4j Section */
+        .neo4j-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .neo4j-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .neo4j-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .neo4j-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-dot.connected { background: var(--accent-green); }
+
+        .neo4j-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .neo4j-stat {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+
+        .neo4j-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .neo4j-stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        .neo4j-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .charts-grid, .details-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-nav {
+                display: none;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 20V10M12 20V4M6 20v-6"/>
+                </svg>
+                <span>Statistics Dashboard</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <nav class="main-nav">
+                <a href="/" class="nav-link" title="Graph View">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
+                    </svg>
+                    Graph
+                </a>
+                <a href="/dashboard.html" class="nav-link active" title="Statistics Dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10M12 20V4M6 20v-6"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/query_explorer.html" class="nav-link" title="Neo4j Query Explorer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    Queries
+                </a>
+            </nav>
+            <button class="btn btn-primary" id="refreshBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <path d="M23 4v6h-6M1 20v-6h6"/>
+                    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                </svg>
+                Refresh
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Summary Cards -->
+        <section class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">Workspaces</span>
+                    <div class="stat-icon blue">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                    </div>
+                </div>
+                <p id="totalWorkspaces" class="stat-value loading">--</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">Items</span>
+                    <div class="stat-icon green">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                </div>
+                <p id="totalItems" class="stat-value loading">--</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">External Sources</span>
+                    <div class="stat-icon purple">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                    </div>
+                </div>
+                <p id="totalSources" class="stat-value loading">--</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">Connections</span>
+                    <div class="stat-icon amber">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                        </svg>
+                    </div>
+                </div>
+                <p id="totalEdges" class="stat-value loading">--</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-label">Tables</span>
+                    <div class="stat-icon cyan">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p id="totalTables" class="stat-value loading">--</p>
+            </div>
+        </section>
+
+        <!-- Charts Row -->
+        <section class="charts-grid">
+            <!-- Item Types Chart -->
+            <div class="chart-card">
+                <h3>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--accent-blue)">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                    </svg>
+                    Items by Type
+                </h3>
+                <div class="chart-container">
+                    <canvas id="itemTypesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Source Types Chart -->
+            <div class="chart-card">
+                <h3>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--accent-purple)">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                    </svg>
+                    External Sources by Type
+                </h3>
+                <div class="chart-container">
+                    <canvas id="sourceTypesChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Workspace Table -->
+        <section class="table-section">
+            <div class="table-header">
+                <h3>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--accent-green)">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    Top Workspaces by Item Count
+                </h3>
+                <input type="text" id="workspaceSearch" placeholder="Search workspaces..." class="search-input">
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Workspace</th>
+                            <th class="text-right">Items</th>
+                            <th class="text-right">Internal Deps</th>
+                            <th class="text-right">External Deps</th>
+                            <th>Distribution</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workspaceTableBody">
+                        <tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);" class="loading">Loading workspaces...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- External Sources Details -->
+        <section class="details-grid">
+            <!-- ADLS Containers -->
+            <div class="details-card">
+                <h3>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--accent-blue)">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                    </svg>
+                    ADLS Containers
+                </h3>
+                <ul id="adlsList" class="details-list">
+                    <li class="loading">Loading...</li>
+                </ul>
+            </div>
+
+            <!-- Tables by Database -->
+            <div class="details-card">
+                <h3>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--accent-cyan)">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                    </svg>
+                    Tables by Database (Snowflake)
+                </h3>
+                <div id="tablesByDb" class="details-list">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Neo4j Status -->
+        <section class="neo4j-section">
+            <div class="neo4j-header">
+                <h3>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--accent-green); width: 18px; height: 18px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                    </svg>
+                    Neo4j Graph Database
+                </h3>
+                <div id="neo4jStatus" class="neo4j-status">
+                    <span class="status-dot"></span>
+                    <span>Checking...</span>
+                </div>
+            </div>
+            <div class="neo4j-stats">
+                <div class="neo4j-stat">
+                    <p class="neo4j-stat-value" id="neo4jNodes">--</p>
+                    <p class="neo4j-stat-label">Nodes</p>
+                </div>
+                <div class="neo4j-stat">
+                    <p class="neo4j-stat-value" id="neo4jRelationships">--</p>
+                    <p class="neo4j-stat-label">Relationships</p>
+                </div>
+                <div class="neo4j-stat">
+                    <p class="neo4j-stat-value" id="neo4jLabels">--</p>
+                    <p class="neo4j-stat-label">Labels</p>
+                </div>
+                <div class="neo4j-stat">
+                    <p class="neo4j-stat-value" id="neo4jRelTypes">--</p>
+                    <p class="neo4j-stat-label">Rel Types</p>
+                </div>
+            </div>
+            <div class="neo4j-actions">
+                <button id="loadNeo4jBtn" class="btn btn-primary">
+                    Load Data into Neo4j
+                </button>
+                <a href="http://localhost:7474" target="_blank" class="btn btn-secondary">
+                    Open Neo4j Browser
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>Fabric Lineage Explorer v2.0.0 • <span id="lastUpdated">--</span></p>
+    </footer>
+
+    <script>
+        // Chart.js defaults for light theme
+        Chart.defaults.color = '#475569';
+        Chart.defaults.borderColor = 'rgba(226, 232, 240, 0.8)';
+        
+        let itemTypesChart, sourceTypesChart;
+        
+        // Color palette
+        const colors = {
+            blue: 'rgba(59, 130, 246, 0.8)',
+            green: 'rgba(16, 185, 129, 0.8)',
+            purple: 'rgba(139, 92, 246, 0.8)',
+            amber: 'rgba(245, 158, 11, 0.8)',
+            cyan: 'rgba(6, 182, 212, 0.8)',
+            pink: 'rgba(236, 72, 153, 0.8)',
+            red: 'rgba(239, 68, 68, 0.8)',
+        };
+        const colorArray = Object.values(colors);
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats/detailed');
+                if (!res.ok) throw new Error('Failed to fetch stats');
+                return await res.json();
+            } catch (err) {
+                console.error('Error fetching stats:', err);
+                return null;
+            }
+        }
+
+        async function fetchWorkspaces() {
+            try {
+                const res = await fetch('/api/stats/workspaces');
+                if (!res.ok) throw new Error('Failed to fetch workspaces');
+                return await res.json();
+            } catch (err) {
+                console.error('Error fetching workspaces:', err);
+                return null;
+            }
+        }
+
+        async function fetchExternalSources() {
+            try {
+                const res = await fetch('/api/stats/external-sources');
+                if (!res.ok) throw new Error('Failed to fetch external sources');
+                return await res.json();
+            } catch (err) {
+                console.error('Error fetching external sources:', err);
+                return null;
+            }
+        }
+
+        async function fetchTables() {
+            try {
+                const res = await fetch('/api/stats/tables');
+                if (!res.ok) throw new Error('Failed to fetch tables');
+                return await res.json();
+            } catch (err) {
+                console.error('Error fetching tables:', err);
+                return null;
+            }
+        }
+
+        async function checkNeo4j() {
+            try {
+                const res = await fetch('/api/neo4j/health');
+                if (!res.ok) throw new Error('Neo4j not available');
+                const data = await res.json();
+                return data;
+            } catch (err) {
+                return { status: 'disconnected' };
+            }
+        }
+
+        async function fetchNeo4jStats() {
+            try {
+                const res = await fetch('/api/neo4j/stats');
+                if (!res.ok) throw new Error('Neo4j stats not available');
+                return await res.json();
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function updateSummaryCards(stats) {
+            document.getElementById('totalWorkspaces').textContent = stats.summary.total_workspaces.toLocaleString();
+            document.getElementById('totalItems').textContent = stats.summary.total_items.toLocaleString();
+            document.getElementById('totalSources').textContent = stats.summary.total_external_sources.toLocaleString();
+            document.getElementById('totalEdges').textContent = stats.summary.total_edges.toLocaleString();
+            document.getElementById('totalTables').textContent = stats.summary.total_tables.toLocaleString();
+            
+            // Remove loading class
+            document.querySelectorAll('.loading').forEach(el => el.classList.remove('loading'));
+        }
+
+        function createItemTypesChart(data) {
+            const ctx = document.getElementById('itemTypesChart').getContext('2d');
+            
+            if (itemTypesChart) itemTypesChart.destroy();
+            
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+            
+            itemTypesChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colorArray.slice(0, labels.length),
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { padding: 20, usePointStyle: true }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createSourceTypesChart(data) {
+            const ctx = document.getElementById('sourceTypesChart').getContext('2d');
+            
+            if (sourceTypesChart) sourceTypesChart.destroy();
+            
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+            
+            sourceTypesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Count',
+                        data: values,
+                        backgroundColor: colorArray.slice(0, labels.length),
+                        borderRadius: 6,
+                        barThickness: 40
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function updateWorkspaceTable(workspaces) {
+            const tbody = document.getElementById('workspaceTableBody');
+            const maxItems = Math.max(...workspaces.workspaces.map(w => w.item_count));
+            
+            const rows = workspaces.workspaces.slice(0, 15).map(ws => {
+                const pct = (ws.item_count / maxItems) * 100;
+                const extPct = ws.external_deps > 0 ? Math.min((ws.external_deps / ws.item_count) * 100, 100) : 0;
+                
+                return `
+                    <tr>
+                        <td>
+                            <div style="font-weight: 500;">${ws.workspace_name}</div>
+                            <div style="font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">${ws.workspace_id.substring(0, 8)}...</div>
+                        </td>
+                        <td class="text-right">${ws.item_count}</td>
+                        <td class="text-right">${ws.internal_deps}</td>
+                        <td class="text-right" style="color: ${ws.external_deps > 0 ? 'var(--accent-purple)' : 'inherit'}">${ws.external_deps}</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${pct}%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tbody.innerHTML = rows || '<tr><td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);">No workspaces found</td></tr>';
+        }
+
+        function updateExternalSources(sources) {
+            // ADLS
+            const adlsList = document.getElementById('adlsList');
+            if (sources.adls_containers && sources.adls_containers.length > 0) {
+                adlsList.innerHTML = sources.adls_containers.map(c => `
+                    <li style="display: flex; align-items: center; gap: 8px;">
+                        <svg style="width: 16px; height: 16px; color: var(--accent-blue); flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                        <code style="font-size: 12px; background: var(--bg-tertiary); padding: 2px 8px; border-radius: 4px;">${c}</code>
+                    </li>
+                `).join('');
+            } else {
+                adlsList.innerHTML = '<li style="color: var(--text-muted);">No ADLS containers found</li>';
+            }
+        }
+
+        function updateTables(tables) {
+            const container = document.getElementById('tablesByDb');
+            
+            if (tables.tables_by_database && Object.keys(tables.tables_by_database).length > 0) {
+                const items = Object.entries(tables.tables_by_database).map(([db, count]) => `
+                    <li style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg style="width: 16px; height: 16px; color: var(--accent-cyan);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                            </svg>
+                            <span style="font-weight: 500;">${db}</span>
+                        </div>
+                        <span style="color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 12px;">${count} tables</span>
+                    </li>
+                `).join('');
+                container.innerHTML = items;
+            } else {
+                container.innerHTML = '<div style="color: var(--text-muted);">No Snowflake tables found</div>';
+            }
+        }
+
+        async function updateNeo4jStatus() {
+            const statusEl = document.getElementById('neo4jStatus');
+            const health = await checkNeo4j();
+            
+            if (health.status === 'connected') {
+                statusEl.innerHTML = `
+                    <span class="status-dot connected"></span>
+                    <span style="color: var(--accent-green);">Connected</span>
+                `;
+                
+                const stats = await fetchNeo4jStats();
+                if (stats) {
+                    document.getElementById('neo4jNodes').textContent = stats.nodes?.toLocaleString() || '--';
+                    document.getElementById('neo4jRelationships').textContent = stats.relationships?.toLocaleString() || '--';
+                    document.getElementById('neo4jLabels').textContent = stats.labels?.length || '--';
+                    document.getElementById('neo4jRelTypes').textContent = stats.relationship_types?.length || '--';
+                }
+            } else {
+                statusEl.innerHTML = `
+                    <span class="status-dot"></span>
+                    <span>Disconnected</span>
+                `;
+            }
+        }
+
+        async function loadDataIntoNeo4j() {
+            const btn = document.getElementById('loadNeo4jBtn');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            
+            try {
+                const res = await fetch('/api/neo4j/load', { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to load data');
+                const data = await res.json();
+                alert(`Data loaded successfully!\nWorkspaces: ${data.workspaces}\nItems: ${data.items}\nSources: ${data.sources}\nEdges: ${data.edges}`);
+                await updateNeo4jStatus();
+            } catch (err) {
+                alert('Error loading data: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Load Data into Neo4j';
+            }
+        }
+
+        async function refreshDashboard() {
+            // Fetch all data in parallel
+            const [stats, workspaces, sources, tables] = await Promise.all([
+                fetchStats(),
+                fetchWorkspaces(),
+                fetchExternalSources(),
+                fetchTables()
+            ]);
+            
+            if (stats) {
+                updateSummaryCards(stats);
+                createItemTypesChart(stats.distributions.items_by_type);
+                createSourceTypesChart(stats.distributions.sources_by_type);
+            }
+            
+            if (workspaces) {
+                updateWorkspaceTable(workspaces);
+            }
+            
+            if (sources) {
+                updateExternalSources(sources);
+            }
+            
+            if (tables) {
+                updateTables(tables);
+            }
+            
+            // Update Neo4j status
+            await updateNeo4jStatus();
+            
+            // Update timestamp
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        }
+
+        // Workspace search filter
+        document.getElementById('workspaceSearch').addEventListener('input', async (e) => {
+            const query = e.target.value.toLowerCase();
+            const workspaces = await fetchWorkspaces();
+            if (workspaces) {
+                workspaces.workspaces = workspaces.workspaces.filter(ws => 
+                    ws.workspace_name.toLowerCase().includes(query) ||
+                    ws.workspace_id.toLowerCase().includes(query)
+                );
+                updateWorkspaceTable(workspaces);
+            }
+        });
+
+        // Event listeners
+        document.getElementById('refreshBtn').addEventListener('click', refreshDashboard);
+        document.getElementById('loadNeo4jBtn').addEventListener('click', loadDataIntoNeo4j);
+
+        // Initial load
+        refreshDashboard();
+    </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 CLI entry point for Lineage Explorer.
 
 Usage:
-    python -m usf_fabric_monitoring.lineage_explorer [OPTIONS]
+    python -m lineage_explorer [OPTIONS]
     
 Options:
     --file PATH     Path to lineage JSON or CSV file
@@ -19,8 +19,8 @@ def find_default_file():
     """Look for the most recent lineage JSON or CSV (prefers JSON)."""
     # Get the module directory and navigate up to project root
     module_dir = Path(__file__).parent
-    # Go up: lineage_explorer -> usf_fabric_monitoring -> src -> usf_fabric_monitoring (root)
-    project_root = module_dir.parent.parent.parent
+    # Go up: lineage_explorer -> usf_fabric_monitoring (root)
+    project_root = module_dir.parent
     
     lineage_dir = project_root / "exports" / "lineage"
     

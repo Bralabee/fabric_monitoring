@@ -6,8 +6,9 @@ Supports both JSON (preferred) and CSV (legacy) lineage files.
 import sys
 from pathlib import Path
 
-# Add src to path
+# Add project root and lineage_explorer to path
 project_root = Path(__file__).parent.parent  # scripts/ -> root
+sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
 
 # Find lineage file (prefer JSON, fallback to CSV)
@@ -32,5 +33,5 @@ if not data_file:
 
 print(f"Loading: {data_file}")
 
-from usf_fabric_monitoring.lineage_explorer import run_server
+from lineage_explorer import run_server
 run_server(csv_path=str(data_file), host="127.0.0.1", port=8000)

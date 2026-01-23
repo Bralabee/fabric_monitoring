@@ -2,7 +2,7 @@
 
 A comprehensive Python-based solution for monitoring, analyzing, and governing Microsoft Fabric workspaces. This project provides tools for historical activity analysis (Monitor Hub), automated security group enforcement, and star schema analytics for business intelligence.
 
-> **Current Version: 0.3.17** - Deep Dive Visualization Release (Topology Analysis, Sankey Flows, Shortcuts Lineage)  
+> **Current Version: 0.3.19** - Neo4j-Powered Interactive Graph Analysis  
 > See [CHANGELOG.md](CHANGELOG.md) for release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
 ## 🚀 Key Features
 
@@ -34,11 +34,20 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 - **Mirrored Database Analysis**: Scans workspaces for Mirrored Databases (Snowflake, Azure SQL, Cosmos DB).
 - **OneLake Shortcut Analysis**: Extracts OneLake shortcuts from **Lakehouses** and **KQL Databases**.
 - **Unified Inventory**: Outputs a consolidated CSV schema (`Workspace`, `Item`, `Type`, `Source Connection`) for all external dependencies.
-- **Lineage Explorer**: Interactive D3.js force-directed graph visualization:
+- **Lineage Explorer**: Interactive D3.js force-directed graph visualization with Neo4j-powered analysis:
   - **Graph-Native Model**: Direct CSV → JSON graph conversion for clean, efficient data flow.
   - **Smart Filtering**: Filter by workspace, item type, source type with instant updates.
   - **Node Details**: Click any node to see connections, metadata, and related items.
   - **Zoom & Pan**: Navigate large graphs with intuitive controls.
+  - **Neo4j Graph Analysis** ⭐ NEW:
+    - **Right-Click Context Menu**: Access impact analysis, upstream trace, path finding from any node
+    - **Path Finder**: Find and visualize shortest path between any two items
+    - **Impact Analysis**: Show all downstream items affected by changes to a node
+    - **Upstream Trace**: Display all data sources feeding into an item
+    - **Smart Filtering**: Filter by external source type (ADLS, S3, Snowflake)
+    - **Cross-Workspace View**: Highlight dependencies spanning workspaces
+    - **Centrality Highlighting**: Size nodes by importance/connection count
+    - **Statistics Dashboard**: Comprehensive analytics at `/dashboard.html`
 - **Command**: `make lineage-explorer` (starts server at http://127.0.0.1:8000)
 
 ### 4. Star Schema Analytics (`build_star_schema.py`) ⭐ NEW in v0.3.0

@@ -3,15 +3,20 @@ Lineage Explorer API Server
 ---------------------------
 FastAPI backend serving the lineage graph data and static frontend.
 
-Endpoints:
+Core Endpoints:
 - GET /api/graph - Full lineage graph
 - GET /api/stats - Graph statistics
 - GET /api/workspaces - List of workspaces
 - GET /api/health - Health check
 - POST /api/refresh - Refresh graph from CSV
+
+Extended Endpoints (see api_extended.py):
+- GET /api/stats/detailed - Comprehensive statistics
+- GET /api/stats/workspaces - Per-workspace metrics
+- GET /api/neo4j/* - Neo4j graph database queries
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -24,6 +29,22 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 from contextlib import asynccontextmanager
+
+# Load .env file for environment variables (including NEO4J_PASSWORD)
+try:
+    from dotenv import load_dotenv
+    # Try to load from project root first, then from lineage_explorer directory
+    env_paths = [
+        Path(__file__).resolve().parent.parent / ".env",  # PROJECT_ROOT/.env
+        Path(__file__).resolve().parent / ".env",  # lineage_explorer/.env
+    ]
+    for env_path in env_paths:
+        if env_path.exists():
+            load_dotenv(env_path)
+            logging.info(f"Loaded environment from {env_path}")
+            break
+except ImportError:
+    logging.warning("python-dotenv not installed - environment variables must be set manually")
 
 from .graph_builder import (
     build_graph_from_csv, build_graph_from_json, build_graph,
@@ -40,7 +61,7 @@ logger = logging.getLogger(__name__)
 
 # Path Configuration
 BASE_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = BASE_DIR.parents[2]  # usf_fabric_monitoring root
+PROJECT_ROOT = BASE_DIR.parent  # usf_fabric_monitoring root (lineage_explorer is at root level)
 EXPORT_DIR = PROJECT_ROOT / "exports" / "lineage"
 FRONTEND_DIR = BASE_DIR / "static"
 
@@ -157,10 +178,33 @@ async def lifespan(app: FastAPI):
     try:
         load_graph()
         logger.info("Initial cache loaded successfully")
+        
+        # Initialize extended stats calculator
+        from .api_extended import init_stats_calculator, init_neo4j
+        if _cache.source_file:
+            init_stats_calculator(_cache.source_file)
+            logger.info("Stats calculator initialized")
+        
+        # Try to connect to Neo4j if available
+        try:
+            if init_neo4j():
+                logger.info("Neo4j connection established")
+        except Exception as e:
+            logger.info(f"Neo4j not available (optional): {e}")
+            
     except Exception as e:
         logger.warning(f"Could not pre-load cache: {e}")
     
     yield
+    
+    # Cleanup Neo4j connection
+    try:
+        from .api_extended import _neo4j_client
+        if _neo4j_client:
+            _neo4j_client.close()
+            logger.info("Neo4j connection closed")
+    except Exception:
+        pass
     
     logger.info("Shutting down Fabric Lineage Explorer")
 
@@ -168,18 +212,61 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Fabric Lineage Explorer",
     description="Interactive visualization of Microsoft Fabric lineage relationships",
-    version="1.0.0",
+    version="3.0.0",
     lifespan=lifespan
 )
 
-# CORS for development
+# Include extended API routes
+try:
+    from .api_extended import extended_router
+    app.include_router(extended_router)
+    logger.info("Extended API endpoints loaded")
+except ImportError as e:
+    logger.warning(f"Extended API not available: {e}")
+
+# CORS configuration - restrict origins in production
+# Set CORS_ORIGINS env var to comma-separated list of allowed origins
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
+_cors_allow_all = os.getenv("CORS_ALLOW_ALL", "false").lower() == "true"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"] if _cors_allow_all else _cors_origins,
+    allow_credentials=False,  # Credentials only with specific origins
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
+
+
+# Simple in-memory rate limiting for sensitive endpoints
+_rate_limit_store: dict = {}
+_rate_limit_window = 60  # seconds
+_rate_limit_max_requests = int(os.getenv("RATE_LIMIT_MAX", "30"))  # requests per window
+
+def check_rate_limit(client_ip: str, endpoint: str) -> bool:
+    """
+    Check if client has exceeded rate limit.
+    
+    Returns True if request should be allowed, False if rate limited.
+    """
+    import time
+    key = f"{client_ip}:{endpoint}"
+    now = time.time()
+    
+    # Clean old entries
+    if key in _rate_limit_store:
+        requests = [t for t in _rate_limit_store[key] if now - t < _rate_limit_window]
+        _rate_limit_store[key] = requests
+    else:
+        _rate_limit_store[key] = []
+    
+    # Check limit
+    if len(_rate_limit_store[key]) >= _rate_limit_max_requests:
+        return False
+    
+    # Record request
+    _rate_limit_store[key].append(now)
+    return True
 
 
 # API Endpoints
@@ -191,7 +278,29 @@ async def health_check():
         "version": "1.0.0",
         "cached": _cache.graph is not None,
         "loaded_at": _cache.loaded_at.isoformat() if _cache.loaded_at else None,
-        "source_file": _cache.source_file
+        # Note: source_file path removed for security - use /api/health/debug in development
+    }
+
+
+@app.get("/api/health/debug")
+async def health_check_debug():
+    """
+    Debug health check with full details.
+    
+    Only use in development - exposes internal paths.
+    """
+    debug_enabled = os.getenv("DEBUG", "false").lower() == "true"
+    if not debug_enabled:
+        raise HTTPException(status_code=403, detail="Debug endpoint disabled. Set DEBUG=true to enable.")
+    
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "cached": _cache.graph is not None,
+        "loaded_at": _cache.loaded_at.isoformat() if _cache.loaded_at else None,
+        "source_file": _cache.source_file,
+        "frontend_dir": str(FRONTEND_DIR),
+        "export_dir": str(EXPORT_DIR),
     }
 
 
@@ -205,7 +314,7 @@ async def get_graph():
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error loading graph: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error loading graph: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading graph data")
 
 
 @app.get("/api/stats")
@@ -218,7 +327,7 @@ async def get_stats():
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error computing stats: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error computing statistics")
 
 
 @app.get("/api/workspaces")
@@ -248,8 +357,13 @@ async def list_workspaces():
 
 
 @app.post("/api/refresh")
-async def refresh_graph():
-    """Force refresh the graph from CSV."""
+async def refresh_graph(request: Request):
+    """Force refresh the graph from CSV. Rate limited to prevent abuse."""
+    # Apply rate limiting to this expensive operation
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_rate_limit(client_ip, "refresh"):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
+    
     try:
         _cache.clear()
         graph, stats = load_graph(force_refresh=True)
@@ -261,17 +375,57 @@ async def refresh_graph():
         }
     except Exception as e:
         logger.error(f"Error refreshing: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error refreshing graph data")
 
 
-# Serve static frontend
+# Serve static frontend (unified single-page visualization)
 @app.get("/")
 async def serve_frontend():
-    """Serve the frontend application."""
+    """Serve the unified lineage explorer frontend."""
     index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():
         return FileResponse(index_path)
     raise HTTPException(status_code=404, detail="Frontend not found")
+
+
+@app.get("/dashboard.html")
+async def serve_dashboard():
+    """Serve the statistics dashboard."""
+    dashboard_path = FRONTEND_DIR / "dashboard.html"
+    if dashboard_path.exists():
+        return FileResponse(dashboard_path)
+    raise HTTPException(status_code=404, detail="Dashboard not found")
+
+
+@app.get("/query_explorer.html")
+async def serve_query_explorer():
+    """Serve the Neo4j query explorer."""
+    explorer_path = FRONTEND_DIR / "query_explorer.html"
+    if explorer_path.exists():
+        return FileResponse(explorer_path)
+    raise HTTPException(status_code=404, detail="Query explorer not found")
+
+
+# Serve static files from root path (for index-v3.html which uses relative paths)
+@app.get("/{filename:path}")
+async def serve_root_static(filename: str):
+    """Serve static files from root path for relative imports in HTML."""
+    # Skip API routes
+    if filename.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    # Security: Resolve path and ensure it's within FRONTEND_DIR
+    try:
+        file_path = (FRONTEND_DIR / filename).resolve()
+        frontend_resolved = FRONTEND_DIR.resolve()
+        # Prevent path traversal attacks
+        if not str(file_path).startswith(str(frontend_resolved)):
+            raise HTTPException(status_code=403, detail="Access denied")
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+    except (ValueError, OSError):
+        pass  # Invalid path
+    raise HTTPException(status_code=404, detail=f"File not found: {filename}")
 
 
 # Mount static files if directory exists
@@ -319,4 +473,12 @@ def run_server(csv_path: Optional[str] = None, host: str = "127.0.0.1", port: in
 
 
 if __name__ == "__main__":
-    run_server()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Lineage Explorer API Server")
+    parser.add_argument("--host", default="127.0.0.1", help="Server host (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=8000, help="Server port (default: 8000)")
+    parser.add_argument("--csv", "--file", dest="csv_path", help="Path to lineage JSON/CSV file")
+    
+    args = parser.parse_args()
+    run_server(csv_path=args.csv_path, host=args.host, port=args.port)

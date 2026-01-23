@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "usf_fabric_monitoring"
-version = "0.3.18"
+version = "0.3.19"
 description = "Microsoft Fabric Monitoring & Governance System with Advanced Analytics, Smart Merge Technology, and Star Schema Builder"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -30,7 +30,10 @@ dependencies = [
     "azure-storage-blob",
     "asyncio-throttle",
     "pyarrow",
-    "fastparquet"
+    "fastparquet",
+    "fastapi",
+    "uvicorn",
+    "neo4j"
 ]
 
 [project.scripts]

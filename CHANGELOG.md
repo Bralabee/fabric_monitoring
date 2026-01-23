@@ -2,10 +2,104 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.20 (January 2026) - Lineage Explorer UI/UX Enhancements
+
+### Added
+- **Query Explorer Page** (`lineage_explorer/static/query_explorer.html`):
+  - 10 query categories (Overview, Workspaces, Items, Dependencies, External Sources, Tables, Semantic Models, Reports, Security, Advanced)
+  - ~40 pre-built Neo4j Cypher queries with descriptions
+  - Interactive query execution with real-time results display
+  - KPI cards showing Total Workspaces, Items, External Sources, Tables
+  - Dual view modes: Table view (sortable columns) and Chart view (visualizations)
+  - Export functionality: Download results as CSV or JSON
+  - Category filtering for easy query discovery
+
+### Changed
+- **Unified Light Theme**: Converted all three pages to consistent light theme styling
+  - Background: `#f8fafc` (light gray)
+  - Text: `#0f172a` (navy)
+  - Accent: `#3b82f6` (blue)
+  - Replaced "deep space" dark theme with professional light theme
+- **Navigation Component**: Added consistent navigation header to all pages
+  - Graph icon → Main visualization (`/`)
+  - Chart icon → Statistics dashboard (`/dashboard.html`)
+  - Search icon → Query explorer (`/query_explorer.html`)
+- **Persistent Node Selection**: Graph view now keeps clicked nodes highlighted with blue ring
+- **Dashboard Theme Update**: Converted from Tailwind dark classes to custom CSS light theme
+- **Chart.js Theme**: Updated default colors from dark (`#94a3b8`) to light (`#475569`)
+
+### Fixed
+- **CSS Variable Consistency**: All pages now use the same CSS custom properties
+- **JavaScript Generated HTML**: Removed Tailwind classes from all dynamically generated elements
+- **Navigation State**: Active page link properly highlighted in navigation
+
+### Documentation
+- **lineage_explorer/README.md**: Updated with Query Explorer features, light theme description, and navigation guide
+- **CHANGELOG.md**: Documented all UI/UX improvements
+
+---
+
+## 0.3.19 (January 2026) - Neo4j-Powered Interactive Graph Analysis
+
+### Added
+- **Neo4j Graph Database Integration** (`lineage_explorer/graph_database/`):
+  - `neo4j_client.py` - Connection management with retry logic and connection pooling
+  - `data_loader.py` - Transforms lineage CSV data into Neo4j graph model
+  - `queries.py` - 20+ pre-built Cypher queries for lineage analysis
+  - `docker-compose.yml` - Neo4j 5.15.0-community container configuration
+
+- **Extended API Endpoints** (`lineage_explorer/api_extended.py`):
+  - `/api/stats/detailed` - Comprehensive statistics with all breakdowns
+  - `/api/stats/workspaces` - Per-workspace item counts and dependencies
+  - `/api/stats/external-sources` - External source breakdown (ADLS, S3, Snowflake, SharePoint)
+  - `/api/stats/tables` - MirroredDatabase table statistics by database/schema
+  - `/api/neo4j/health` - Neo4j connection status check
+  - `/api/neo4j/load` - Load lineage data into Neo4j
+  - `/api/neo4j/upstream/{id}` - Find all upstream dependencies
+  - `/api/neo4j/downstream/{id}` - Impact analysis (downstream dependents)
+  - `/api/neo4j/path` - Find shortest path between two items
+  - `/api/neo4j/search` - Search items by name/type
+  - `/api/neo4j/centrality` - Calculate node importance scores
+  - `/api/neo4j/cross-workspace` - Cross-workspace dependency analysis
+  - `/api/neo4j/source-type/{type}` - Items consuming specific source types
+
+- **Neo4j-Powered D3.js Frontend Features** (`lineage_explorer/static/`):
+  - `neo4j-features.js` - 650+ lines of Neo4j integration code
+  - `neo4j-features.css` - Styles for context menu, panels, and node states
+  - **Right-Click Context Menu**: Show Upstream Sources, Show Downstream Impact, Set as Path Source/Target, Focus on Node, Copy Node ID
+  - **Path Finder Panel**: Select source/target nodes, visualize connection paths with step-by-step display
+  - **Impact Analysis Panel**: Shows all downstream items affected by changes to selected node
+  - **Upstream Trace Panel**: Displays all data sources feeding into selected item
+  - **Smart Filtering**: Dropdown to filter items by external source type (ADLS, S3, Snowflake)
+  - **Cross-Workspace Highlighting**: Button to highlight dependencies spanning workspaces
+  - **Centrality Highlighting**: Button to resize/color nodes by importance score
+  - **Neo4j Status Indicator**: Shows connection status in header
+
+- **Statistics Dashboard** (`lineage_explorer/static/dashboard.html`):
+  - Summary KPI cards (workspaces, items, sources, connections, tables)
+  - Interactive Chart.js visualizations (items by type, sources by type)
+  - Workspace table with search and filtering
+  - External source details (ADLS containers, S3 buckets, SharePoint sites)
+  - Table breakdown by database/schema
+  - Neo4j status indicator and data loading button
+
+### Changed
+- **Server Integration**: Auto-initializes Neo4j on startup if available
+- **app.js**: Exported functions for Neo4j features integration (`state`, `truncate`, `getNodeColorRaw`, `renderGraph`)
+
+### Fixed
+- **Neo4j Query Syntax**: Fixed parameterized path lengths in Cypher queries (Neo4j doesn't support `*1..$var` in shortestPath)
+
+### Documentation
+- Updated `docs/02_User_Guides/Lineage_Explorer_API.md` with all new endpoints
+- Updated `.github/copilot-instructions.md` with Neo4j architecture and usage
+
+---
+
 ## 0.3.18 (January 2026) - Enhanced Lineage Explorer & Documentation Overhaul
 
 ### Added
-- **Interactive Lineage Explorer** (`src/usf_fabric_monitoring/lineage_explorer/`):
+- **Interactive Lineage Explorer** (`lineage_explorer/`):
   - FastAPI backend serving graph data from CSV lineage exports
   - D3.js v7 force-directed graph visualization with 3 layout modes (force/radial/tree)
   - Animated particle flow along data connections

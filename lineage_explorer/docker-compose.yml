@@ -1,0 +1,96 @@
+# Docker Compose for Fabric Lineage Explorer with Neo4j
+# =====================================================
+# Provides a complete graph database backend for advanced lineage querying.
+#
+# Usage:
+#   cd src/usf_fabric_monitoring/lineage_explorer
+#   docker-compose up -d
+#
+# Services:
+#   - neo4j: Graph database for lineage storage and querying
+#   - lineage-api: FastAPI server with Neo4j integration (optional)
+#
+# Ports:
+#   - 7474: Neo4j Browser (web UI)
+#   - 7687: Neo4j Bolt protocol (client connections)
+#   - 8000: Lineage Explorer API
+
+version: '3.8'
+
+services:
+  neo4j:
+    image: neo4j:5.15.0-community
+    container_name: fabric-lineage-neo4j
+    hostname: neo4j
+    ports:
+      - "127.0.0.1:7474:7474"  # HTTP (Browser) - localhost only
+      - "127.0.0.1:7687:7687"  # Bolt - localhost only
+    environment:
+      # Authentication - REQUIRED: Set NEO4J_PASSWORD env var before starting
+      # Example: NEO4J_PASSWORD=your_secure_password docker-compose up -d
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-changeme_in_production}
+      
+      # Memory configuration (adjust based on data size)
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+      
+      # Performance tuning
+      NEO4J_dbms_transaction_timeout: 60s
+      
+      # Enable APOC (Awesome Procedures)
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*
+      
+    volumes:
+      # Persist data between container restarts
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - lineage-network
+
+  # Optional: Run the lineage API in Docker
+  # Uncomment to enable containerized API
+  # lineage-api:
+  #   build:
+  #     context: ../../../..
+  #     dockerfile: src/usf_fabric_monitoring/lineage_explorer/Dockerfile
+  #   container_name: fabric-lineage-api
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     NEO4J_URI: bolt://neo4j:7687
+  #     NEO4J_USERNAME: neo4j
+  #     NEO4J_PASSWORD: fabric_lineage
+  #   volumes:
+  #     - ../../../../exports/lineage:/app/exports/lineage:ro
+  #   depends_on:
+  #     neo4j:
+  #       condition: service_healthy
+  #   networks:
+  #     - lineage-network
+
+volumes:
+  neo4j_data:
+    name: fabric_lineage_neo4j_data
+  neo4j_logs:
+    name: fabric_lineage_neo4j_logs
+  neo4j_import:
+    name: fabric_lineage_neo4j_import
+  neo4j_plugins:
+    name: fabric_lineage_neo4j_plugins
+
+networks:
+  lineage-network:
+    name: fabric-lineage-network
+    driver: bridge

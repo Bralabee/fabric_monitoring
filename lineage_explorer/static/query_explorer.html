@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Explorer - Fabric Lineage</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Fonts (matching graph view) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS Variables (matching graph view light theme) */
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-pink: #ec4899;
+            --accent-red: #ef4444;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header (matching graph view) */
+        .header {
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .logo svg { width: 24px; height: 24px; color: var(--accent-blue); }
+
+        /* Main Navigation (matching graph view) */
+        .main-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 16px;
+            padding: 4px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .nav-link.active {
+            color: var(--accent-blue);
+            background: var(--bg-secondary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-link svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Neo4j Status */
+        .neo4j-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .neo4j-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-red);
+        }
+
+        .neo4j-dot.connected { background: var(--accent-green); }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 56px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 16px;
+            overflow-y: auto;
+            position: sticky;
+            top: 56px;
+            height: calc(100vh - 56px);
+        }
+
+        .sidebar h2 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .category-list {
+            list-style: none;
+        }
+
+        .category-item {
+            margin-bottom: 4px;
+        }
+
+        .category-btn {
+            width: 100%;
+            text-align: left;
+            padding: 10px 12px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .category-btn.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        .category-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .query-count {
+            margin-left: auto;
+            background: var(--bg-tertiary);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .category-btn.active .query-count {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .category-header {
+            margin-bottom: 24px;
+        }
+
+        .category-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .category-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .category-actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .kpi-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .kpi-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        /* Query Cards */
+        .query-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .query-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .query-card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: var(--shadow-md);
+        }
+
+        .query-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-tertiary);
+        }
+
+        .query-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .query-description {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .query-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Query Code */
+        .query-code {
+            padding: 16px 20px;
+            background: var(--bg-primary);
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .query-code.visible {
+            display: block;
+        }
+
+        .query-code pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+
+        .query-code code {
+            color: var(--accent-blue);
+        }
+
+        /* Results Area */
+        .query-results {
+            padding: 20px;
+            display: none;
+        }
+
+        .query-results.visible {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .results-info {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .results-info span {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            padding: 4px;
+            border-radius: var(--radius-md);
+        }
+
+        .view-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .view-btn.active {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .view-btn:hover:not(.active) {
+            color: var(--text-secondary);
+        }
+
+        /* Results Table */
+        .results-table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .results-table th {
+            background: var(--bg-tertiary);
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .results-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .results-table tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        .results-table td.number {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-blue);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error State */
+        .error {
+            padding: 16px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: var(--radius-md);
+            color: var(--accent-red);
+            font-size: 13px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        /* Connection Status (legacy support) */
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-red);
+        }
+
+        .status-dot.connected {
+            background: var(--accent-green);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                top: 0;
+            }
+            
+            .main-nav {
+                display: none;
+            }
+        }
+
+        /* Syntax Highlighting */
+        .keyword { color: #c586c0; }
+        .function { color: #dcdcaa; }
+        .string { color: #ce9178; }
+        .property { color: #9cdcfe; }
+        .number { color: #b5cea8; }
+        .comment { color: #6a9955; font-style: italic; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span>Query Explorer</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <nav class="main-nav">
+                <a href="/" class="nav-link" title="Graph View">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
+                    </svg>
+                    Graph
+                </a>
+                <a href="/dashboard.html" class="nav-link" title="Statistics Dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10M12 20V4M6 20v-6"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/query_explorer.html" class="nav-link active" title="Neo4j Query Explorer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    Queries
+                </a>
+            </nav>
+            <div class="neo4j-indicator" id="neo4j-indicator">
+                <span class="neo4j-dot" id="statusDot"></span>
+                <span id="statusText">Checking Neo4j...</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <h2>Categories</h2>
+            <ul class="category-list" id="categoryList">
+                <!-- Categories populated by JS -->
+            </ul>
+        </aside>
+
+        <main class="content" id="content">
+            <div class="empty-state" id="welcomeState">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3>Select a Category</h3>
+                <p>Choose a category from the sidebar to explore Neo4j queries</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Query definitions organized by category
+        const QUERY_CATEGORIES = {
+            "Database Overview": {
+                icon: "📊",
+                description: "Explore the structure and composition of your Neo4j graph database",
+                queries: [
+                    {
+                        name: "Node Counts by Label",
+                        description: "Distribution of nodes across different labels",
+                        query: `MATCH (n)
+RETURN labels(n)[0] AS label, count(*) AS count
+ORDER BY count DESC`,
+                        chartType: "pie"
+                    },
+                    {
+                        name: "Relationship Counts by Type",
+                        description: "Distribution of relationships by type",
+                        query: `MATCH ()-[r]->()
+RETURN type(r) AS relationship_type, count(*) AS count
+ORDER BY count DESC`,
+                        chartType: "bar"
+                    }
+                ]
+            },
+            "Basic Statistics": {
+                icon: "📈",
+                description: "Core metrics and statistics about your graph",
+                queries: [
+                    {
+                        name: "Total Graph Metrics",
+                        description: "Complete overview of all entities in the graph",
+                        query: `MATCH (n)
+WITH count(n) AS total_nodes
+MATCH ()-[r]->()
+WITH total_nodes, count(r) AS total_relationships
+MATCH (w:Workspace)
+WITH total_nodes, total_relationships, count(w) AS workspaces
+MATCH (i:FabricItem)
+WITH total_nodes, total_relationships, workspaces, count(i) AS items
+MATCH (s:ExternalSource)
+WITH total_nodes, total_relationships, workspaces, items, count(s) AS external_sources
+MATCH (t:Table)
+RETURN total_nodes, total_relationships, workspaces, items, external_sources, count(t) AS tables`,
+                        chartType: "kpi"
+                    },
+                    {
+                        name: "Node Distribution",
+                        description: "Count of nodes by type",
+                        query: `MATCH (n)
+WITH labels(n)[0] AS node_type, count(*) AS count
+RETURN node_type, count
+ORDER BY count DESC`,
+                        chartType: "doughnut"
+                    },
+                    {
+                        name: "Connectivity Statistics",
+                        description: "Average connections per node type",
+                        query: `MATCH (n)
+WITH labels(n)[0] AS node_type, n
+OPTIONAL MATCH (n)-[r]-()
+WITH node_type, n, count(r) AS connections
+RETURN node_type, 
+       count(n) AS node_count,
+       round(avg(connections)*100)/100 AS avg_connections,
+       min(connections) AS min_connections,
+       max(connections) AS max_connections
+ORDER BY avg_connections DESC`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "Workspace Analysis": {
+                icon: "🏢",
+                description: "Analyze workspaces, their contents, and relationships",
+                queries: [
+                    {
+                        name: "Workspace Summary",
+                        description: "Overview of workspaces with item counts and dependencies",
+                        query: `MATCH (w:Workspace)
+OPTIONAL MATCH (w)-[:CONTAINS]->(i:FabricItem)
+WITH w, count(i) AS item_count
+OPTIONAL MATCH (w)-[:CONTAINS]->(i:FabricItem)-[:DEPENDS_ON]->()
+WITH w, item_count, count(DISTINCT i) AS items_with_dependencies
+RETURN w.name AS workspace, 
+       item_count,
+       items_with_dependencies,
+       item_count - items_with_dependencies AS standalone_items
+ORDER BY item_count DESC
+LIMIT 20`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Workspace Item Type Distribution",
+                        description: "Item types within each workspace",
+                        query: `MATCH (w:Workspace)-[:CONTAINS]->(i:FabricItem)
+RETURN w.name AS workspace, 
+       i.type AS item_type, 
+       count(*) AS count
+ORDER BY count DESC
+LIMIT 30`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Top Workspaces by Complexity",
+                        description: "Workspaces ranked by relationship density",
+                        query: `MATCH (w:Workspace)-[:CONTAINS]->(i:FabricItem)
+OPTIONAL MATCH (i)-[r:DEPENDS_ON|CONSUMES|MIRRORS]-()
+WITH w, count(DISTINCT i) AS items, count(r) AS total_relationships
+RETURN w.name AS workspace,
+       items,
+       total_relationships,
+       round(1.0 * total_relationships / items * 100) / 100 AS avg_relationships_per_item
+ORDER BY total_relationships DESC
+LIMIT 15`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Isolated Workspaces",
+                        description: "Workspaces with no external dependencies",
+                        query: `MATCH (w:Workspace)-[:CONTAINS]->(i:FabricItem)
+WHERE NOT EXISTS {
+    MATCH (i)-[:DEPENDS_ON]->(other:FabricItem)<-[:CONTAINS]-(w2:Workspace)
+    WHERE w2 <> w
+}
+AND NOT EXISTS {
+    MATCH (i)-[:CONSUMES]->(:ExternalSource)
+}
+WITH w, count(i) AS item_count
+RETURN w.name AS isolated_workspace, item_count
+ORDER BY item_count DESC
+LIMIT 20`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "Item Analysis": {
+                icon: "📦",
+                description: "Examine Fabric items, their types, and connections",
+                queries: [
+                    {
+                        name: "Item Type Statistics",
+                        description: "Distribution of items by type",
+                        query: `MATCH (i:FabricItem)
+RETURN i.type AS item_type, count(*) AS count
+ORDER BY count DESC`,
+                        chartType: "pie"
+                    },
+                    {
+                        name: "Most Connected Items (Hub Nodes)",
+                        description: "Items with the highest number of connections",
+                        query: `MATCH (i:FabricItem)
+OPTIONAL MATCH (i)-[out]->()
+OPTIONAL MATCH (i)<-[in]-()
+WITH i, count(DISTINCT out) AS outgoing, count(DISTINCT in) AS incoming
+RETURN i.name AS item_name,
+       i.type AS item_type,
+       incoming,
+       outgoing,
+       incoming + outgoing AS total_connections
+ORDER BY total_connections DESC
+LIMIT 20`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Leaf Nodes",
+                        description: "Items with no downstream consumers",
+                        query: `MATCH (i:FabricItem)
+WHERE NOT EXISTS { MATCH (i)<-[:DEPENDS_ON]-() }
+OPTIONAL MATCH (i)<-[:CONTAINS]-(w:Workspace)
+RETURN i.name AS item_name, 
+       i.type AS item_type,
+       w.name AS workspace
+ORDER BY i.type, i.name
+LIMIT 25`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Root Nodes",
+                        description: "Items with no upstream dependencies",
+                        query: `MATCH (i:FabricItem)
+WHERE NOT EXISTS { MATCH (i)-[:DEPENDS_ON]->() }
+AND NOT EXISTS { MATCH (i)-[:CONSUMES]->() }
+OPTIONAL MATCH (i)<-[:CONTAINS]-(w:Workspace)
+RETURN i.name AS item_name, 
+       i.type AS item_type,
+       w.name AS workspace
+ORDER BY i.type, i.name
+LIMIT 25`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "External Sources": {
+                icon: "🔗",
+                description: "Analyze external data sources and their usage",
+                queries: [
+                    {
+                        name: "External Source Types",
+                        description: "Distribution of external source types",
+                        query: `MATCH (s:ExternalSource)
+RETURN s.type AS source_type, count(*) AS count
+ORDER BY count DESC`,
+                        chartType: "doughnut"
+                    },
+                    {
+                        name: "Most Used External Sources",
+                        description: "Sources with the most consumers",
+                        query: `MATCH (s:ExternalSource)<-[:CONSUMES]-(i:FabricItem)
+WITH s, collect(DISTINCT i.name) AS consumers, count(DISTINCT i) AS consumer_count
+RETURN s.display_name AS source_name,
+       s.type AS source_type,
+       consumer_count,
+       consumers[0..3] AS sample_consumers
+ORDER BY consumer_count DESC
+LIMIT 15`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "External Sources by Workspace",
+                        description: "How workspaces use external sources",
+                        query: `MATCH (s:ExternalSource)<-[:CONSUMES]-(i:FabricItem)<-[:CONTAINS]-(w:Workspace)
+RETURN w.name AS workspace,
+       s.type AS source_type,
+       count(DISTINCT s) AS source_count
+ORDER BY source_count DESC
+LIMIT 30`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Unused External Sources",
+                        description: "Sources with no active consumers",
+                        query: `MATCH (s:ExternalSource)
+WHERE NOT EXISTS { MATCH (s)<-[:CONSUMES]-() }
+RETURN s.display_name AS unused_source,
+       s.type AS source_type
+ORDER BY s.type, s.display_name
+LIMIT 20`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "Table Analysis": {
+                icon: "📋",
+                description: "Explore mirrored database tables",
+                queries: [
+                    {
+                        name: "Table Statistics by Database",
+                        description: "Tables grouped by database and schema",
+                        query: `MATCH (t:Table)
+RETURN t.database AS database, 
+       t.schema AS schema,
+       count(*) AS table_count
+ORDER BY table_count DESC
+LIMIT 20`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Tables by Fabric Item",
+                        description: "Which items mirror which tables",
+                        query: `MATCH (i:FabricItem)-[:MIRRORS]->(t:Table)
+RETURN i.name AS fabric_item,
+       i.type AS item_type,
+       count(t) AS table_count,
+       collect(t.name)[0..3] AS sample_tables
+ORDER BY table_count DESC
+LIMIT 15`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "Dependency Analysis": {
+                icon: "🔀",
+                description: "Analyze dependency chains and data lineage",
+                queries: [
+                    {
+                        name: "Dependency Chain Length",
+                        description: "Longest dependency chains in the graph",
+                        query: `MATCH path = (leaf:FabricItem)-[:DEPENDS_ON*]->(root)
+WHERE NOT EXISTS { MATCH (leaf)<-[:DEPENDS_ON]-() }
+AND NOT EXISTS { MATCH (root)-[:DEPENDS_ON]->() }
+WITH path, length(path) AS chain_length
+ORDER BY chain_length DESC
+LIMIT 10
+RETURN [n IN nodes(path) | n.name] AS chain, chain_length`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Single Points of Failure",
+                        description: "Critical bottleneck items",
+                        query: `MATCH (i:FabricItem)
+OPTIONAL MATCH (upstream)-[:DEPENDS_ON]->(i)-[:DEPENDS_ON]->(downstream)
+WITH i, count(DISTINCT upstream) AS upstream_count, count(DISTINCT downstream) AS downstream_count
+WHERE upstream_count > 0 AND downstream_count > 0
+RETURN i.name AS bottleneck_item,
+       i.type AS item_type,
+       upstream_count,
+       downstream_count,
+       upstream_count * downstream_count AS impact_score
+ORDER BY impact_score DESC
+LIMIT 15`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Item Type Co-occurrence",
+                        description: "Which item types commonly depend on each other",
+                        query: `MATCH (i1:FabricItem)-[:DEPENDS_ON]->(i2:FabricItem)
+RETURN i1.type AS source_type,
+       i2.type AS target_type,
+       count(*) AS occurrence_count
+ORDER BY occurrence_count DESC
+LIMIT 20`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "Cross-Workspace": {
+                icon: "🌐",
+                description: "Dependencies spanning multiple workspaces",
+                queries: [
+                    {
+                        name: "Cross-Workspace Dependencies",
+                        description: "Items depending on items from other workspaces",
+                        query: `MATCH (i1:FabricItem)-[:DEPENDS_ON]->(i2:FabricItem)
+MATCH (i1)<-[:CONTAINS]-(w1:Workspace)
+MATCH (i2)<-[:CONTAINS]-(w2:Workspace)
+WHERE w1 <> w2
+RETURN w1.name AS source_workspace,
+       i1.name AS source_item,
+       i2.name AS target_item,
+       w2.name AS target_workspace
+ORDER BY w1.name, w2.name
+LIMIT 25`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Workspace Dependency Matrix",
+                        description: "Summarized dependencies between workspaces",
+                        query: `MATCH (i1:FabricItem)-[:DEPENDS_ON]->(i2:FabricItem)
+MATCH (i1)<-[:CONTAINS]-(w1:Workspace)
+MATCH (i2)<-[:CONTAINS]-(w2:Workspace)
+WHERE w1 <> w2
+RETURN w1.name AS from_workspace,
+       w2.name AS to_workspace,
+       count(*) AS dependency_count
+ORDER BY dependency_count DESC
+LIMIT 20`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Workspace Clusters",
+                        description: "Tightly coupled workspaces",
+                        query: `MATCH (i1:FabricItem)-[:DEPENDS_ON]-(i2:FabricItem)
+MATCH (i1)<-[:CONTAINS]-(w1:Workspace)
+MATCH (i2)<-[:CONTAINS]-(w2:Workspace)
+WHERE w1 <> w2
+WITH w1, w2, count(*) AS connections
+WHERE connections >= 3
+RETURN w1.name AS workspace_a,
+       w2.name AS workspace_b,
+       connections
+ORDER BY connections DESC
+LIMIT 15`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "Data Quality": {
+                icon: "✅",
+                description: "Identify data quality issues and governance concerns",
+                queries: [
+                    {
+                        name: "Orphaned Items",
+                        description: "Items with no relationships",
+                        query: `MATCH (i:FabricItem)
+WHERE NOT EXISTS { MATCH (i)-[:DEPENDS_ON]-() }
+AND NOT EXISTS { MATCH (i)-[:CONSUMES]-() }
+AND NOT EXISTS { MATCH (i)-[:MIRRORS]-() }
+OPTIONAL MATCH (i)<-[:CONTAINS]-(w:Workspace)
+RETURN i.name AS orphaned_item,
+       i.type AS item_type,
+       w.name AS workspace
+ORDER BY w.name, i.type
+LIMIT 25`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Circular Dependencies",
+                        description: "Detect cycles in the dependency graph",
+                        query: `MATCH path = (i:FabricItem)-[:DEPENDS_ON*2..10]->(i)
+RETURN DISTINCT [n IN nodes(path) | n.name] AS circular_path,
+       length(path) AS cycle_length
+ORDER BY cycle_length
+LIMIT 15`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Duplicate Detection",
+                        description: "Items with identical names",
+                        query: `MATCH (i1:FabricItem), (i2:FabricItem)
+WHERE i1.id < i2.id 
+AND toLower(i1.name) = toLower(i2.name)
+OPTIONAL MATCH (i1)<-[:CONTAINS]-(w1:Workspace)
+OPTIONAL MATCH (i2)<-[:CONTAINS]-(w2:Workspace)
+RETURN i1.name AS item_name,
+       w1.name AS workspace_1,
+       w2.name AS workspace_2,
+       i1.type AS type_1,
+       i2.type AS type_2
+LIMIT 20`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Items Missing Workspace",
+                        description: "Items not assigned to any workspace",
+                        query: `MATCH (i:FabricItem)
+WHERE NOT EXISTS { MATCH (i)<-[:CONTAINS]-(:Workspace) }
+RETURN i.name AS unassigned_item,
+       i.type AS item_type,
+       i.id AS item_id
+LIMIT 20`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "Performance Metrics": {
+                icon: "⚡",
+                description: "Graph analysis and optimization insights",
+                queries: [
+                    {
+                        name: "Degree Centrality",
+                        description: "Most connected nodes overall",
+                        query: `MATCH (i:FabricItem)
+OPTIONAL MATCH (i)-[r]-()
+WITH i, count(r) AS degree
+RETURN i.name AS item_name,
+       i.type AS item_type,
+       degree
+ORDER BY degree DESC
+LIMIT 20`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Bridge Nodes",
+                        description: "Items connecting different parts of the graph",
+                        query: `MATCH (i:FabricItem)
+WHERE EXISTS { MATCH (i)-[:DEPENDS_ON]->() }
+AND EXISTS { MATCH (i)<-[:DEPENDS_ON]-() }
+OPTIONAL MATCH (upstream)-[:DEPENDS_ON]->(i)
+OPTIONAL MATCH (i)-[:DEPENDS_ON]->(downstream)
+WITH i, 
+     count(DISTINCT upstream) AS in_degree,
+     count(DISTINCT downstream) AS out_degree
+WHERE in_degree > 1 AND out_degree > 1
+RETURN i.name AS bridge_item,
+       i.type AS item_type,
+       in_degree,
+       out_degree,
+       in_degree * out_degree AS bridge_score
+ORDER BY bridge_score DESC
+LIMIT 15`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Graph Density by Workspace",
+                        description: "How interconnected items are within workspaces",
+                        query: `MATCH (w:Workspace)-[:CONTAINS]->(i:FabricItem)
+WITH w, collect(i) AS items, count(i) AS n
+OPTIONAL MATCH (i1:FabricItem)-[r:DEPENDS_ON]->(i2:FabricItem)
+WHERE i1 IN items AND i2 IN items
+WITH w, n, count(r) AS edges
+RETURN w.name AS workspace,
+       n AS nodes,
+       edges,
+       CASE WHEN n > 1 THEN round(2.0 * edges / (n * (n - 1)) * 10000) / 10000 ELSE 0 END AS density
+ORDER BY density DESC
+LIMIT 15`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Workspace Maturity Score",
+                        description: "Score based on connectivity and source usage",
+                        query: `MATCH (w:Workspace)-[:CONTAINS]->(i:FabricItem)
+WITH w, count(i) AS item_count
+OPTIONAL MATCH (w)-[:CONTAINS]->(i2:FabricItem)-[:DEPENDS_ON]->()
+WITH w, item_count, count(DISTINCT i2) AS items_with_deps
+OPTIONAL MATCH (w)-[:CONTAINS]->(i3:FabricItem)-[:CONSUMES]->(:ExternalSource)
+WITH w, item_count, items_with_deps, count(DISTINCT i3) AS items_with_sources
+RETURN w.name AS workspace,
+       item_count,
+       items_with_deps,
+       items_with_sources,
+       round(100.0 * (items_with_deps + items_with_sources) / (2 * item_count) * 10) / 10 AS maturity_score
+ORDER BY maturity_score DESC
+LIMIT 15`,
+                        chartType: "bar"
+                    }
+                ]
+            }
+        };
+
+        // Chart color palette
+        const CHART_COLORS = [
+            '#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b',
+            '#ec4899', '#ef4444', '#84cc16', '#14b8a6', '#f97316',
+            '#6366f1', '#a855f7', '#22d3ee', '#34d399', '#fbbf24'
+        ];
+
+        // State
+        let currentCategory = null;
+        let charts = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCategoryList();
+            checkNeo4jConnection();
+        });
+
+        // Render category sidebar
+        function renderCategoryList() {
+            const list = document.getElementById('categoryList');
+            list.innerHTML = Object.entries(QUERY_CATEGORIES).map(([name, cat]) => `
+                <li class="category-item">
+                    <button class="category-btn" onclick="selectCategory('${name}')">
+                        <span class="category-icon">${cat.icon}</span>
+                        <span>${name}</span>
+                        <span class="query-count">${cat.queries.length}</span>
+                    </button>
+                </li>
+            `).join('');
+        }
+
+        // Select category
+        function selectCategory(categoryName) {
+            currentCategory = categoryName;
+            
+            // Update active state
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(categoryName)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            renderQueries(categoryName);
+        }
+
+        // Render queries for category
+        function renderQueries(categoryName) {
+            const category = QUERY_CATEGORIES[categoryName];
+            const content = document.getElementById('content');
+            
+            content.innerHTML = `
+                <div class="category-header">
+                    <h2>${category.icon} ${categoryName}</h2>
+                    <p>${category.description}</p>
+                    <div class="category-actions">
+                        <button class="btn btn-primary" onclick="runAllQueries('${categoryName}')">
+                            ▶ Run All Queries
+                        </button>
+                    </div>
+                </div>
+                <div class="query-grid">
+                    ${category.queries.map((q, idx) => renderQueryCard(q, idx, categoryName)).join('')}
+                </div>
+            `;
+        }
+
+        // Run all queries in a category
+        async function runAllQueries(categoryName) {
+            const category = QUERY_CATEGORIES[categoryName];
+            for (let i = 0; i < category.queries.length; i++) {
+                const query = category.queries[i];
+                const cardId = `query-${categoryName.replace(/\s+/g, '-')}-${i}`;
+                await runQuery(cardId, escapeTemplate(query.query).replace(/\\`/g, '`').replace(/\\\$/g, '$'), query.chartType);
+                // Small delay between queries to avoid overwhelming the server
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
+
+        // Render single query card
+        function renderQueryCard(query, index, category) {
+            const cardId = `query-${category.replace(/\s+/g, '-')}-${index}`;
+            return `
+                <div class="query-card" id="${cardId}">
+                    <div class="query-card-header">
+                        <div>
+                            <div class="query-title">${query.name}</div>
+                            <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">
+                                ${query.description || ''}
+                            </div>
+                        </div>
+                        <div class="query-actions">
+                            <button class="btn btn-secondary" onclick="toggleCode('${cardId}')" title="Show Cypher">
+                                &lt;/&gt;
+                            </button>
+                            <button class="btn btn-secondary" onclick="copyQuery('${cardId}', \`${escapeTemplate(query.query)}\`)" title="Copy Query">
+                                📋
+                            </button>
+                            <button class="btn btn-primary" onclick="runQuery('${cardId}', \`${escapeTemplate(query.query)}\`, '${query.chartType}')">
+                                ▶ Run
+                            </button>
+                        </div>
+                    </div>
+                    <div class="query-code" id="${cardId}-code" style="display: none;">
+                        <pre><code>${highlightCypher(query.query)}</code></pre>
+                    </div>
+                    <div class="query-results" id="${cardId}-results"></div>
+                </div>
+            `;
+        }
+
+        // Copy query to clipboard
+        async function copyQuery(cardId, query) {
+            const cleanQuery = query.replace(/\\`/g, '`').replace(/\\\$/g, '$');
+            try {
+                await navigator.clipboard.writeText(cleanQuery);
+                // Show brief confirmation
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓';
+                setTimeout(() => btn.textContent = originalText, 1500);
+            } catch (e) {
+                console.error('Failed to copy:', e);
+            }
+        }
+
+        // Escape template literals
+        function escapeTemplate(str) {
+            return str.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+        }
+
+        // Syntax highlighting for Cypher
+        function highlightCypher(code) {
+            const keywords = ['MATCH', 'WHERE', 'RETURN', 'WITH', 'ORDER BY', 'LIMIT', 'OPTIONAL MATCH', 
+                            'CREATE', 'DELETE', 'SET', 'REMOVE', 'MERGE', 'UNWIND', 'CALL', 'YIELD',
+                            'AND', 'OR', 'NOT', 'IN', 'AS', 'DISTINCT', 'DESC', 'ASC', 'BY', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END'];
+            const functions = ['count', 'sum', 'avg', 'min', 'max', 'collect', 'size', 'length', 
+                              'labels', 'type', 'nodes', 'relationships', 'round', 'toLower', 'EXISTS'];
+            
+            let highlighted = code
+                .replace(/\/\/.*/g, '<span class="comment">$&</span>')
+                .replace(/'[^']*'/g, '<span class="string">$&</span>')
+                .replace(/"[^"]*"/g, '<span class="string">$&</span>')
+                .replace(/\b(\d+)\b/g, '<span class="number">$1</span>');
+            
+            keywords.forEach(kw => {
+                const regex = new RegExp(`\\b(${kw})\\b`, 'gi');
+                highlighted = highlighted.replace(regex, '<span class="keyword">$1</span>');
+            });
+            
+            functions.forEach(fn => {
+                const regex = new RegExp(`\\b(${fn})\\s*\\(`, 'gi');
+                highlighted = highlighted.replace(regex, '<span class="function">$1</span>(');
+            });
+            
+            return highlighted;
+        }
+
+        // Toggle code visibility
+        function toggleCode(cardId) {
+            const codeEl = document.getElementById(`${cardId}-code`);
+            codeEl.style.display = codeEl.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Run query
+        async function runQuery(cardId, query, chartType) {
+            const resultsEl = document.getElementById(`${cardId}-results`);
+            resultsEl.classList.add('visible');
+            resultsEl.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Running query...
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/neo4j/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query.replace(/\\`/g, '`').replace(/\\\$/g, '$') })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                renderResults(cardId, data.results || data, chartType);
+            } catch (error) {
+                resultsEl.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Render results
+        function renderResults(cardId, results, chartType) {
+            const resultsEl = document.getElementById(`${cardId}-results`);
+            
+            if (!results || results.length === 0) {
+                resultsEl.innerHTML = `
+                    <div class="empty-state" style="padding: 1rem;">
+                        <p>No results returned</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const columns = Object.keys(results[0]);
+            
+            // Check if this is a KPI-style query (single row with numeric values)
+            const isKpi = chartType === 'kpi' || (results.length === 1 && columns.every(c => typeof results[0][c] === 'number'));
+            
+            if (isKpi) {
+                resultsEl.innerHTML = `
+                    <div class="kpi-grid">
+                        ${columns.map(col => `
+                            <div class="kpi-card">
+                                <div class="kpi-value">${formatValue(results[0][col])}</div>
+                                <div class="kpi-label">${formatColumnName(col)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Determine if we can show a chart
+            const canChart = chartType !== 'table' && results.length > 0 && 
+                            hasNumericColumn(results);
+
+            resultsEl.innerHTML = `
+                <div class="results-header">
+                    <div class="results-info">
+                        <span>${results.length}</span> ${results.length === 1 ? 'record' : 'records'} returned
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-secondary" onclick="exportResults('${cardId}')" title="Export as CSV" style="padding: 0.4rem 0.75rem;">
+                            📥 Export
+                        </button>
+                        ${canChart ? `
+                        <div class="view-toggle">
+                            <button class="view-btn active" onclick="showView('${cardId}', 'table')">Table</button>
+                            <button class="view-btn" onclick="showView('${cardId}', 'chart')">Chart</button>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div id="${cardId}-table-view">
+                    ${renderTable(results, columns)}
+                </div>
+                ${canChart ? `
+                <div id="${cardId}-chart-view" style="display: none;">
+                    <div class="chart-container">
+                        <canvas id="${cardId}-chart"></canvas>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            // Store results for export
+            window.queryResults = window.queryResults || {};
+            window.queryResults[cardId] = results;
+
+            // Pre-create chart
+            if (canChart) {
+                setTimeout(() => createChart(cardId, results, chartType), 100);
+            }
+        }
+
+        // Check if results have numeric column
+        function hasNumericColumn(results) {
+            if (!results.length) return false;
+            return Object.values(results[0]).some(v => typeof v === 'number');
+        }
+
+        // Render table
+        function renderTable(results, columns) {
+            return `
+                <div class="results-table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                ${columns.map(col => `<th>${formatColumnName(col)}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.map(row => `
+                                <tr>
+                                    ${columns.map(col => {
+                                        const val = row[col];
+                                        const isNum = typeof val === 'number';
+                                        const displayVal = formatValue(val);
+                                        return `<td class="${isNum ? 'number' : ''}">${displayVal}</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Format column name
+        function formatColumnName(name) {
+            return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Format value
+        function formatValue(val) {
+            if (val === null || val === undefined) return '-';
+            if (Array.isArray(val)) return val.join(', ') || '-';
+            if (typeof val === 'object') return JSON.stringify(val);
+            if (typeof val === 'number') {
+                return val % 1 === 0 ? val.toLocaleString() : val.toFixed(2);
+            }
+            return String(val);
+        }
+
+        // Show view (table or chart)
+        function showView(cardId, view) {
+            const tableView = document.getElementById(`${cardId}-table-view`);
+            const chartView = document.getElementById(`${cardId}-chart-view`);
+            const buttons = document.querySelectorAll(`#${cardId}-results .view-btn`);
+            
+            if (view === 'table') {
+                tableView.style.display = 'block';
+                chartView.style.display = 'none';
+                buttons[0].classList.add('active');
+                buttons[1].classList.remove('active');
+            } else {
+                tableView.style.display = 'none';
+                chartView.style.display = 'block';
+                buttons[0].classList.remove('active');
+                buttons[1].classList.add('active');
+            }
+        }
+
+        // Create chart
+        function createChart(cardId, results, chartType) {
+            const canvas = document.getElementById(`${cardId}-chart`);
+            if (!canvas) return;
+
+            // Destroy existing chart
+            if (charts[cardId]) {
+                charts[cardId].destroy();
+            }
+
+            const columns = Object.keys(results[0]);
+            const labelColumn = columns.find(c => typeof results[0][c] === 'string') || columns[0];
+            const valueColumn = columns.find(c => typeof results[0][c] === 'number') || columns[1];
+
+            const labels = results.map(r => truncateLabel(String(r[labelColumn] || 'Unknown')));
+            const values = results.map(r => r[valueColumn] || 0);
+
+            const config = {
+                type: chartType === 'doughnut' ? 'doughnut' : chartType === 'pie' ? 'pie' : 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: CHART_COLORS.slice(0, labels.length),
+                        borderColor: chartType === 'bar' ? CHART_COLORS[0] : CHART_COLORS.slice(0, labels.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: chartType === 'pie' || chartType === 'doughnut',
+                            position: 'right',
+                            labels: {
+                                color: '#a0a0b0',
+                                font: { size: 11 }
+                            }
+                        }
+                    },
+                    scales: chartType === 'bar' ? {
+                        x: {
+                            ticks: { color: '#a0a0b0', maxRotation: 45 },
+                            grid: { color: '#2a2a3a' }
+                        },
+                        y: {
+                            ticks: { color: '#a0a0b0' },
+                            grid: { color: '#2a2a3a' }
+                        }
+                    } : {}
+                }
+            };
+
+            charts[cardId] = new Chart(canvas, config);
+        }
+
+        // Truncate label
+        function truncateLabel(label, maxLen = 20) {
+            return label.length > maxLen ? label.substring(0, maxLen) + '...' : label;
+        }
+
+        // Export results as CSV
+        function exportResults(cardId) {
+            const results = window.queryResults && window.queryResults[cardId];
+            if (!results || results.length === 0) {
+                alert('No results to export');
+                return;
+            }
+            
+            const columns = Object.keys(results[0]);
+            const csvRows = [columns.join(',')];
+            
+            results.forEach(row => {
+                const values = columns.map(col => {
+                    let val = row[col];
+                    if (val === null || val === undefined) return '';
+                    if (Array.isArray(val)) val = val.join('; ');
+                    if (typeof val === 'object') val = JSON.stringify(val);
+                    // Escape quotes and wrap in quotes if needed
+                    val = String(val);
+                    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                        val = '"' + val.replace(/"/g, '""') + '"';
+                    }
+                    return val;
+                });
+                csvRows.push(values.join(','));
+            });
+            
+            const csv = csvRows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `query_results_${cardId}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Check Neo4j connection
+        async function checkNeo4jConnection() {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            try {
+                const response = await fetch('/api/neo4j/health');
+                const data = await response.json();
+                
+                if (data.healthy) {
+                    dot.classList.add('connected');
+                    text.textContent = `Neo4j Connected (${data.nodes || 0} nodes)`;
+                } else if (data.status === 'not_configured') {
+                    text.textContent = 'Neo4j Not Configured';
+                } else {
+                    text.textContent = 'Neo4j Offline';
+                }
+            } catch (e) {
+                text.textContent = 'Connection Error';
+            }
+        }
+    </script>
+</body>
+</html>

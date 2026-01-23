@@ -138,7 +138,7 @@ install:
 validate-config:
 	@echo "$(GREEN)Validating config JSON files$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
-		conda run --no-capture-output -n $(ENV_NAME) python -m usf_fabric_monitoring.scripts.validate_config; \
+		conda run --no-capture-output -n $(ENV_NAME) python scripts/validate_config.py; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
