@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -93,9 +93,9 @@ def coerce_surrogate_keys(df: pd.DataFrame, inplace: bool = False) -> pd.DataFra
     """
     if not inplace:
         df = df.copy()
-    
+
     sk_columns = [col for col in df.columns if col.endswith('_sk')]
-    
+
     for col in sk_columns:
         if col in df.columns:
             # Convert to nullable Int64
@@ -106,7 +106,7 @@ def coerce_surrogate_keys(df: pd.DataFrame, inplace: bool = False) -> pd.DataFra
                 )
             except Exception as e:
                 logger.warning(f"Failed to coerce {col} to Int64: {e}")
-    
+
     return df
 
 
@@ -155,31 +155,31 @@ def safe_datetime(value: Any) -> Optional[datetime]:
         return value
     if isinstance(value, pd.Timestamp):
         return value.to_pydatetime()
-    
+
     if not isinstance(value, str):
         try:
             value = str(value)
         except Exception:
             return None
-    
+
     value = value.strip()
     if not value:
         return None
-    
+
     # Try pandas first (handles ISO8601 well)
     try:
         result = pd.to_datetime(value, utc=True)
         return result.to_pydatetime().replace(tzinfo=None)
     except Exception:
         pass
-    
+
     # Try explicit formats
     for fmt in DATETIME_FORMATS:
         try:
             return datetime.strptime(value.rstrip('Z'), fmt.rstrip('Z'))
         except ValueError:
             continue
-    
+
     logger.debug(f"Could not parse datetime: {value}")
     return None
 
@@ -202,13 +202,13 @@ def safe_datetime_column(series: pd.Series) -> pd.Series:
         return pd.to_datetime(series, format='ISO8601', errors='coerce')
     except Exception:
         pass
-    
+
     # Try mixed format parsing
     try:
         return pd.to_datetime(series, format='mixed', errors='coerce')
     except Exception:
         pass
-    
+
     # Fallback to individual parsing
     return series.apply(safe_datetime)
 
@@ -256,13 +256,13 @@ def safe_workspace_lookup(
         name = id_lookup.get(str(workspace_id))
         if name:
             return name
-    
+
     # Use provided name if available and non-null
     if workspace_name and not pd.isna(workspace_name):
         name_str = str(workspace_name).strip()
         if name_str and name_str.lower() != "unknown":
             return name_str
-    
+
     return default
 
 
@@ -293,14 +293,14 @@ def safe_workspace_sk_lookup(
         sk = sk_by_id.get(str(workspace_id))
         if sk is not None:
             return sk
-    
+
     # Try name lookup
     if workspace_name and not pd.isna(workspace_name):
         name_str = str(workspace_name).strip()
         sk = sk_by_name.get(name_str)
         if sk is not None:
             return sk
-    
+
     return default_sk
 
 
@@ -345,8 +345,8 @@ def safe_string_or_none(value: Any) -> Optional[str]:
 # =============================================================================
 
 def ensure_columns_exist(
-    df: pd.DataFrame, 
-    columns: List[str], 
+    df: pd.DataFrame,
+    columns: List[str],
     fill_value: Any = None
 ) -> pd.DataFrame:
     """
@@ -398,12 +398,12 @@ def microsecond_timestamps(df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with datetime columns truncated to microseconds
     """
     datetime_cols = df.select_dtypes(include=['datetime64[ns]', 'datetime64']).columns
-    
+
     for col in datetime_cols:
         try:
             # Truncate to microseconds
             df[col] = df[col].dt.floor('us')
         except Exception as e:
             logger.debug(f"Could not truncate {col} to microseconds: {e}")
-    
+
     return df

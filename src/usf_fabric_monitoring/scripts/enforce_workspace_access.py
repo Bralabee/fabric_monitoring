@@ -18,7 +18,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Iterable, Optional
+from typing import Iterable, Optional
 
 from dotenv import load_dotenv
 
@@ -138,22 +138,22 @@ def write_csv_summary(summary: dict, destination: Path) -> Path:
         "needs_action",
         "actions",
     ]
-    
+
     rows = []
     for item in summary.get("actions", []):
         workspace = item.get("workspace", {})
         status = item.get("status", "unknown")
         actions = item.get("actions", [])
-        
+
         needs_action = any(
             a.get("action") not in ["already_compliant"] for a in actions
         )
-        
+
         action_summary = "; ".join(
             f"{a.get('group')}: {a.get('action')}"
             for a in actions
         )
-        
+
         rows.append({
             "workspace_id": workspace.get("id", ""),
             "workspace_name": workspace.get("name", ""),
@@ -161,13 +161,13 @@ def write_csv_summary(summary: dict, destination: Path) -> Path:
             "needs_action": str(needs_action).lower(),
             "actions": action_summary,
         })
-    
+
     import csv
     with open(output_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
         writer.writerows(rows)
-    
+
     return output_file
 
 
@@ -203,7 +203,7 @@ def derive_report_metrics(summary: dict) -> dict:
 def main(argv: Optional[Iterable[str]] = None) -> int:
     load_dotenv()
     args = parse_args(argv)
-    
+
     logger = setup_logging(
         name="workspace_enforcer",
         level=getattr(logging, args.log_level.upper(), logging.INFO)

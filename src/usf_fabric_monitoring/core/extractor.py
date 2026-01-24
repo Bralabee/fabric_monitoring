@@ -11,11 +11,9 @@ This module handles data extraction from Microsoft Fabric APIs including:
 import os
 import logging
 import time
-from typing import List, Dict, Any, Optional, Union
-from datetime import datetime, timedelta, timezone
-import json
+from typing import List, Dict, Any, Optional
+from datetime import datetime, timedelta
 import requests
-import pandas as pd
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -33,7 +31,7 @@ from .enrichment import (
 
 class FabricDataExtractor:
     """Extracts monitoring data from Microsoft Fabric and Power BI APIs"""
-    
+
     def __init__(self, authenticator: FabricAuthenticator):
         """
         Initialize the data extractor.
@@ -43,12 +41,12 @@ class FabricDataExtractor:
         """
         self.auth = authenticator
         self.logger = logging.getLogger(__name__)
-        
+
         # API base URLs
         self.fabric_base_url = os.getenv("FABRIC_API_BASE_URL", "https://api.fabric.microsoft.com")
         self.powerbi_base_url = os.getenv("POWERBI_API_BASE_URL", "https://api.powerbi.com")
         self.api_version = os.getenv("FABRIC_API_VERSION", "v1")
-        
+
         # Configure requests session with retry strategy
         self.session = requests.Session()
         retry_strategy = Retry(
@@ -59,7 +57,7 @@ class FabricDataExtractor:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
-        
+
         # Request timeout
         self.timeout = int(os.getenv("API_REQUEST_TIMEOUT", "30"))
 
@@ -75,7 +73,7 @@ class FabricDataExtractor:
             print(message, end=end, flush=True)
         except Exception:
             return
-    
+
     def get_workspaces(self, tenant_wide: bool = False, exclude_personal: bool = True) -> List[Dict[str, Any]]:
         """
         Get list of workspaces.
@@ -95,7 +93,7 @@ class FabricDataExtractor:
             return self._get_workspaces_tenant_wide(exclude_personal=exclude_personal)
         else:
             return self._get_workspaces_member_only()
-    
+
     def _get_workspaces_tenant_wide(self, exclude_personal: bool = True) -> List[Dict[str, Any]]:
         """
         Fetch ALL tenant workspaces using Power BI Admin API.
@@ -111,60 +109,60 @@ class FabricDataExtractor:
         workspaces = []
         skip = 0
         page_size = 200
-        
+
         filter_clause = "$filter=type ne 'PersonalGroup'" if exclude_personal else ""
         filter_param = f"&{filter_clause}" if filter_clause else ""
-        
+
         self.logger.info("Fetching tenant-wide workspaces via Power BI Admin API")
-        
+
         while True:
             url = f"{self.powerbi_base_url}/v1.0/myorg/admin/groups?$top={page_size}&$skip={skip}{filter_param}"
             headers = self.auth.get_powerbi_headers()
-            
+
             self.logger.info(f"Fetching page at skip={skip}...")
-            
+
             # Retry loop for 429s
             retries = 0
             max_retries = 20
             while True:
                 response = self.session.get(url, headers=headers, timeout=self.timeout)
-                
+
                 if response.status_code == 429:
                     retries += 1
                     if retries > max_retries:
                         raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
-                        
+
                     retry_after = int(response.headers.get('Retry-After', 60))
                     self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
                     self._emit_progress(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r')
                     time.sleep(retry_after + 1)
                     continue
-                
+
                 break
-            
+
             response.raise_for_status()
             data = response.json()
             items = data.get("value", [])
-            
+
             if not items:
                 break
-            
+
             workspaces.extend(items)
             self.logger.info(f"Retrieved {len(items)} workspaces (total: {len(workspaces)})")
             self._emit_progress(f"   ⏳ Retrieved {len(workspaces)} workspaces...", end='\r')
-            
+
             if len(items) < page_size:
                 break
-            
+
             skip += page_size
-        
+
         self._emit_progress(f"   ✅ Retrieved {len(workspaces)} workspaces total.          ")
         self.logger.info(f"Total tenant-wide workspaces retrieved: {len(workspaces)}")
-        
+
         # Cache the result
         self._cached_tenant_workspaces = workspaces
         return workspaces
-    
+
     def _get_workspaces_member_only(self) -> List[Dict[str, Any]]:
         """
         Fetch only workspaces where the service principal is a member.
@@ -176,32 +174,32 @@ class FabricDataExtractor:
             base_url = f"{self.fabric_base_url}/{self.api_version}/workspaces"
             url = base_url
             headers = self.auth.get_fabric_headers()
-            
+
             self.logger.info("Fetching member workspaces (legacy behavior)")
-            
+
             workspaces = []
             while url:
                 response = self.session.get(url, headers=headers, timeout=self.timeout)
                 response.raise_for_status()
-                
+
                 data = response.json()
                 items = data.get("value", [])
                 workspaces.extend(items)
-                
+
                 continuation_token = data.get("continuationToken")
                 if continuation_token:
                     url = f"{base_url}?continuationToken={continuation_token}"
                 else:
                     url = None
-            
+
             self.logger.info(f"Retrieved {len(workspaces)} member workspaces")
             return workspaces
-            
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Failed to fetch workspaces: {str(e)}")
             raise
-    
-    def get_workspace_activities(self, workspace_id: str, start_date: datetime, 
+
+    def get_workspace_activities(self, workspace_id: str, start_date: datetime,
                                end_date: datetime, activity_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
         Get activities for a specific workspace within date range.
@@ -219,55 +217,55 @@ class FabricDataExtractor:
             # Format dates for API (ISO 8601 format)
             start_str = start_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
             end_str = end_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-            
+
             url = f"{self.fabric_base_url}/{self.api_version}/workspaces/{workspace_id}/activities"
             headers = self.auth.get_fabric_headers()
-            
+
             params = {
                 "startDateTime": start_str,
                 "endDateTime": end_str
             }
-            
+
             if activity_types:
                 params["activityTypes"] = ",".join(activity_types)
-            
+
             self.logger.info(f"Fetching activities for workspace {workspace_id} from {start_str} to {end_str}")
-            
+
             # Retry loop for 429s
             retries = 0
             max_retries = 20
             while True:
                 response = self.session.get(url, headers=headers, params=params, timeout=self.timeout)
-                
+
                 if response.status_code == 429:
                     retries += 1
                     if retries > max_retries:
                         raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
-                        
+
                     retry_after = int(response.headers.get('Retry-After', 60))
                     self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
                     time.sleep(retry_after + 1)
                     continue
-                
+
                 break
-            
+
             if response.status_code == 404:
                 self.logger.warning(f"Activities endpoint not found for workspace {workspace_id} - using Power BI API fallback")
                 return self._get_powerbi_activities_fallback(workspace_id, start_date, end_date, activity_types)
-            
+
             response.raise_for_status()
             data = response.json()
             activities = data.get("value", [])
-            
+
             self.logger.info(f"Retrieved {len(activities)} activities for workspace {workspace_id}")
             return activities
-            
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Failed to fetch activities for workspace {workspace_id}: {str(e)}")
             # Try Power BI API as fallback
             return self._get_powerbi_activities_fallback(workspace_id, start_date, end_date, activity_types)
-    
-    def _get_powerbi_activities_fallback(self, workspace_id: str, start_date: datetime, 
+
+    def _get_powerbi_activities_fallback(self, workspace_id: str, start_date: datetime,
                                        end_date: datetime, activity_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
         Fallback method to get activities using Power BI Admin API.
@@ -276,67 +274,67 @@ class FabricDataExtractor:
             # Power BI Admin API for activity events requires literal single quotes
             start_str = start_date.strftime('%Y-%m-%dT%H:%M:%S')
             end_str = end_date.strftime('%Y-%m-%dT%H:%M:%S')
-            
+
             base_url = f"{self.powerbi_base_url}/v1.0/myorg/admin/activityevents"
             query = f"startDateTime='{start_str}'&endDateTime='{end_str}'"
             url = f"{base_url}?{query}"
-            
+
             headers = self.auth.get_powerbi_headers()
-            
+
             self.logger.info(f"Using Power BI Admin API fallback for workspace {workspace_id}")
-            
+
             # Use PreparedRequest to prevent requests from encoding the URL
             req = requests.Request('GET', url, headers=headers)
             prepped = self.session.prepare_request(req)
             prepped.url = url # Force the URL to be exactly as we constructed it
-            
+
             # Retry loop for 429s
             retries = 0
             max_retries = 20
             while True:
                 response = self.session.send(prepped, timeout=self.timeout)
-                
+
                 if response.status_code == 429:
                     retries += 1
                     if retries > max_retries:
                         raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
-                        
+
                     retry_after = int(response.headers.get('Retry-After', 60))
                     self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
                     time.sleep(retry_after + 1)
                     continue
-                
+
                 break
-            
+
             response.raise_for_status()
-            
+
             data = response.json()
             all_activities = data.get("activityEventEntities", [])
-            
+
             # Filter by workspace if specified
             if workspace_id:
                 workspace_activities = [
-                    activity for activity in all_activities 
+                    activity for activity in all_activities
                     if activity.get("WorkspaceId") == workspace_id
                 ]
             else:
                 workspace_activities = all_activities
-            
+
             # Filter by activity types if specified
             if activity_types:
                 workspace_activities = [
                     activity for activity in workspace_activities
                     if activity.get("Activity") in activity_types
                 ]
-            
+
             self.logger.info(f"Retrieved {len(workspace_activities)} activities via Power BI API")
             return workspace_activities
-            
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Power BI API fallback also failed: {str(e)}")
             return []
-    
-    def get_tenant_wide_activities(self, start_date: datetime, end_date: datetime, 
+
+    def get_tenant_wide_activities(self, start_date: datetime, end_date: datetime,
                                   workspace_ids: Optional[List[str]] = None,
                                   activity_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
@@ -356,61 +354,61 @@ class FabricDataExtractor:
             # We must manually construct the URL and bypass requests' automatic encoding
             start_str = start_date.strftime('%Y-%m-%dT%H:%M:%S')
             end_str = end_date.strftime('%Y-%m-%dT%H:%M:%S')
-            
+
             # Base URL without query params
             base_url = f"{self.powerbi_base_url}/v1.0/myorg/admin/activityevents"
-            
+
             # Construct query string with literal quotes
             query = f"startDateTime='{start_str}'&endDateTime='{end_str}'"
             url = f"{base_url}?{query}"
-            
+
             headers = self.auth.get_powerbi_headers()
-            
+
             self.logger.info(f"Fetching tenant-wide activities from {start_date.strftime('%Y-%m-%d %H:%M:%S')} to {end_date.strftime('%Y-%m-%d %H:%M:%S')}")
-            
+
             all_activities = []
-            
+
             while url:
                 # Use PreparedRequest to prevent requests from encoding the URL
                 req = requests.Request('GET', url, headers=headers)
                 prepped = self.session.prepare_request(req)
                 prepped.url = url # Force the URL to be exactly as we constructed it
-                
+
                 # Retry loop for 429s
                 retries = 0
                 max_retries = 20
                 while True:
                     response = self.session.send(prepped, timeout=self.timeout)
-                    
+
                     if response.status_code == 429:
                         retries += 1
                         if retries > max_retries:
                             raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
-                            
+
                         retry_after = int(response.headers.get('Retry-After', 60))
                         self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
                         print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
                         time.sleep(retry_after + 1)
                         continue
-                    
+
                     break
-                
+
                 response.raise_for_status()
                 data = response.json()
                 items = data.get("activityEventEntities", [])
                 all_activities.extend(items)
-                
+
                 self.logger.info(f"Retrieved {len(items)} activities (Total: {len(all_activities)})")
                 print(f"   ⏳ Fetched {len(all_activities)} activities...", end='\r', flush=True)
-                
+
                 # Check for continuation URI
                 url = data.get("continuationUri")
                 # continuationUri is already a full URL, we'll use it as is in the next loop
                 # and the same prepped.url override will ensure it's not re-encoded
-            
+
             print(f"   ✅ Fetched {len(all_activities)} activities total.          ")
             self.logger.info(f"Retrieved {len(all_activities)} tenant-wide activities")
-            
+
             # Filter by workspace IDs if specified
             if workspace_ids:
                 all_activities = [
@@ -418,7 +416,7 @@ class FabricDataExtractor:
                     if activity.get("WorkspaceId") in workspace_ids
                 ]
                 self.logger.info(f"Filtered to {len(all_activities)} activities for specified workspaces")
-            
+
             # Filter by activity types if specified
             if activity_types:
                 all_activities = [
@@ -426,15 +424,15 @@ class FabricDataExtractor:
                     if activity.get("Activity") in activity_types
                 ]
                 self.logger.info(f"Filtered to {len(all_activities)} activities for specified types")
-            
+
             return all_activities
 
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Failed to fetch tenant-wide activities: {str(e)}")
             raise
-            
-    
-    def get_daily_activities(self, date: datetime, workspace_ids: Optional[List[str]] = None, 
+
+
+    def get_daily_activities(self, date: datetime, workspace_ids: Optional[List[str]] = None,
                            activity_types: Optional[List[str]] = None, tenant_wide: bool = True) -> List[Dict[str, Any]]:
         """
         Get all activities for a specific date.
@@ -452,11 +450,11 @@ class FabricDataExtractor:
         # Set up date range (full day)
         start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_date = start_date + timedelta(days=1) - timedelta(microseconds=1)
-        
+
         if tenant_wide:
             # Use Power BI Admin API to get ALL tenant activities in a single call
             self.logger.info(f"Using tenant-wide Power BI Admin API for {date.strftime('%Y-%m-%d')}")
-            
+
             try:
                 # Fetch all tenant activities at once
                 all_activities = self.get_tenant_wide_activities(
@@ -465,23 +463,23 @@ class FabricDataExtractor:
                     workspace_ids=workspace_ids,
                     activity_types=activity_types
                 )
-                
+
                 # Get workspace metadata for enrichment
                 if not self._workspace_lookup:
                     self.logger.info("Populating workspace lookup cache...")
                     workspaces = self.get_workspaces(tenant_wide=True, exclude_personal=True)
                     self._workspace_lookup = {ws.get("id"): ws for ws in workspaces if ws.get("id")}
-                
+
                 # Enrich activities with workspace and item metadata
                 enriched_activities = []
                 for activity in all_activities:
                     workspace_id = activity.get("WorkspaceId")
                     if not workspace_id:
                         continue
-                    
+
                     workspace_info = self._workspace_lookup.get(workspace_id, {"id": workspace_id, "name": "Unknown"})
                     enriched = self._enrich_activity(activity, workspace_id, workspace_info)
-                    
+
                     # Try to attach item metadata (optional, may fail for some workspaces)
                     try:
                         item_lookup = self._get_workspace_items_lookup(workspace_id)
@@ -489,18 +487,18 @@ class FabricDataExtractor:
                             self._attach_item_metadata(enriched, workspace_id, item_lookup)
                     except Exception:
                         pass  # Skip item metadata if unavailable
-                    
+
                     enriched_activities.append(enriched)
-                
+
                 self.logger.info(f"Enriched {len(enriched_activities)} activities for {date.strftime('%Y-%m-%d')}")
                 return enriched_activities
-                
+
             except requests.exceptions.RequestException as e:
                 # Check for 401/403 errors which indicate lack of Admin permissions
                 status_code = 0
                 if e.response is not None:
                     status_code = e.response.status_code
-                
+
                 if status_code in [401, 403]:
                     self.logger.warning(f"⚠️ Tenant-wide access denied ({status_code}). Falling back to member-only scope.")
                     print(f"   ⚠️ Access denied to tenant-wide API ({status_code}). Falling back to member workspaces...", end='\r', flush=True)
@@ -513,18 +511,18 @@ class FabricDataExtractor:
         else:
             # Legacy per-workspace loop (member workspaces only)
             self.logger.info(f"Using per-workspace API for member workspaces on {date.strftime('%Y-%m-%d')}")
-            
+
             all_activities = []
             target_workspaces = self.get_workspaces(tenant_wide=False, exclude_personal=True)
             self._workspace_lookup = {ws.get("id"): ws for ws in target_workspaces if ws.get("id")}
-            
+
             self.logger.info(f"Fetching activities for {len(target_workspaces)} member workspaces")
-            
+
             for workspace in target_workspaces:
                 workspace_id = workspace.get("id")
                 if not workspace_id:
                     continue
-                    
+
                 try:
                     activities = self.get_workspace_activities(
                         workspace_id=workspace_id,
@@ -532,7 +530,7 @@ class FabricDataExtractor:
                         end_date=end_date,
                         activity_types=activity_types
                     )
-                    
+
                     item_lookup = self._get_workspace_items_lookup(workspace_id)
 
                     for activity in activities:
@@ -540,14 +538,14 @@ class FabricDataExtractor:
                         if item_lookup:
                             self._attach_item_metadata(enriched, workspace_id, item_lookup)
                         all_activities.append(enriched)
-                    
+
                 except Exception as e:
                     self.logger.warning(f"Failed to fetch activities for workspace {workspace_id}: {str(e)}")
                     continue
-            
+
             self.logger.info(f"Total activities retrieved for {date.strftime('%Y-%m-%d')}: {len(all_activities)}")
             return all_activities
-    
+
     def get_workspace_items(self, workspace_id: str) -> List[Dict[str, Any]]:
         """
         Get all items (reports, datasets, etc.) in a workspace.
@@ -561,17 +559,17 @@ class FabricDataExtractor:
         try:
             url = f"{self.fabric_base_url}/{self.api_version}/workspaces/{workspace_id}/items"
             headers = self.auth.get_fabric_headers()
-            
+
             self.logger.info(f"Fetching items for workspace {workspace_id}")
             response = self.session.get(url, headers=headers, timeout=self.timeout)
             response.raise_for_status()
-            
+
             data = response.json()
             items = data.get("value", [])
-            
+
             self.logger.info(f"Retrieved {len(items)} items for workspace {workspace_id}")
             return items
-            
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Failed to fetch items for workspace {workspace_id}: {str(e)}")
             return []
@@ -633,7 +631,7 @@ class FabricDataExtractor:
         domain_source = activity.get("ItemName") or workspace_name
         activity["Domain"] = activity.get("Domain") or infer_domain(domain_source)
         activity["Location"] = activity.get("Location") or infer_location(workspace)
-        
+
         # Normalize status
         # API uses 'IsSuccess' boolean, but sometimes 'Status' string might exist in other contexts
         is_success = activity.get("IsSuccess")
@@ -681,7 +679,7 @@ class FabricDataExtractor:
             if value:
                 return str(value)
         return None
-    
+
     def test_api_connectivity(self) -> Dict[str, bool]:
         """
         Test connectivity to Fabric and Power BI APIs.
@@ -694,20 +692,20 @@ class FabricDataExtractor:
             "powerbi_api": False,
             "authentication": False
         }
-        
+
         # Test authentication
         try:
             results["authentication"] = self.auth.validate_credentials()
         except Exception as e:
             self.logger.error(f"Authentication test failed: {str(e)}")
-        
+
         # Test Fabric API (use member-only for connectivity test to avoid rate limits)
         try:
             workspaces = self.get_workspaces(tenant_wide=False, exclude_personal=True)
             results["fabric_api"] = len(workspaces) >= 0  # Even 0 workspaces means API is accessible
         except Exception as e:
             self.logger.error(f"Fabric API test failed: {str(e)}")
-        
+
         # Test Power BI API
         try:
             url = f"{self.powerbi_base_url}/v1.0/myorg/groups"
@@ -716,5 +714,5 @@ class FabricDataExtractor:
             results["powerbi_api"] = response.status_code == 200
         except Exception as e:
             self.logger.error(f"Power BI API test failed: {str(e)}")
-        
+
         return results

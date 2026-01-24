@@ -17,9 +17,7 @@ Usage:
 """
 
 import os
-import sys
 import argparse
-from pathlib import Path
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -33,7 +31,7 @@ def main():
     """Main function for command line execution"""
     max_days = int(os.getenv('MAX_HISTORICAL_DAYS', '28'))
     default_days = int(os.getenv('DEFAULT_ANALYSIS_DAYS', '7'))
-    
+
     parser = argparse.ArgumentParser(
         description="Microsoft Fabric Monitor Hub Analysis Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -45,29 +43,29 @@ Examples:
   python monitor_hub_pipeline.py --output exports/ # Custom output directory
         """
     )
-    
+
     parser.add_argument(
         "--days",
         type=int,
         default=None,
         help=f"Number of days of historical data to analyze (default: from env, max: {max_days} due to API limits)"
     )
-    
+
     parser.add_argument(
         "--output-dir",
         type=str,
         default="exports/monitor_hub_analysis",
         help="Output directory for reports (default: exports/monitor_hub_analysis)"
     )
-    
+
     parser.add_argument(
         "--member-only",
         action="store_true",
         help="Monitor only member workspaces (~139) instead of all tenant workspaces (~2187)"
     )
-    
+
     args = parser.parse_args()
-    
+
     effective_days = args.days if args.days is not None else default_days
 
     # Print banner immediately
@@ -79,11 +77,11 @@ Examples:
 
     # Initialize and run pipeline
     pipeline = MonitorHubPipeline(args.output_dir)
-    
+
     results = pipeline.run_complete_analysis(days=effective_days, tenant_wide=(not args.member_only))
-    
+
     pipeline.print_results_summary(results)
-    
+
     # Exit with appropriate code
     if results["status"] == "success":
         print("\n✅ Analysis completed successfully!")

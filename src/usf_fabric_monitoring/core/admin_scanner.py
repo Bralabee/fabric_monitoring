@@ -13,7 +13,6 @@ Reference: https://learn.microsoft.com/en-us/rest/api/fabric/admin/workspaces
 import time
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime
 
 import requests
 
@@ -38,7 +37,7 @@ class AdminScannerClient:
         - Service Principal with Tenant.Read.All permission
         - "Service principals can use read-only admin APIs" enabled in tenant
     """
-    
+
     def __init__(self, token: str, api_base: str = "https://api.powerbi.com/v1.0/myorg"):
         """
         Initialize the Admin Scanner client.
@@ -50,34 +49,34 @@ class AdminScannerClient:
         self.token = token
         self.api_base = api_base
         self.headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        
+
         # Rate limiting: 500 requests/hour, max 16 concurrent
         self.max_retries = 5
         self.base_delay = 2
         self.batch_size = 100  # Max workspaces per getInfo call
-    
+
     def _make_request(self, method: str, url: str, **kwargs) -> Optional[requests.Response]:
         """Make HTTP request with retry logic for 429 rate limiting."""
         for attempt in range(self.max_retries):
             try:
                 response = requests.request(method, url, headers=self.headers, **kwargs)
-                
+
                 if response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", self.base_delay * (2 ** attempt)))
                     logger.warning(f"Rate limited. Waiting {retry_after}s before retry {attempt + 1}/{self.max_retries}...")
                     time.sleep(retry_after)
                     continue
-                
+
                 return response
-                
+
             except requests.RequestException as e:
                 logger.error(f"Request failed: {str(e)}")
                 if attempt == self.max_retries - 1:
                     raise AdminScannerError(f"Request failed after {self.max_retries} retries: {e}")
                 time.sleep(self.base_delay * (2 ** attempt))
-        
+
         return None
-    
+
     def scan_workspaces(
         self,
         workspace_ids: List[str],
@@ -113,25 +112,25 @@ class AdminScannerClient:
         """
         if not workspace_ids:
             return {"workspaces": [], "lineage": []}
-        
+
         # Process in batches of 100
         all_results = {"workspaces": [], "lineage": []}
-        
+
         for i in range(0, len(workspace_ids), self.batch_size):
             batch = workspace_ids[i:i + self.batch_size]
             logger.info(f"Scanning batch {i // self.batch_size + 1}: {len(batch)} workspaces")
-            
+
             batch_result = self._scan_batch(
-                batch, lineage, datasource_details, dataset_schema, 
+                batch, lineage, datasource_details, dataset_schema,
                 dataset_expressions, poll_interval, max_poll_time
             )
-            
+
             all_results["workspaces"].extend(batch_result.get("workspaces", []))
             if "lineage" in batch_result:
                 all_results["lineage"].extend(batch_result.get("lineage", []))
-        
+
         return all_results
-    
+
     def _scan_batch(
         self,
         workspace_ids: List[str],
@@ -143,26 +142,26 @@ class AdminScannerClient:
         max_poll_time: int
     ) -> Dict[str, Any]:
         """Scan a single batch of workspaces (max 100)."""
-        
+
         # Step 1: Initiate scan
         scan_id = self._initiate_scan(
             workspace_ids, lineage, datasource_details, dataset_schema, dataset_expressions
         )
-        
+
         if not scan_id:
             raise AdminScannerError("Failed to initiate scan - no scan ID returned")
-        
+
         logger.info(f"Scan initiated with ID: {scan_id}")
-        
+
         # Step 2: Poll for completion
         start_time = time.time()
         while True:
             elapsed = time.time() - start_time
             if elapsed > max_poll_time:
                 raise AdminScannerError(f"Scan timed out after {max_poll_time} seconds")
-            
+
             status = self._get_scan_status(scan_id)
-            
+
             if status == "Succeeded":
                 logger.info(f"Scan completed successfully in {elapsed:.1f}s")
                 break
@@ -174,10 +173,10 @@ class AdminScannerClient:
             else:
                 logger.warning(f"Unknown scan status: {status}")
                 time.sleep(poll_interval)
-        
+
         # Step 3: Get results
         return self._get_scan_result(scan_id)
-    
+
     def _initiate_scan(
         self,
         workspace_ids: List[str],
@@ -193,7 +192,7 @@ class AdminScannerClient:
             Scan ID if successful, None otherwise
         """
         url = f"{self.api_base}/admin/workspaces/getInfo"
-        
+
         # Build query parameters
         params = {
             "lineage": str(lineage).lower(),
@@ -201,15 +200,15 @@ class AdminScannerClient:
             "datasetSchema": str(dataset_schema).lower(),
             "datasetExpressions": str(dataset_expressions).lower()
         }
-        
+
         # Body contains workspace IDs
         body = {"workspaces": workspace_ids}
-        
+
         response = self._make_request("POST", url, params=params, json=body)
-        
+
         if response is None:
             return None
-        
+
         if response.status_code == 202:
             # Accepted - scan initiated
             data = response.json()
@@ -221,7 +220,7 @@ class AdminScannerClient:
         else:
             logger.error(f"Failed to initiate scan: {response.status_code} - {response.text}")
             return None
-    
+
     def _get_scan_status(self, scan_id: str) -> str:
         """
         GET /admin/workspaces/scanStatus/{scanId}
@@ -230,15 +229,15 @@ class AdminScannerClient:
             Status string: "NotStarted", "Running", "Succeeded", "Failed"
         """
         url = f"{self.api_base}/admin/workspaces/scanStatus/{scan_id}"
-        
+
         response = self._make_request("GET", url)
-        
+
         if response is None or response.status_code != 200:
             return "Failed"
-        
+
         data = response.json()
         return data.get("status", "Unknown")
-    
+
     def _get_scan_result(self, scan_id: str) -> Dict[str, Any]:
         """
         GET /admin/workspaces/scanResult/{scanId}
@@ -247,14 +246,14 @@ class AdminScannerClient:
             Complete scan result including workspaces and lineage
         """
         url = f"{self.api_base}/admin/workspaces/scanResult/{scan_id}"
-        
+
         response = self._make_request("GET", url)
-        
+
         if response is None or response.status_code != 200:
             raise AdminScannerError(f"Failed to get scan results: {response.status_code if response else 'No response'}")
-        
+
         return response.json()
-    
+
     def normalize_lineage_results(self, scan_result: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Normalize Scanner API results to match iterative extraction format.
@@ -268,13 +267,13 @@ class AdminScannerClient:
             List of lineage records in standard format
         """
         lineage_data = []
-        
+
         workspaces = scan_result.get("workspaces", [])
-        
+
         for ws in workspaces:
             ws_id = ws.get("id")
             ws_name = ws.get("name", "Unknown")
-            
+
             # Process each artifact type
             for artifact_type in ["lakehouses", "warehouses", "mirroredDatabases", "kqlDatabases"]:
                 artifacts = ws.get(artifact_type, [])
@@ -283,7 +282,7 @@ class AdminScannerClient:
                     upstream = artifact.get("upstreamDataflows", [])
                     downstream = artifact.get("downstreamDataflows", [])
                     datasources = artifact.get("datasourceUsages", [])
-                    
+
                     lineage_data.append({
                         "Workspace Name": ws_name,
                         "Workspace ID": ws_id,
@@ -305,7 +304,7 @@ class AdminScannerClient:
                             "datasources": datasources
                         })
                     })
-            
+
             # Process shortcuts separately if available
             shortcuts = ws.get("shortcuts", [])
             for shortcut in shortcuts:
@@ -324,5 +323,5 @@ class AdminScannerClient:
                     "Connection ID": target.get("connectionId"),
                     "Full Definition": str(shortcut)
                 })
-        
+
         return lineage_data

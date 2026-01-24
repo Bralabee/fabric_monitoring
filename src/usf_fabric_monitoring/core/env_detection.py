@@ -25,7 +25,6 @@ import sys
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +59,7 @@ def detect_environment() -> Environment:
     # Check Azure DevOps
     if os.environ.get("TF_BUILD") == "True":
         return Environment.AZURE_DEVOPS
-    
+
     # Check for Fabric environment indicators
     if _is_fabric_context():
         # Try to distinguish between notebook and pipeline
@@ -70,7 +69,7 @@ def detect_environment() -> Environment:
             return Environment.FABRIC_PIPELINE
         # Generic Fabric environment
         return Environment.FABRIC_NOTEBOOK
-    
+
     # Default to local
     return Environment.LOCAL
 
@@ -94,7 +93,7 @@ def _is_fabric_context() -> bool:
         # mssparkutils is available
         _has_mssparkutils(),
     ]
-    
+
     return any(fabric_indicators)
 
 
@@ -114,11 +113,11 @@ def _has_mssparkutils() -> bool:
         return True
     except ImportError:
         pass
-    
+
     # Check for mssparkutils global (injected in Fabric notebooks)
     if 'mssparkutils' in dir(__builtins__) if isinstance(__builtins__, dict) else hasattr(__builtins__, 'mssparkutils'):
         return True
-    
+
     return False
 
 
@@ -161,7 +160,7 @@ def get_default_output_path(subdir: str = "exports") -> Path:
         lakehouse_base = Path("/lakehouse/default/Files")
         if lakehouse_base.exists():
             return lakehouse_base / subdir
-    
+
     # Local development - find project root
     return _get_project_root() / subdir
 
@@ -178,7 +177,7 @@ def get_config_path() -> Path:
         lakehouse_config = Path("/lakehouse/default/Files/config")
         if lakehouse_config.exists():
             return lakehouse_config
-    
+
     # Local development
     return _get_project_root() / "config"
 
@@ -216,13 +215,13 @@ def convert_to_spark_path(local_path: str) -> str:
         "/lakehouse/default/",
         "/lakehouse/default",
     ]
-    
+
     result = local_path
     for pattern in patterns:
         if result.startswith(pattern):
             result = result[len(pattern):]
             break
-    
+
     return result
 
 
@@ -234,7 +233,7 @@ def get_environment_info() -> dict:
         Dictionary with environment details
     """
     env = detect_environment()
-    
+
     return {
         "environment": env.value,
         "is_fabric": is_fabric_environment(),

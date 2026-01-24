@@ -130,7 +130,7 @@ class WorkspaceAccessEnforcer:
 
         workspaces = self._fetch_workspaces()
         self.logger.info(f"Total workspaces retrieved: {len(workspaces)}")
-        
+
         if fabric_only:
             original_count = len(workspaces)
             workspaces = [ws for ws in workspaces if self._is_fabric_workspace(ws)]
@@ -177,11 +177,11 @@ class WorkspaceAccessEnforcer:
         capacity_id = workspace.get("capacityId")
         if capacity_id and capacity_id != "00000000-0000-0000-0000-000000000000":
             return True
-            
+
         # Check for isOnDedicatedCapacity (Power BI Premium/Fabric)
         if workspace.get("isOnDedicatedCapacity"):
             return True
-            
+
         return False
 
     @staticmethod
@@ -252,13 +252,13 @@ class WorkspaceAccessEnforcer:
                     entry["capacityId"] = item["capacityId"]
                 if item.get("isOnDedicatedCapacity"):
                     entry["isOnDedicatedCapacity"] = True
-                    
+
                 entry["sources"].append(source)
 
         # For tenant-wide enforcement, use ONLY admin APIs (Fabric/Power BI)
         # Do NOT use legacy extractor - it only returns member workspaces (~139)
         # We need ALL tenant workspaces (~286+) to enforce security policies
-        
+
         sources_to_fetch = []
         if self.api_preference in {"auto", "fabric"}:
             sources_to_fetch.append(("fabric", self._fetch_fabric_workspaces))
@@ -338,7 +338,7 @@ class WorkspaceAccessEnforcer:
         # Build filter to exclude personal workspaces
         filter_clause = "$filter=type ne 'PersonalGroup'" if self.exclude_personal_workspaces else ""
         filter_param = f"&{filter_clause}" if filter_clause else ""
-        
+
         url = f"{self.fabric_endpoint}?$top={self.page_size}{filter_param}"
         workspaces: List[Dict[str, Any]] = []
 
@@ -388,19 +388,19 @@ class WorkspaceAccessEnforcer:
         skip = 0
         max_pages = 100  # Safety limit: 100 pages * 200 = 20,000 workspaces max
         page = 0
-        
+
         # Build filter to exclude personal workspaces
         filter_clause = "$filter=type ne 'PersonalGroup'" if self.exclude_personal_workspaces else ""
         filter_param = f"&{filter_clause}" if filter_clause else ""
-        
+
         while page < max_pages:
             url = f"{self.pbi_endpoint}?$top={self.page_size}&$skip={skip}{filter_param}"
             payload = self._get_json(url, use_fabric=False)
             items = payload.get("value", [])
-            
+
             if not items:
                 break
-                
+
             for item in items:
                 # Skip inactive workspaces
                 if item.get("state") and item.get("state") != "Active":
@@ -415,14 +415,14 @@ class WorkspaceAccessEnforcer:
                         "isOnDedicatedCapacity": item.get("isOnDedicatedCapacity", False),
                     }
                 )
-            
+
             page += 1
             self.logger.info(f"Power BI page {page}: fetched {len(items)} workspaces (total: {len(workspaces)})")
-            
+
             # Stop if we got fewer items than requested (last page)
             if len(items) < self.page_size:
                 break
-                
+
             skip += self.page_size
 
         if not workspaces:
@@ -485,7 +485,7 @@ class WorkspaceAccessEnforcer:
 
     def _fetch_workspace_users(self, workspace_id: str) -> List[Dict[str, Any]]:
         errors: List[str] = []
-        
+
         sources = []
         if self.api_preference in {"auto", "fabric"}:
             sources.append(("fabric", self.fabric_users_template, True))
@@ -503,10 +503,10 @@ class WorkspaceAccessEnforcer:
                     # We continue to the next source (e.g. Admin API) to verify.
                     errors.append(f"{source_name}: 404 Not Found")
                     continue
-                
+
                 errors.append(f"{source_name}: {exc}")
                 self.logger.warning(
-                    "%s user lookup failed for workspace %s: %s", 
+                    "%s user lookup failed for workspace %s: %s",
                     source_name.title(), workspace_id, exc
                 )
 
@@ -539,7 +539,7 @@ class WorkspaceAccessEnforcer:
             return action_summary
 
         errors: List[str] = []
-        
+
         sources = []
         if self.api_preference in {"auto", "fabric"}:
             sources.append(("fabric", self.fabric_users_template, True))
@@ -548,7 +548,7 @@ class WorkspaceAccessEnforcer:
 
         for source_name, url_template, use_fabric in sources:
             url = url_template.format(workspace_id=workspace_id)
-            
+
             if use_fabric:
                 payload = {
                     "userObjectId": requirement.object_id,

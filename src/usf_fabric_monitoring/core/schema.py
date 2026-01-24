@@ -5,7 +5,7 @@ This module defines the schema (DDL) for the monitoring datasets and
 represents the semantic model structure (tables, relationships, measures).
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List
 from dataclasses import dataclass, field
 
 # ==========================================
@@ -154,18 +154,18 @@ class FabricSemanticModel:
     Represents the Semantic Model for Fabric Monitoring.
     This model is designed to be implemented in Power BI / Fabric Semantic Models.
     """
-    
+
     def __init__(self):
         self.tables: Dict[str, Table] = {}
         self.relationships: List[Relationship] = []
         self._build_model()
-        
+
     def _build_model(self):
         # --- Fact Table ---
         self.tables["Fact_Activities"] = Table(
             name="Fact_Activities",
             columns=[
-                "activity_id", "workspace_id", "item_id", "date", "submitted_by", 
+                "activity_id", "workspace_id", "item_id", "date", "submitted_by",
                 "status", "duration_seconds", "is_failed", "is_success"
             ],
             source_expression="SELECT * FROM activities_master",
@@ -177,26 +177,26 @@ class FabricSemanticModel:
                 Measure("Total Duration (h)", "SUM(Fact_Activities[duration_seconds]) / 3600", "#,##0.00")
             ]
         )
-        
+
         # --- Dimensions ---
         self.tables["Dim_Date"] = Table(
             name="Dim_Date",
             columns=["Date", "Year", "Month", "Day", "DayOfWeek"],
             source_expression="Calendar table generated from min/max of Fact_Activities[date]"
         )
-        
+
         self.tables["Dim_User"] = Table(
             name="Dim_User",
             columns=["User", "Risk_Level"],
             source_expression="SELECT DISTINCT submitted_by as User FROM activities_master"
         )
-        
+
         self.tables["Dim_Item"] = Table(
             name="Dim_Item",
             columns=["Item_Id", "Item_Name", "Item_Type", "Workspace_Name"],
             source_expression="SELECT DISTINCT item_id, item_name, item_type, workspace_name FROM activities_master"
         )
-        
+
         self.tables["Dim_Workspace"] = Table(
             name="Dim_Workspace",
             columns=["Workspace_Id", "Workspace_Name", "Domain", "Location"],
@@ -217,7 +217,7 @@ class FabricSemanticModel:
         """Returns a text description of the semantic model"""
         desc = "Fabric Monitoring Semantic Model\n"
         desc += "================================\n\n"
-        
+
         desc += "Tables:\n"
         for name, table in self.tables.items():
             desc += f"- {name}\n"
@@ -225,11 +225,11 @@ class FabricSemanticModel:
                 desc += "  Measures:\n"
                 for m in table.measures:
                     desc += f"    - {m.name}: {m.expression}\n"
-        
+
         desc += "\nRelationships:\n"
         for r in self.relationships:
             desc += f"- {r.from_table}[{r.from_column}] -> {r.to_table}[{r.to_column}] ({r.cardinality})\n"
-            
+
         return desc
 
 if __name__ == "__main__":

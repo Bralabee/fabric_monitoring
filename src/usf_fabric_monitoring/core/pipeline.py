@@ -1,6 +1,5 @@
 import os
 import sys
-import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
@@ -48,7 +47,7 @@ from usf_fabric_monitoring.core.utils import resolve_path
 
 class MonitorHubPipeline:
     """Complete Monitor Hub analysis pipeline"""
-    
+
     def __init__(self, output_directory: str = None):
         """Initialize the pipeline"""
         # Configure logging for the entire package so scripts inherit it
@@ -56,7 +55,7 @@ class MonitorHubPipeline:
             name="usf_fabric_monitoring",
             log_file='logs/monitor_hub_pipeline.log'
         )
-        
+
         # Use environment configuration for output directory
         if output_directory is None:
             # Default to exports/monitor_hub_analysis, resolved to Lakehouse if in Fabric
@@ -64,14 +63,14 @@ class MonitorHubPipeline:
         else:
             # Resolve user provided path to ensure it lands in Lakehouse if relative
             self.output_directory = resolve_path(output_directory)
-        
+
         self.output_directory.mkdir(parents=True, exist_ok=True)
-        
+
         self.reporter = None
         self.max_days = int(os.getenv('MAX_HISTORICAL_DAYS', '28'))
-        
+
         self.logger.info("Monitor Hub Pipeline initialized")
-    
+
     def run_complete_analysis(self, days: int = 90, *, tenant_wide: bool = True) -> Dict[str, Any]:
         """
         Run complete Monitor Hub analysis pipeline
@@ -110,10 +109,10 @@ class MonitorHubPipeline:
             # We use a separate directory for item details, but we can pass it if needed.
             # The default is exports/fabric_item_details, which matches what we load later.
             details_output_dir = self.output_directory / "fabric_item_details"
-            
+
             # Check for recent detailed job extraction (8-hour cache logic)
             details_cache_valid = self._check_recent_job_details_extraction(details_output_dir)
-            
+
             if details_cache_valid:
                 self.logger.info("✅ Using cached detailed job data (within 8 hours)")
                 details_result = {"status": "success", "cached": True, "jobs_count": "cached"}
@@ -122,7 +121,7 @@ class MonitorHubPipeline:
                 details_result = run_item_details_extraction(
                     output_dir=str(details_output_dir)
                 )
-            
+
             if details_result.get("status") != "success":
                 self.logger.warning(f"Detailed job extraction failed: {details_result.get('message')}")
                 # We proceed, but warn that failure data might be incomplete
@@ -180,7 +179,7 @@ class MonitorHubPipeline:
                 "message": str(e),
                 "report_files": {}
             }
-    
+
     def _save_to_parquet(self, historical_data: Dict[str, Any]) -> None:
         """
         Save merged data to Parquet files for Delta Table ingestion.
@@ -192,9 +191,9 @@ class MonitorHubPipeline:
         """
         parquet_dir = self.output_directory / "parquet"
         parquet_dir.mkdir(parents=True, exist_ok=True)
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
+
         # Parquet write options for Spark compatibility
         # Spark doesn't support TIMESTAMP(NANOS,true) - must use microseconds
         parquet_kwargs = {
@@ -202,7 +201,7 @@ class MonitorHubPipeline:
             'coerce_timestamps': 'us',  # Microsecond precision
             'allow_truncated_timestamps': True
         }
-        
+
         # 1. Save Activities
         activities = historical_data.get("activities", [])
         if activities:
@@ -212,13 +211,13 @@ class MonitorHubPipeline:
                 for col in ['start_time', 'end_time', 'creation_time']:
                     if col in df_activities.columns:
                         df_activities[col] = pd.to_datetime(df_activities[col], errors='coerce')
-                
+
                 activities_path = parquet_dir / f"activities_{timestamp}.parquet"
                 df_activities.to_parquet(activities_path, **parquet_kwargs)
                 self.logger.info(f"Saved {len(activities)} activities to {activities_path}")
             except Exception as e:
                 self.logger.error(f"Failed to save activities to parquet: {e}")
-        
+
         # 2. Save Workspaces
         workspaces = historical_data.get("workspaces", [])
         if workspaces:
@@ -229,7 +228,7 @@ class MonitorHubPipeline:
                 self.logger.info(f"Saved {len(workspaces)} workspaces to {workspaces_path}")
             except Exception as e:
                 self.logger.error(f"Failed to save workspaces to parquet: {e}")
-                
+
         # 3. Save Items
         items = historical_data.get("items", [])
         if items:
@@ -241,18 +240,18 @@ class MonitorHubPipeline:
             except Exception as e:
                 self.logger.error(f"Failed to save items to parquet: {e}")
 
-    def _create_pipeline_summary(self, historical_data: Dict[str, Any], 
+    def _create_pipeline_summary(self, historical_data: Dict[str, Any],
                                 report_files: Dict[str, str], days: int) -> Dict[str, Any]:
         """Create summary of pipeline execution"""
-        
+
         # Calculate basic statistics
         activities = historical_data.get("activities", [])
         total_activities = len(activities)
-        
+
         if total_activities > 0:
             failed_activities = sum(1 for a in activities if a.get("status") == "Failed")
             success_rate = ((total_activities - failed_activities) / total_activities) * 100
-            
+
             # Calculate duration statistics
             durations = [a.get("duration_seconds", 0) for a in activities]
             total_duration_seconds = sum(durations)
@@ -262,13 +261,13 @@ class MonitorHubPipeline:
             success_rate = 0
             total_duration_seconds = 0
             avg_duration_seconds = 0
-        
+
         # Get unique counts
         workspaces = set(a.get("workspace_id") for a in activities if a.get("workspace_id"))
         users = set(a.get("submitted_by") for a in activities if a.get("submitted_by"))
         domains = set(a.get("domain") for a in activities if a.get("domain"))
         item_types = set(a.get("item_type") for a in activities if a.get("item_type"))
-        
+
         summary = {
             "pipeline_execution": {
                 "executed_at": datetime.now().isoformat(),
@@ -289,14 +288,14 @@ class MonitorHubPipeline:
             },
             "report_files": report_files
         }
-        
+
         # Save summary to file
         summary_file = self.output_directory / f"pipeline_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(summary_file, 'w', encoding='utf-8') as f:
             json.dump(summary, f, indent=2, default=str)
-        
+
         self.logger.info(f"Pipeline summary saved to: {summary_file}")
-        
+
         return summary
 
     def _resolve_days(self, requested_days: Optional[int]) -> int:
@@ -321,29 +320,29 @@ class MonitorHubPipeline:
         try:
             if not details_output_dir.exists():
                 return False
-            
+
             # Find all jobs_*.json files
             job_files = list(details_output_dir.glob("jobs_*.json"))
             if not job_files:
                 return False
-            
+
             # Get the most recent file by modification time - using sorted to avoid max() key issues
             job_files_with_time = [(f, f.stat().st_mtime) for f in job_files]
             job_files_with_time.sort(key=lambda x: x[1], reverse=True)  # Sort by time, newest first
             most_recent_file, _ = job_files_with_time[0]
-            
+
             # Check if it's within the threshold
             file_time = datetime.fromtimestamp(most_recent_file.stat().st_mtime)
             current_time = datetime.now()
             hours_old = (current_time - file_time).total_seconds() / 3600
-            
+
             if hours_old <= hours_threshold:
                 self.logger.info(f"Found recent job details file: {most_recent_file.name} ({hours_old:.1f} hours old)")
                 return True
             else:
                 self.logger.info(f"Most recent job details file is {hours_old:.1f} hours old (threshold: {hours_threshold}h)")
                 return False
-        
+
         except Exception as e:
             self.logger.warning(f"Error checking job details cache: {e}")
             return False
@@ -354,13 +353,13 @@ class MonitorHubPipeline:
         if not export_dir.exists():
             self.logger.warning(f"Detailed jobs directory not found: {export_dir}")
             return []
-            
+
         # Find all jobs_*.json files
         job_files = list(export_dir.glob("jobs_*.json"))
         if not job_files:
             self.logger.warning("No detailed job files found")
             return []
-            
+
         all_jobs = []
         for job_file in job_files:
             self.logger.info(f"Loading detailed jobs from {job_file}")
@@ -370,7 +369,7 @@ class MonitorHubPipeline:
                     all_jobs.extend(jobs)
             except Exception as e:
                 self.logger.error(f"Failed to load detailed jobs from {job_file}: {e}")
-                
+
         self.logger.info(f"Total detailed jobs loaded: {len(all_jobs)}")
         return all_jobs
 
@@ -388,7 +387,7 @@ class MonitorHubPipeline:
 
         # 1. Prepare Activities DataFrame
         df_activities = pd.DataFrame(activities)
-        
+
         # Ensure timestamps are datetime
         time_cols = ['start_time', 'end_time', 'creation_time']
         for col in time_cols:
@@ -398,13 +397,13 @@ class MonitorHubPipeline:
         # Ensure item_id is string and handle NaNs
         if 'item_id' in df_activities.columns:
             df_activities['item_id'] = df_activities['item_id'].astype(str)
-        
+
         # Sort for merge_asof
         df_activities = df_activities.sort_values('start_time')
 
         # 2. Prepare Jobs DataFrame
         df_jobs = pd.DataFrame(detailed_jobs)
-        
+
         # Map Job columns to friendly names
         job_rename_map = {
             'id': 'job_instance_id',
@@ -417,20 +416,20 @@ class MonitorHubPipeline:
             'invoker': 'job_invoker'
         }
         df_jobs = df_jobs.rename(columns=job_rename_map)
-        
+
         # Ensure timestamps are datetime
         job_time_cols = ['job_start_time', 'job_end_time']
         for col in job_time_cols:
             if col in df_jobs.columns:
                 df_jobs[col] = pd.to_datetime(df_jobs[col], utc=True, errors='coerce')
-        
+
         # Ensure item_id is string
         if 'item_id' in df_jobs.columns:
             df_jobs['item_id'] = df_jobs['item_id'].astype(str)
 
         # Drop rows without start time or item_id
         df_jobs = df_jobs.dropna(subset=['job_start_time', 'item_id'])
-        
+
         # Sort for merge_asof
         df_jobs = df_jobs.sort_values('job_start_time')
 
@@ -447,21 +446,21 @@ class MonitorHubPipeline:
                 direction='nearest',
                 suffixes=('', '_job')
             )
-            
+
             # 4. Enrich Data
-            
+
             # Update Status: If Job Failed, mark Activity as Failed
             # (Activity logs often say "Completed" even if the internal job failed)
             mask_job_failed = merged_df['job_status'] == 'Failed'
             merged_df.loc[mask_job_failed, 'status'] = 'Failed'
-            
+
             # Enrich Failure Reason
             # If activity doesn't have a failure reason, take it from the job
             if 'failure_reason' not in merged_df.columns:
                 merged_df['failure_reason'] = None
-            
+
             merged_df['failure_reason'] = merged_df['failure_reason'].fillna(merged_df['job_failure_reason'])
-            
+
             # Create explicit error_message column if not exists
             if 'error_message' not in merged_df.columns:
                 merged_df['error_message'] = merged_df['failure_reason']
@@ -476,15 +475,15 @@ class MonitorHubPipeline:
             # Fix Duration Calculation: Use job end times when activity end times are missing
             self.logger.info("Applying duration calculation fix...")
             original_missing_end_time = merged_df['end_time'].isna().sum()
-            
+
             if original_missing_end_time > 0 and 'job_end_time' in merged_df.columns:
                 # Fill missing end_time with job_end_time
                 merged_df['end_time'] = merged_df['end_time'].fillna(merged_df['job_end_time'])
-                
+
                 after_fix_missing_end_time = merged_df['end_time'].isna().sum()
                 fixed_count = original_missing_end_time - after_fix_missing_end_time
                 self.logger.info(f"Fixed {fixed_count} missing end times using job data")
-                
+
                 # Recalculate duration_seconds
                 def calculate_duration(start_time, end_time):
                     if pd.isna(start_time) or pd.isna(end_time):
@@ -496,10 +495,10 @@ class MonitorHubPipeline:
                         return 0.0
 
                 merged_df['duration_seconds'] = merged_df.apply(
-                    lambda row: calculate_duration(row['start_time'], row['end_time']), 
+                    lambda row: calculate_duration(row['start_time'], row['end_time']),
                     axis=1
                 )
-                
+
                 # Log improvement statistics
                 original_zero_duration = (pd.DataFrame(activities).get('duration_seconds', pd.Series([0.0] * len(activities))) == 0.0).sum()
                 fixed_zero_duration = (merged_df['duration_seconds'] == 0.0).sum()
@@ -509,9 +508,9 @@ class MonitorHubPipeline:
 
             # Fill remaining NaNs in key columns to avoid serialization issues
             merged_df['status'] = merged_df['status'].fillna('Unknown')
-            
+
             self.logger.info(f"Smart Merge Complete. Enriched {len(merged_df)} activities.")
-            
+
             # Convert back to list of dicts
             # Handle datetime serialization by converting to ISO format strings
             for col in ['start_time', 'end_time', 'creation_time', 'job_start_time', 'job_end_time']:
@@ -528,7 +527,7 @@ class MonitorHubPipeline:
     def _build_historical_dataset(self, activities: List[Dict[str, Any]], start_date: datetime, end_date: datetime, days: int) -> Dict[str, Any]:
         workspace_lookup: Dict[str, Dict[str, Any]] = {}
         item_lookup: Dict[str, Dict[str, Any]] = {}
-        
+
         # Filter for Fabric-only activities
         fabric_activities = [a for a in activities if self._is_fabric_activity(a)]
         self.logger.info(f"Filtered {len(activities)} total activities to {len(fabric_activities)} Fabric activities")
@@ -583,41 +582,41 @@ class MonitorHubPipeline:
             # Infrastructure
             "Environment", "MLModel", "MLExperiment", "GraphQLApi",
         }
-        
+
         # List of known Fabric activity operations
         fabric_ops = {
-            "RunArtifact", "ExecuteNotebook", "ExecutePipeline", 
+            "RunArtifact", "ExecuteNotebook", "ExecutePipeline",
             "ExecuteSparkJob", "ExecuteDataflow", "ReadLakehouse",
             "WriteLakehouse"
         }
-        
+
         item_type = activity.get("item_type")
         activity_type = activity.get("activity_type")
-        
+
         if item_type and item_type in fabric_types:
             return True
-            
+
         if activity_type and activity_type in fabric_ops:
             return True
-            
+
         return False
-    
+
     def print_results_summary(self, results: Dict[str, Any]) -> None:
         """Print formatted results summary"""
         print("\n" + "="*80)
         print("MICROSOFT FABRIC MONITOR HUB ANALYSIS RESULTS")
         print("="*80)
-        
+
         if results["status"] == "success":
             summary = results["summary"]
-            
+
             print(f"\n📊 KEY MEASURABLES (Statement of Work Requirements):")
             measurables = summary["key_measurables"]
             print(f"   • Activities: {measurables['total_activities']:,}")
             print(f"   • Failed Activity: {measurables['failed_activities']:,}")
             print(f"   • Success %: {measurables['success_rate_percent']}%")
             print(f"   • Total Duration: {measurables['total_duration_hours']} hours")
-            
+
             print(f"\n🔍 ANALYSIS SCOPE:")
             scope = summary["analysis_scope"]
             print(f"   • Period: {summary['pipeline_execution']['analysis_period_days']} days")
@@ -625,18 +624,18 @@ class MonitorHubPipeline:
             print(f"   • Users: {scope['unique_users']:,}")
             print(f"   • Domains: {scope['unique_domains']:,}")
             print(f"   • Item Types: {scope['unique_item_types']:,}")
-            
+
             print(f"\n📋 REPORTS GENERATED ({len(results['report_files'])} files):")
             for report_name, file_path in results["report_files"].items():
                 file_name = Path(file_path).name
                 print(f"   • {report_name}: {file_name}")
-            
+
             print(f"\n📁 Export Directory: {self.output_directory}")
-            
+
         elif results["status"] == "no_data":
             print(f"\n⚠️  {results['message']}")
-            
+
         else:
             print(f"\n❌ Analysis failed: {results.get('message', 'Unknown error')}")
-        
+
         print("\n" + "="*80)

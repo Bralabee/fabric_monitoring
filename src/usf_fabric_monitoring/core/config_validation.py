@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-from jsonschema import Draft7Validator, ValidationError
+from jsonschema import Draft7Validator
 
 logger = logging.getLogger(__name__)
 
@@ -141,12 +141,12 @@ def load_schema_file(config_filename: str) -> Optional[Dict[str, Any]]:
     schema_filename = SCHEMA_FILES.get(config_filename)
     if not schema_filename:
         return None
-    
+
     schema_path = _get_schemas_dir() / schema_filename
     if not schema_path.exists():
         logger.debug(f"Schema file not found: {schema_path}, using inline schema")
         return None
-    
+
     try:
         return _load_json(schema_path)
     except (json.JSONDecodeError, IOError) as e:
@@ -168,7 +168,7 @@ def get_schema(config_filename: str) -> Dict[str, Any]:
     external_schema = load_schema_file(config_filename)
     if external_schema:
         return external_schema
-    
+
     # Fall back to inline schema
     return _INLINE_SCHEMAS.get(config_filename, {})
 
@@ -179,7 +179,7 @@ def get_schema(config_filename: str) -> Dict[str, Any]:
 
 class ConfigValidationError(Exception):
     """Exception raised when config validation fails."""
-    
+
     def __init__(self, filename: str, errors: List[str]):
         self.filename = filename
         self.errors = errors
@@ -221,17 +221,17 @@ def validate_file(path: Path, *, use_external_schema: bool = True) -> List[str]:
         schema = get_schema(path.name)
     else:
         schema = _INLINE_SCHEMAS.get(path.name)
-    
+
     if not schema:
         return []
-    
+
     try:
         data = _load_json(path)
     except json.JSONDecodeError as e:
         return [f"Invalid JSON: {e}"]
     except IOError as e:
         return [f"Could not read file: {e}"]
-    
+
     return validate_data(schema, data)
 
 
@@ -252,8 +252,8 @@ def validate_file_or_raise(path: Path, *, use_external_schema: bool = True) -> N
 
 
 def validate_config_dir(
-    config_dir: Path, 
-    *, 
+    config_dir: Path,
+    *,
     only_known_files: bool = True,
     use_external_schema: bool = True
 ) -> Dict[str, List[str]]:
@@ -297,14 +297,14 @@ def validate_all_configs(*, raise_on_error: bool = False) -> Tuple[int, int, Dic
     """
     config_dir = _get_project_root() / "config"
     errors_by_file = validate_config_dir(config_dir, use_external_schema=True)
-    
+
     files_checked = len(list(config_dir.glob("*.json")))
     files_valid = files_checked - len(errors_by_file)
-    
+
     if raise_on_error and errors_by_file:
         first_file = next(iter(errors_by_file))
         raise ConfigValidationError(Path(first_file).name, errors_by_file[first_file])
-    
+
     return files_checked, files_valid, errors_by_file
 
 
@@ -313,7 +313,7 @@ def print_validation_report(errors_by_file: Dict[str, List[str]]) -> None:
     if not errors_by_file:
         print("✅ All config files are valid")
         return
-    
+
     print(f"❌ {len(errors_by_file)} config file(s) have validation errors:\n")
     for filepath, errors in errors_by_file.items():
         print(f"  📄 {Path(filepath).name}")

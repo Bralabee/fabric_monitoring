@@ -8,8 +8,7 @@ This module handles extraction of detailed item information from Microsoft Fabri
 
 import logging
 import os
-import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -43,7 +42,7 @@ class FabricItemDetailExtractor:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
-        
+
         # Request timeout
         self.timeout = int(os.getenv("API_REQUEST_TIMEOUT", "30"))
 
@@ -63,15 +62,15 @@ class FabricItemDetailExtractor:
             headers = self.auth.get_fabric_headers()
 
             self.logger.debug(f"Fetching job instances for item {item_id} in workspace {workspace_id}")
-            
+
             response = self.session.get(url, headers=headers, timeout=self.timeout)
-            
+
             if response.status_code == 404:
                 self.logger.warning(f"Job instances endpoint not found for item {item_id}")
                 return []
-                
+
             response.raise_for_status()
-            
+
             data = response.json()
             return data.get("value", [])
 
@@ -97,7 +96,7 @@ class FabricItemDetailExtractor:
             self.logger.debug(f"Fetching tables for lakehouse {lakehouse_id} in workspace {workspace_id}")
 
             response = self.session.get(url, headers=headers, timeout=self.timeout)
-            
+
             if response.status_code == 404:
                 self.logger.warning(f"Tables endpoint not found for lakehouse {lakehouse_id}")
                 return []

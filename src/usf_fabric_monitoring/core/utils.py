@@ -24,12 +24,12 @@ def _find_project_root() -> Path:
         Path: Project root directory, or current directory if not found.
     """
     cwd = Path(os.getcwd()).resolve()
-    
+
     # Search up to 3 levels for project markers
     for check_dir in [cwd, cwd.parent, cwd.parent.parent]:
         if (check_dir / "pyproject.toml").exists() or (check_dir / "Makefile").exists():
             return check_dir
-    
+
     # Fallback to current directory
     return cwd
 

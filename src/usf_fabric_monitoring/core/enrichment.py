@@ -92,9 +92,9 @@ def compute_duration_seconds(activity: Dict[str, Any]) -> Optional[float]:
         diff = (end - start).total_seconds()
         if diff >= 0:
             return round(diff, 3)
-    
-    # Fallback: If no end time, but we have start time, check for "Succeeded" status 
-    # and maybe assume a minimal duration or leave as None. 
+
+    # Fallback: If no end time, but we have start time, check for "Succeeded" status
+    # and maybe assume a minimal duration or leave as None.
     # For now, we return None to indicate "unknown duration".
     return None
 
@@ -103,7 +103,7 @@ def normalize_status(status: Optional[str]) -> str:
     """Normalize activity status, defaulting to 'Succeeded' if missing."""
     if not status:
         return "Succeeded"
-    
+
     s = str(status).strip().title()
     if s.lower() in ["", "none", "nan", "null"]:
         return "Succeeded"

@@ -33,7 +33,7 @@ def setup_logging(
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    
+
     # Clear existing handlers to avoid duplicates if setup is called multiple times
     if logger.handlers:
         logger.handlers.clear()
