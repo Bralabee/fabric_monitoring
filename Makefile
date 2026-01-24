@@ -252,7 +252,7 @@ enforce-access:
 		API_ARG=$${API_PREFERENCE:+--api-preference $$API_PREFERENCE}; \
 		MAX_WS_ARG=$${MAX_WORKSPACES:+--max-workspaces $$MAX_WORKSPACES}; \
 		INCLUDE_PERSONAL_ARG=$${INCLUDE_PERSONAL:+--include-personal-workspaces}; \
-		conda run --no-capture-output -n $(ENV_NAME) python scripts/enforce_workspace_access.py $$MODE_ARG $$CONFIRM_ARG $$DRY_RUN_ARG $$CSV_ARG $$API_ARG $$MAX_WS_ARG $$INCLUDE_PERSONAL_ARG; \
+		conda run --no-capture-output -n $(ENV_NAME) python -m usf_fabric_monitoring.scripts.enforce_workspace_access $$MODE_ARG $$CONFIRM_ARG $$DRY_RUN_ARG $$CSV_ARG $$API_ARG $$MAX_WS_ARG $$INCLUDE_PERSONAL_ARG; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -265,7 +265,7 @@ monitor-hub:
 		DAYS_ARG=$${DAYS:+--days $$DAYS}; \
 		MEMBER_ONLY_ARG=$${MEMBER_ONLY:+--member-only}; \
 		OUTPUT_ARG=$${OUTPUT_DIR:+--output-dir $$OUTPUT_DIR}; \
-		conda run --no-capture-output -n $(ENV_NAME) python scripts/monitor_hub_pipeline.py $$DAYS_ARG $$MEMBER_ONLY_ARG $$OUTPUT_ARG; \
+		conda run --no-capture-output -n $(ENV_NAME) python -m usf_fabric_monitoring.scripts.monitor_hub_pipeline $$DAYS_ARG $$MEMBER_ONLY_ARG $$OUTPUT_ARG; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -283,7 +283,7 @@ extract-lineage:
 	@echo "$(GREEN)Running Lineage Extraction (Mirrored DBs & Shortcuts)$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
 		OUTPUT_ARG=$${OUTPUT_DIR:+--output-dir $$OUTPUT_DIR}; \
-		conda run --no-capture-output -n $(ENV_NAME) python scripts/extract_lineage.py $$OUTPUT_ARG; \
+		conda run --no-capture-output -n $(ENV_NAME) python -m usf_fabric_monitoring.scripts.extract_lineage $$OUTPUT_ARG; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -393,7 +393,7 @@ star-schema:
 		INPUT_ARG=$${INPUT_DIR:+--input-dir $$INPUT_DIR}; \
 		OUTPUT_ARG=$${OUTPUT_DIR:+--output-dir $$OUTPUT_DIR}; \
 		FULL_REFRESH_ARG=$${FULL_REFRESH:+--full-refresh}; \
-		conda run --no-capture-output -n $(ENV_NAME) python scripts/build_star_schema.py $$INPUT_ARG $$OUTPUT_ARG $$FULL_REFRESH_ARG; \
+		conda run --no-capture-output -n $(ENV_NAME) python -m usf_fabric_monitoring.scripts.build_star_schema $$INPUT_ARG $$OUTPUT_ARG $$FULL_REFRESH_ARG; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -402,7 +402,7 @@ star-schema:
 star-schema-ddl:
 	@echo "$(GREEN)Generating Star Schema DDL$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
-		conda run --no-capture-output -n $(ENV_NAME) python scripts/build_star_schema.py --ddl-only; \
+		conda run --no-capture-output -n $(ENV_NAME) python -m usf_fabric_monitoring.scripts.build_star_schema --ddl-only; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \
@@ -411,7 +411,7 @@ star-schema-ddl:
 star-schema-describe:
 	@echo "$(GREEN)Describing Star Schema$(NC)"
 	@if conda env list | grep -q "^$(ENV_NAME) "; then \
-		conda run --no-capture-output -n $(ENV_NAME) python scripts/build_star_schema.py --describe; \
+		conda run --no-capture-output -n $(ENV_NAME) python -m usf_fabric_monitoring.scripts.build_star_schema --describe; \
 	else \
 		echo "$(RED)❌ Environment $(ENV_NAME) does not exist$(NC)"; \
 		echo "$(YELLOW)Create it first with: make create$(NC)"; \

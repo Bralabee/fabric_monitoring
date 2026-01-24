@@ -221,17 +221,21 @@ usf_fabric_monitoring/
 │   ├── Monitor_Hub_Analysis.ipynb
 │   ├── Workspace_Access_Enforcement.ipynb
 │   └── Fabric_Star_Schema_Builder.ipynb
-├── scripts/                # Entry point CLI scripts
-│   ├── extract_lineage.py  # Lineage extraction (with Admin Scanner support)
-│   ├── monitor_hub_pipeline.py
-│   └── enforce_workspace_access.py
-├── src/                    # Source code
+├── scripts/                # Development utilities and convenience wrappers
+├── src/                    # Source code (industry-standard src layout)
 │   └── usf_fabric_monitoring/
-│       └── core/           # Core logic (pipeline, star_schema_builder, admin_scanner, etc.)
+│       ├── core/           # Core logic (pipeline, star_schema_builder, admin_scanner)
+│       └── scripts/        # CLI entry points (installable via pip)
+│           ├── monitor_hub_pipeline.py     → usf-monitor-hub
+│           ├── extract_lineage.py          → usf-extract-lineage
+│           ├── enforce_workspace_access.py → usf-enforce-access
+│           ├── build_star_schema.py        → usf-star-schema
+│           └── validate_config.py          → usf-validate-config
 ├── lineage_explorer/       # Interactive D3.js lineage visualization with Neo4j
 │   ├── static/             # HTML/CSS/JS for web interface
 │   ├── graph_database/     # Neo4j client, data loader, queries
 │   └── server.py           # FastAPI backend
+├── tests/                  # Test suite
 ├── Makefile                # Command automation
 ├── environment.yml         # Conda environment definition
 └── pyproject.toml          # Python package metadata + pip dependencies

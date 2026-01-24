@@ -41,6 +41,7 @@ usf-monitor-hub = "usf_fabric_monitoring.scripts.monitor_hub_pipeline:main"
 usf-enforce-access = "usf_fabric_monitoring.scripts.enforce_workspace_access:main"
 usf-validate-config = "usf_fabric_monitoring.scripts.validate_config:main"
 usf-star-schema = "usf_fabric_monitoring.scripts.build_star_schema:main"
+usf-extract-lineage = "usf_fabric_monitoring.scripts.extract_lineage:main"
 
 [project.optional-dependencies]
 dev = [
