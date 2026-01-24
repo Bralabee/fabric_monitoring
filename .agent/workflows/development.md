@@ -64,8 +64,19 @@ python -m usf_fabric_monitoring.scripts.monitor_hub_pipeline --days 7
 
 // turbo
 ```bash
+# Run pre-commit on all files
+pre-commit run --all-files
+
+# Or individual commands
 make lint
 make format
+```
+
+### Validate Config
+
+// turbo
+```bash
+make validate-config
 ```
 
 ### After Modifying pyproject.toml
