@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.21 (January 2026) - Lineage Explorer Advanced Selection Features
+
+### Added
+- **Multi-Node Selection** (`lineage_explorer/static/index.html`):
+  - Ctrl+Click (Cmd+Click on Mac) to add/remove nodes from selection
+  - Selection count badge showing number of selected nodes
+  - Clear selection button in toolbar
+  - Supports selecting multiple nodes for batch connection analysis
+  
+- **Children/Descendants Selection Buttons**:
+  - "Children" button: Select all direct children (1 level downstream) of currently selected nodes
+  - "Descendants" button: Select all descendants (up to 10 levels downstream)
+  - Auto-updates selection count badge
+  - Works seamlessly with existing multi-selection system
+  
+- **Directional Arrow Coloring**:
+  - Inward arrows (incoming data): Green (#10b981) - identifies data consumers
+  - Outward arrows (outgoing data): Blue (#3b82f6) - identifies data producers
+  - Visual distinction makes data flow direction instantly recognizable
+  - Applied when hovering or clicking on nodes
+
+### Changed
+- **Selection System Refactor**: Replaced single `selectedNode` with `selectedNodes` Set for multi-select support
+- **Detail Panel Behavior**: Now hides when multiple nodes are selected (shows only for single selection)
+- **Connection Highlighting**: Updated `highlightConnections()` to support multiple selected nodes simultaneously
+
+### Fixed
+- **Multi-Select Arrow Colors**: Maintains directional arrow coloring (green/blue) when multiple nodes selected
+- **Hover Behavior**: Only shows hover highlight when no nodes are selected (prevents visual conflicts)
+
+---
+
 ## 0.3.20 (January 2026) - Lineage Explorer UI/UX Enhancements
 
 ### Added

@@ -2,7 +2,7 @@
 
 A comprehensive Python-based solution for monitoring, analyzing, and governing Microsoft Fabric workspaces. This project provides tools for historical activity analysis (Monitor Hub), automated security group enforcement, and star schema analytics for business intelligence.
 
-> **Current Version: 0.3.19** - Neo4j-Powered Interactive Graph Analysis  
+> **Current Version: 0.3.21** - Multi-Node Selection & Directional Arrow Coloring  
 > See [CHANGELOG.md](CHANGELOG.md) for release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
 ## 🚀 Key Features
 
@@ -35,6 +35,15 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 - **OneLake Shortcut Analysis**: Extracts OneLake shortcuts from **Lakehouses** and **KQL Databases**.
 - **Unified Inventory**: Outputs a consolidated CSV schema (`Workspace`, `Item`, `Type`, `Source Connection`) for all external dependencies.
 - **Lineage Explorer**: Interactive D3.js force-directed graph visualization with Neo4j-powered analysis:
+  - **Unified Light Theme**: Professional light color scheme optimized for readability
+  - **Query Explorer**: 40+ pre-built Neo4j queries across 10 categories (Overview, Dependencies, Security, etc.)
+  - **Multi-Node Selection**: Ctrl+Click to select multiple nodes for batch analysis
+    - Children button: Select all direct children (1 level downstream)
+    - Descendants button: Select all descendants (up to 10 levels downstream)
+    - Selection count badge and Clear button in toolbar
+  - **Directional Arrow Coloring**: Color-coded data flow visualization
+    - Green arrows: Inward connections (incoming data)
+    - Blue arrows: Outward connections (outgoing data)
   - **Graph-Native Model**: Direct CSV → JSON graph conversion for clean, efficient data flow.
   - **Smart Filtering**: Filter by workspace, item type, source type with instant updates.
   - **Node Details**: Click any node to see connections, metadata, and related items.
@@ -58,24 +67,6 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 - **SCD Type 2 Support**: Tracks slowly changing dimensions (workspace names, item descriptions)
 - **Delta Lake DDL**: Generates deployment scripts for Fabric Lakehouses
 - **CLI & Notebook Options**: Run via `usf-star-schema` command or `notebooks/Fabric_Star_Schema_Builder.ipynb`
-
-### 5. Interactive Web Guide (`webapp/`) 🆕
-A comprehensive, step-by-step interactive guide to help users learn and utilize the USF Fabric Monitoring toolkit.
-
-- **6 Scenario Guides**: Getting Started, Monitor Hub Analysis, Workspace Access Enforcement, Star Schema Analytics, Fabric Deployment, Troubleshooting
-- **Progress Tracking**: Mark steps complete and resume where you left off
-- **Full-Text Search**: Find relevant guides and commands quickly
-- **Dark Mode Support**: Comfortable reading in any lighting
-- **Modern Stack**: FastAPI backend + React/TypeScript frontend with Tailwind CSS
-
-**Quick Start:**
-```bash
-cd webapp
-make install    # Install dependencies
-make dev        # Start both backend (port 8001) and frontend (port 5173)
-```
-
-See [webapp/README.md](webapp/README.md) for detailed setup instructions.
 
 ## 📋 Prerequisites
 
@@ -210,11 +201,10 @@ usf_fabric_monitoring/
 │   └── usf_fabric_monitoring/
 │       ├── core/           # Core logic (pipeline, star_schema_builder, etc.)
 │       └── scripts/        # Entry point scripts
-├── webapp/                 # Interactive Web Guide 🆕
-│   ├── backend/            # FastAPI Python backend
-│   │   └── app/            # API routes, models, content
-│   └── frontend/           # React/TypeScript frontend
-│       └── src/            # UI components, pages
+├── lineage_explorer/       # Interactive D3.js lineage visualization with Neo4j
+│   ├── static/             # HTML/CSS/JS for web interface
+│   ├── graph_database/     # Neo4j client, data loader, queries
+│   └── server.py           # FastAPI backend
 ├── Makefile                # Command automation
 ├── environment.yml         # Conda environment definition
 └── pyproject.toml          # Python package metadata + pip dependencies
@@ -287,3 +277,10 @@ To run this solution directly within a Microsoft Fabric Notebook:
     -   Execute the notebook cells. The library will be automatically detected.
 
 For advanced deployment options (inline pip install, lakehouse file reference, etc.), see [docs/FABRIC_DEPLOYMENT.md](docs/FABRIC_DEPLOYMENT.md).
+
+## 🔗 Related Projects
+
+- **[usf_fabric_cli_cicd](../usf_fabric_cli_cicd)**: Lightweight CLI for Fabric deployment automation (v1.3.1)
+- **[usf-fabric-cicd](../usf-fabric-cicd)**: Original monolithic framework (predecessor to CLI tool)
+- **[stakeholder_presentations](../stakeholder_presentations)**: Executive presentation decks for monitoring/CI/CD solutions
+- **[fabric-purview-playbook-webapp](../fabric-purview-playbook-webapp)**: Delivery playbook web application
