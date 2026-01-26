@@ -429,6 +429,198 @@ async def item_centrality(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@extended_router.get("/api/neo4j/items-by-workspace/{workspace_name}")
+async def items_by_workspace(workspace_name: str):
+    """
+    Get all items in a specific workspace with their dependencies.
+    
+    Args:
+        workspace_name: Workspace name (partial match supported)
+    """
+    _require_neo4j()
+    
+    try:
+        query = """
+        MATCH (w:Workspace)-[:CONTAINS]->(i:FabricItem)
+        WHERE toLower(w.name) CONTAINS toLower($workspace_name)
+        OPTIONAL MATCH (i)-[:DEPENDS_ON]->(dep:FabricItem)
+        OPTIONAL MATCH (i)-[:CONSUMES]->(src:ExternalSource)
+        WITH w, i, count(DISTINCT dep) AS internal_deps, count(DISTINCT src) AS external_deps
+        RETURN w.name AS workspace,
+               i.name AS item_name,
+               i.type AS item_type,
+               i.id AS item_id,
+               internal_deps,
+               external_deps
+        ORDER BY i.type, i.name
+        """
+        results = _neo4j_client.run_query(query, {"workspace_name": workspace_name})
+        return {
+            "workspace": workspace_name,
+            "items": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/neo4j/external-sources-by-type/{source_type}")
+async def external_sources_by_type(source_type: str):
+    """
+    List all external sources of a specific type with consumer counts.
+    
+    Args:
+        source_type: Source type (Snowflake, AdlsGen2, AmazonS3, OneLake, etc.)
+    """
+    _require_neo4j()
+    
+    try:
+        query = """
+        MATCH (s:ExternalSource)
+        WHERE toLower(s.type) CONTAINS toLower($source_type)
+        OPTIONAL MATCH (s)<-[:CONSUMES]-(i:FabricItem)
+        WITH s, collect(DISTINCT i.name) AS consumers, count(DISTINCT i) AS consumer_count
+        RETURN s.display_name AS source_name,
+               s.type AS source_type,
+               s.id AS source_id,
+               consumer_count,
+               consumers[0..5] AS sample_consumers
+        ORDER BY consumer_count DESC
+        """
+        results = _neo4j_client.run_query(query, {"source_type": source_type})
+        return {
+            "source_type": source_type,
+            "sources": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/neo4j/lineage-chain/{item_id}")
+async def lineage_chain(
+    item_id: str,
+    max_depth: int = Query(default=5, ge=1, le=10)
+):
+    """
+    Get complete lineage chain (upstream + downstream) for an item.
+    
+    Args:
+        item_id: Item ID
+        max_depth: Maximum traversal depth in each direction
+    """
+    _require_neo4j()
+    
+    try:
+        # Get upstream
+        upstream_query = """
+        MATCH (start:FabricItem {id: $item_id})
+        OPTIONAL MATCH path = (start)-[:DEPENDS_ON|CONSUMES*1..5]->(upstream)
+        WHERE upstream:FabricItem OR upstream:ExternalSource
+        WITH DISTINCT upstream, length(path) AS depth
+        WHERE upstream IS NOT NULL
+        RETURN upstream.name AS name, 
+               upstream.type AS type,
+               labels(upstream)[0] AS node_type,
+               depth,
+               'upstream' AS direction
+        ORDER BY depth
+        """
+        
+        # Get downstream
+        downstream_query = """
+        MATCH (start:FabricItem {id: $item_id})
+        OPTIONAL MATCH path = (start)<-[:DEPENDS_ON*1..5]-(downstream:FabricItem)
+        WITH DISTINCT downstream, length(path) AS depth
+        WHERE downstream IS NOT NULL
+        RETURN downstream.name AS name,
+               downstream.type AS type,
+               'FabricItem' AS node_type,
+               depth,
+               'downstream' AS direction
+        ORDER BY depth
+        """
+        
+        upstream = _neo4j_client.run_query(upstream_query, {"item_id": item_id})
+        downstream = _neo4j_client.run_query(downstream_query, {"item_id": item_id})
+        
+        return {
+            "item_id": item_id,
+            "upstream": upstream,
+            "downstream": downstream,
+            "upstream_count": len(upstream),
+            "downstream_count": len(downstream)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/neo4j/schema-coverage")
+async def schema_coverage():
+    """
+    Get table coverage by schema with consumer counts.
+    Shows which schemas have the most tables and consumers.
+    """
+    _require_neo4j()
+    
+    try:
+        query = """
+        MATCH (t:Table)
+        OPTIONAL MATCH (t)<-[:MIRRORS]-(m:FabricItem)
+        WITH t.schema AS schema, t.database AS database,
+             collect(t.name) AS tables,
+             count(DISTINCT t) AS table_count,
+             count(DISTINCT m) AS consumer_count
+        RETURN database, schema, table_count, consumer_count,
+               tables[0..10] AS sample_tables
+        ORDER BY table_count DESC
+        """
+        results = _neo4j_client.run_query(query, {})
+        return {
+            "schemas": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/neo4j/dependency-depth")
+async def dependency_depth(
+    top_n: int = Query(default=20, ge=1, le=100)
+):
+    """
+    Rank items by their maximum dependency chain depth.
+    Items with deeper chains are more complex/fragile.
+    
+    Args:
+        top_n: Number of top items to return
+    """
+    _require_neo4j()
+    
+    try:
+        query = """
+        MATCH (i:FabricItem)
+        OPTIONAL MATCH path = (i)-[:DEPENDS_ON*]->(root)
+        WHERE NOT EXISTS { MATCH (root)-[:DEPENDS_ON]->() }
+        WITH i, max(length(path)) AS max_depth
+        WHERE max_depth IS NOT NULL AND max_depth > 0
+        OPTIONAL MATCH (i)<-[:CONTAINS]-(w:Workspace)
+        RETURN i.name AS item_name,
+               i.type AS item_type,
+               w.name AS workspace,
+               max_depth AS dependency_depth
+        ORDER BY max_depth DESC
+        LIMIT $top_n
+        """
+        results = _neo4j_client.run_query(query, {"top_n": top_n})
+        return {
+            "items": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class QueryRequest(BaseModel):
     """Request model for custom Cypher queries."""
     query: str
