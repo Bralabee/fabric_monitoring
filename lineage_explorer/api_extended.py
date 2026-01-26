@@ -368,6 +368,36 @@ async def items_using_table(table_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@extended_router.get("/api/neo4j/tables-by-database/{database}")
+async def tables_by_database(database: str):
+    """
+    Get all tables for a specific database.
+    
+    Args:
+        database: Database name (e.g., 'EMEA_DRH_DEV')
+        
+    Returns:
+        List of tables with schema information
+    """
+    _require_neo4j()
+    
+    try:
+        query = """
+        MATCH (t:Table)
+        WHERE t.database = $database
+        RETURN t.name AS table_name, t.schema AS schema
+        ORDER BY t.schema, t.name
+        """
+        results = _neo4j_client.run_query(query, {"database": database})
+        return {
+            "database": database,
+            "tables": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @extended_router.get("/api/neo4j/cross-workspace")
 async def cross_workspace_dependencies():
     """Find dependencies that cross workspace boundaries."""

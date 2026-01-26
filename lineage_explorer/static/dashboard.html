@@ -1094,19 +1094,82 @@
 
             if (tables.tables_by_database && Object.keys(tables.tables_by_database).length > 0) {
                 const items = Object.entries(tables.tables_by_database).map(([db, count]) => `
-                    <li style="display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <svg style="width: 16px; height: 16px; color: var(--accent-cyan);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
-                            </svg>
-                            <span style="font-weight: 500;">${db}</span>
+                    <div class="db-drill-item" data-database="${db}">
+                        <div class="db-header" onclick="toggleDatabaseTables('${db}')" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 10px 12px; border-radius: 8px; transition: background-color 0.2s;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg class="db-chevron" id="chevron-${db}" style="width: 14px; height: 14px; color: var(--text-muted); transition: transform 0.2s;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                                <svg style="width: 16px; height: 16px; color: var(--accent-cyan);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                                </svg>
+                                <span style="font-weight: 500;">${db}</span>
+                            </div>
+                            <span style="color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 12px;">${count} tables</span>
                         </div>
-                        <span style="color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 12px;">${count} tables</span>
-                    </li>
+                        <div class="db-tables" id="tables-${db}" style="display: none; margin-left: 38px; padding: 8px 0; border-left: 2px solid var(--border-color);">
+                            <div style="color: var(--text-muted); padding: 8px 12px; font-size: 12px;">Loading tables...</div>
+                        </div>
+                    </div>
                 `).join('');
                 container.innerHTML = items;
+
+                // Add hover effect styles
+                document.querySelectorAll('.db-header').forEach(el => {
+                    el.addEventListener('mouseenter', () => el.style.backgroundColor = 'var(--card-hover)');
+                    el.addEventListener('mouseleave', () => el.style.backgroundColor = 'transparent');
+                });
             } else {
                 container.innerHTML = '<div style="color: var(--text-muted);">No Snowflake tables found</div>';
+            }
+        }
+
+        // Cache for loaded tables
+        const tablesCache = {};
+
+        async function toggleDatabaseTables(database) {
+            const tablesContainer = document.getElementById(`tables-${database}`);
+            const chevron = document.getElementById(`chevron-${database}`);
+
+            if (tablesContainer.style.display === 'none') {
+                // Expand
+                tablesContainer.style.display = 'block';
+                chevron.style.transform = 'rotate(90deg)';
+
+                // Load tables if not cached
+                if (!tablesCache[database]) {
+                    try {
+                        const res = await fetch(`/api/neo4j/tables-by-database/${encodeURIComponent(database)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            tablesCache[database] = data.tables;
+                        } else {
+                            tablesCache[database] = [];
+                        }
+                    } catch (err) {
+                        tablesCache[database] = [];
+                    }
+                }
+
+                // Render tables
+                const tables = tablesCache[database];
+                if (tables && tables.length > 0) {
+                    tablesContainer.innerHTML = tables.map(t => `
+                        <div style="padding: 6px 12px; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <svg style="width: 12px; height: 12px; color: var(--text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            <span style="color: var(--text-primary);">${t.table_name}</span>
+                            <span style="color: var(--text-muted); font-size: 11px; margin-left: auto;">${t.schema || ''}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    tablesContainer.innerHTML = '<div style="color: var(--text-muted); padding: 8px 12px; font-size: 12px;">No tables found</div>';
+                }
+            } else {
+                // Collapse
+                tablesContainer.style.display = 'none';
+                chevron.style.transform = 'rotate(0deg)';
             }
         }
 
