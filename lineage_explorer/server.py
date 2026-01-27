@@ -406,6 +406,15 @@ async def serve_query_explorer():
     raise HTTPException(status_code=404, detail="Query explorer not found")
 
 
+@app.get("/table_impact.html")
+async def serve_table_impact():
+    """Serve the table impact analysis dashboard."""
+    impact_path = FRONTEND_DIR / "table_impact.html"
+    if impact_path.exists():
+        return FileResponse(impact_path)
+    raise HTTPException(status_code=404, detail="Table impact page not found")
+
+
 # Serve static files from root path (for index-v3.html which uses relative paths)
 @app.get("/{filename:path}")
 async def serve_root_static(filename: str):
