@@ -931,6 +931,147 @@ async def search_tables(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== ITEM SEARCH ENDPOINTS ====================
+
+@extended_router.get("/api/items/search")
+async def search_items(
+    q: str = Query(..., min_length=1, description="Item name search query"),
+    limit: int = Query(default=50, ge=1, le=200)
+):
+    """
+    Search Fabric items (Lakehouses, MirroredDatabases) by name.
+    
+    This complements the table search by finding items that
+    USE or PROVIDE tables, like SHARE_GOLD Lakehouse.
+    
+    Args:
+        q: Search term (partial match)
+        limit: Maximum results
+        
+    Returns:
+        List of matching items with table counts
+    """
+    _require_neo4j()
+    
+    try:
+        query = """
+        MATCH (item:FabricItem)
+        WHERE toLower(item.name) CONTAINS toLower($search)
+        
+        // Count tables this item uses or provides
+        OPTIONAL MATCH (item)-[:USES_TABLE|PROVIDES_TABLE]->(t:Table)
+        
+        // Get workspace info
+        OPTIONAL MATCH (w:Workspace)-[:CONTAINS]->(item)
+        
+        WITH item, w, count(DISTINCT t) as table_count
+        
+        RETURN 
+            item.id as item_id,
+            item.name as item_name,
+            item.type as item_type,
+            w.name as workspace,
+            table_count
+        ORDER BY table_count DESC, item.name
+        LIMIT $limit
+        """
+        results = _neo4j_client.run_query(query, {"search": q, "limit": limit})
+        return {
+            "query": q,
+            "items": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        logger.error(f"Item search failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/items/impact")
+async def get_item_impact(
+    id: str = Query(..., description="Item ID or name"),
+    max_depth: int = Query(default=10, ge=1, le=20)
+):
+    """
+    Get impact analysis for a Fabric item (Lakehouse/MirroredDatabase).
+    
+    Shows:
+    - Tables the item uses (via USES_TABLE)
+    - Tables the item provides (via PROVIDES_TABLE)
+    - Downstream dependencies
+    
+    Args:
+        id: Item ID or name
+        max_depth: Maximum traversal depth
+    """
+    _require_neo4j()
+    
+    try:
+        # Find the item by ID or name
+        item_query = """
+        MATCH (item:FabricItem)
+        WHERE item.id = $item_id OR toLower(item.name) = toLower($item_id)
+        OPTIONAL MATCH (w:Workspace)-[:CONTAINS]->(item)
+        RETURN item.id as id, item.name as name, item.type as type, w.name as workspace
+        LIMIT 1
+        """
+        item_results = _neo4j_client.run_query(item_query, {"item_id": id})
+        
+        if not item_results:
+            raise HTTPException(status_code=404, detail=f"Item not found: {id}")
+        
+        item_info = item_results[0]
+        actual_item_id = item_info["id"]
+        
+        # Get tables this item uses
+        uses_query = """
+        MATCH (item:FabricItem {id: $item_id})-[:USES_TABLE]->(t:Table)
+        RETURN t.id as table_id, t.name as table_name, t.full_path as full_path, 'uses' as relationship
+        """
+        tables_used = _neo4j_client.run_query(uses_query, {"item_id": actual_item_id})
+        
+        # Get tables this item provides
+        provides_query = """
+        MATCH (item:FabricItem {id: $item_id})-[:PROVIDES_TABLE]->(t:Table)
+        RETURN t.id as table_id, t.name as table_name, t.full_path as full_path, 'provides' as relationship
+        """
+        tables_provided = _neo4j_client.run_query(provides_query, {"item_id": actual_item_id})
+        
+        # Get downstream dependencies (items that depend on this item)
+        downstream_query = """
+        MATCH path = (item:FabricItem {id: $item_id})<-[:DEPENDS_ON*1..10]-(downstream)
+        WHERE length(path) <= $max_depth
+        OPTIONAL MATCH (w:Workspace)-[:CONTAINS]->(downstream)
+        RETURN DISTINCT
+            downstream.id as item_id,
+            downstream.name as item_name,
+            downstream.type as item_type,
+            w.name as workspace,
+            length(path) as depth,
+            [n in nodes(path) | n.name] as path_names
+        ORDER BY depth
+        """
+        downstream_items = _neo4j_client.run_query(
+            downstream_query, 
+            {"item_id": actual_item_id, "max_depth": max_depth}
+        )
+        
+        return {
+            "item": item_info,
+            "tables_used": tables_used,
+            "tables_used_count": len(tables_used),
+            "tables_provided": tables_provided,
+            "tables_provided_count": len(tables_provided),
+            "downstream_items": downstream_items,
+            "downstream_count": len(downstream_items),
+            "total_impact": len(tables_used) + len(tables_provided) + len(downstream_items)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Item impact analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @extended_router.get("/api/tables/impact")
 async def get_table_impact_by_query(
     id: str = Query(..., description="Table ID or name to analyze"),

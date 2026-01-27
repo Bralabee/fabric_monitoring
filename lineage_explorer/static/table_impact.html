@@ -640,14 +640,30 @@
                     <circle cx="11" cy="11" r="8" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                Search Source Tables
+                Impact Analysis Search
             </h2>
-            <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
-                Search for a Snowflake table name to see all downstream Fabric dependencies.
+            <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">
+                Search for tables or items (Lakehouses) to see downstream Fabric dependencies.
             </p>
+
+            <!-- Search Type Toggle -->
+            <div class="search-type-toggle" style="margin-bottom: 12px; display: flex; gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px;">
+                    <input type="radio" name="searchType" value="tables" checked
+                        style="accent-color: var(--accent-cyan);">
+                    <span class="badge badge-cyan" style="font-size: 11px;">Tables</span>
+                    <span style="color: var(--text-muted);">(1,802)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 14px;">
+                    <input type="radio" name="searchType" value="items" style="accent-color: var(--accent-purple);">
+                    <span class="badge badge-purple" style="font-size: 11px;">Items</span>
+                    <span style="color: var(--text-muted);">(Lakehouses, MirroredDBs)</span>
+                </label>
+            </div>
+
             <form class="search-form" id="searchForm">
                 <input type="text" class="search-input" id="tableSearch"
-                    placeholder="Enter table name (e.g., fact_lead, dim_customer)..." autocomplete="off">
+                    placeholder="Enter name (e.g., share_gold, fact_lead, dim_customer)..." autocomplete="off">
                 <button type="submit" class="btn btn-primary">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8" />
@@ -829,34 +845,62 @@
             };
         }
 
+        // Get current search type
+        function getSearchType() {
+            const selected = document.querySelector('input[name="searchType"]:checked');
+            return selected ? selected.value : 'tables';
+        }
+
         // Live search with debounce (auto-search after typing)
         const performSearch = debounce(async (query) => {
             if (!query || query.length < 2) return;
 
+            const searchType = getSearchType();
+            const cacheKey = `${searchType}:${query}`;
+
             // Check cache
-            if (searchCache.has(query)) {
-                const cached = searchCache.get(query);
-                renderTablesResults(cached.tables);
-                tableCount.textContent = `${cached.count} tables`;
+            if (searchCache.has(cacheKey)) {
+                const cached = searchCache.get(cacheKey);
+                if (searchType === 'tables') {
+                    renderTablesResults(cached.tables);
+                    tableCount.textContent = `${cached.count} tables`;
+                } else {
+                    renderItemsResults(cached.items);
+                    tableCount.textContent = `${cached.count} items`;
+                }
                 return;
             }
 
             tablesBody.innerHTML = '<tr><td colspan="4" class="loading">Searching...</td></tr>';
 
             try {
-                const response = await fetch(`/api/tables/search?q=${encodeURIComponent(query)}&limit=100`);
+                const endpoint = searchType === 'tables'
+                    ? `/api/tables/search?q=${encodeURIComponent(query)}&limit=100`
+                    : `/api/items/search?q=${encodeURIComponent(query)}&limit=100`;
+
+                const response = await fetch(endpoint);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
 
                 // Cache results
-                searchCache.set(query, data);
+                searchCache.set(cacheKey, data);
 
-                if (data.tables && data.tables.length > 0) {
-                    renderTablesResults(data.tables);
-                    tableCount.textContent = `${data.count} tables`;
+                if (searchType === 'tables') {
+                    if (data.tables && data.tables.length > 0) {
+                        renderTablesResults(data.tables);
+                        tableCount.textContent = `${data.count} tables`;
+                    } else {
+                        tablesBody.innerHTML = '<tr><td colspan="4" class="empty-state"><p>No tables found matching your search</p></td></tr>';
+                        tableCount.textContent = '0 tables';
+                    }
                 } else {
-                    tablesBody.innerHTML = '<tr><td colspan="4" class="empty-state"><p>No tables found matching your search</p></td></tr>';
-                    tableCount.textContent = '0 tables';
+                    if (data.items && data.items.length > 0) {
+                        renderItemsResults(data.items);
+                        tableCount.textContent = `${data.count} items`;
+                    } else {
+                        tablesBody.innerHTML = '<tr><td colspan="4" class="empty-state"><p>No items found matching your search</p></td></tr>';
+                        tableCount.textContent = '0 items';
+                    }
                 }
             } catch (error) {
                 console.error('Search failed:', error);
@@ -892,9 +936,25 @@
                 selectRowByIndex(rows, currentIndex);
             } else if (e.key === 'Enter' && selectedRow) {
                 e.preventDefault();
-                const tableId = selectedRow.dataset.tableId;
-                selectTable(tableId);
+                // Handle both table and item selection
+                if (getSearchType() === 'tables') {
+                    const tableId = selectedRow.dataset.tableId;
+                    selectTable(tableId);
+                } else {
+                    const itemId = selectedRow.dataset.itemId;
+                    selectItem(itemId);
+                }
             }
+        });
+
+        // Re-search when search type changes
+        document.querySelectorAll('input[name="searchType"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const query = tableSearch.value.trim();
+                if (query && query.length >= 2) {
+                    performSearch(query);
+                }
+            });
         });
 
         function selectRowByIndex(rows, index) {
@@ -944,6 +1004,218 @@
                     selectTable(tableId);
                 });
             });
+        }
+
+        // Render items (Lakehouses, MirroredDatabases) results
+        function renderItemsResults(items) {
+            tablesBody.innerHTML = items.map(item => {
+                // Get item type badge
+                const isLakehouse = item.item_type === 'Lakehouse';
+                const typeBadgeClass = isLakehouse ? 'badge-green' : 'badge-purple';
+                const typeLabel = item.item_type || 'Item';
+
+                return `
+                <tr class="clickable ${selectedItemId === item.item_id ? 'selected' : ''}" 
+                    data-item-id="${item.item_id}"
+                    data-item-name="${escapeHtml(item.item_name)}">
+                    <td class="table-name">${escapeHtml(item.item_name)}</td>
+                    <td title="${escapeHtml(item.workspace || '')}">${escapeHtml(item.workspace || 'Unknown')}</td>
+                    <td><span class="badge ${typeBadgeClass}" style="font-size: 10px;">${typeLabel}</span></td>
+                    <td class="text-right">${item.table_count} tables</td>
+                </tr>`;
+            }).join('');
+
+            // Add click handlers for items
+            tablesBody.querySelectorAll('tr.clickable').forEach(row => {
+                row.addEventListener('click', () => {
+                    const itemId = row.dataset.itemId;
+                    selectItem(itemId);
+                });
+            });
+        }
+
+        // Select item (Lakehouse/MirroredDB) and load impact
+        let selectedItemId = null;
+        async function selectItem(itemId) {
+            selectedItemId = itemId;
+            selectedTableId = null;  // Clear table selection
+            expandedNodes.clear();
+
+            // Update selected state
+            tablesBody.querySelectorAll('tr').forEach(row => {
+                row.classList.toggle('selected', row.dataset.itemId === itemId);
+            });
+
+            graphContainer.innerHTML = `
+                <div style="text-align: center;">
+                    <div class="loading" style="margin-bottom: 8px;">Loading item impact analysis...</div>
+                    <p style="font-size: 12px; color: var(--text-muted);">Fetching tables and dependencies</p>
+                </div>
+            `;
+            statsGrid.style.display = 'none';
+            downstreamSection.style.display = 'none';
+
+            try {
+                // Use query parameter endpoint for item impact
+                const response = await fetch(`/api/items/impact?id=${encodeURIComponent(itemId)}`);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
+                const data = await response.json();
+
+                currentImpactData = data;
+                renderItemImpactVisualization(data);
+                renderItemStats(data);
+                exportBtn.style.display = 'flex';
+            } catch (error) {
+                console.error('Item impact analysis failed:', error);
+                graphContainer.innerHTML = `
+                    <div style="text-align: center; padding: 48px;">
+                        <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">⚠️</div>
+                        <p style="color: var(--accent-red); margin-bottom: 8px;">Item impact analysis failed</p>
+                        <p style="color: var(--text-muted); font-size: 12px;">${escapeHtml(error.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render item impact visualization (for Lakehouses)
+        function renderItemImpactVisualization(data) {
+            const { item, tables_used, tables_provided, downstream_items } = data;
+
+            graphContainer.innerHTML = '';
+            statsGrid.style.display = 'grid';
+            downstreamSection.style.display = 'block';
+
+            // If no data, show empty state
+            if (tables_used.length === 0 && tables_provided.length === 0 && downstream_items.length === 0) {
+                graphContainer.innerHTML = `
+                    <div style="text-align: center; padding: 48px;">
+                        <svg style="width: 64px; height: 64px; opacity: 0.3; margin-bottom: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v4M12 16h.01" />
+                        </svg>
+                        <p style="color: var(--text-muted); font-weight: 500;">No table relationships found</p>
+                        <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">This item has no USES_TABLE or PROVIDES_TABLE relationships</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Build tree visualization
+            const isLakehouse = item.type === 'Lakehouse';
+            const typeBadge = isLakehouse
+                ? '<span class="badge badge-green" style="font-size: 10px; margin-left: 8px;">Lakehouse</span>'
+                : '<span class="badge badge-purple" style="font-size: 10px; margin-left: 8px;">MirroredDatabase</span>';
+
+            let html = '<div class="impact-tree">';
+
+            // Root: Item node
+            html += `
+                <div class="tree-controls" style="margin-bottom: 12px; display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="expandAll()" style="padding: 4px 8px; font-size: 11px;">
+                        Expand All
+                    </button>
+                    <button class="btn btn-secondary" onclick="collapseAll()" style="padding: 4px 8px; font-size: 11px;">
+                        Collapse All
+                    </button>
+                </div>
+                <div class="tree-node">
+                    <div class="tree-node-content level-0">
+                        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <ellipse cx="12" cy="5" rx="9" ry="3" />
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                        </svg>
+                        <span class="node-name">${escapeHtml(item.name)}</span>
+                        <span class="node-type">Source Item</span>
+                        ${typeBadge}
+                        <span class="node-workspace">${escapeHtml(item.workspace || '')}</span>
+                    </div>
+                </div>
+            `;
+
+            // Tables Used section
+            if (tables_used.length > 0) {
+                html += `<div class="tree-node" style="margin-left: 24px;">
+                    <div class="tree-node-content" style="background: rgba(6, 182, 212, 0.1); border-left: 3px solid var(--accent-cyan);">
+                        <span style="font-weight: 600;">📥 Tables Used (${tables_used.length})</span>
+                    </div>
+                    <div class="tree-children">`;
+                tables_used.slice(0, 20).forEach(t => {
+                    html += `<div class="tree-node-content level-1">
+                        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <span class="node-name">${escapeHtml(t.table_name)}</span>
+                        <span class="node-workspace">${escapeHtml(t.full_path || '')}</span>
+                    </div>`;
+                });
+                if (tables_used.length > 20) {
+                    html += `<div class="tree-node-content level-1" style="color: var(--text-muted);">... and ${tables_used.length - 20} more</div>`;
+                }
+                html += `</div></div>`;
+            }
+
+            // Tables Provided section
+            if (tables_provided.length > 0) {
+                html += `<div class="tree-node" style="margin-left: 24px;">
+                    <div class="tree-node-content" style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--accent-green);">
+                        <span style="font-weight: 600;">📤 Tables Provided (${tables_provided.length})</span>
+                    </div>
+                    <div class="tree-children">`;
+                tables_provided.slice(0, 20).forEach(t => {
+                    html += `<div class="tree-node-content level-1">
+                        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <span class="node-name">${escapeHtml(t.table_name)}</span>
+                        <span class="node-workspace">${escapeHtml(t.full_path || '')}</span>
+                    </div>`;
+                });
+                if (tables_provided.length > 20) {
+                    html += `<div class="tree-node-content level-1" style="color: var(--text-muted);">... and ${tables_provided.length - 20} more</div>`;
+                }
+                html += `</div></div>`;
+            }
+
+            // Downstream Items section
+            if (downstream_items.length > 0) {
+                html += `<div class="tree-node" style="margin-left: 24px;">
+                    <div class="tree-node-content" style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--accent-purple);">
+                        <span style="font-weight: 600;">🔗 Downstream Dependencies (${downstream_items.length})</span>
+                    </div>
+                    <div class="tree-children">`;
+                downstream_items.slice(0, 20).forEach(item => {
+                    const depIcon = getItemIcon(item.item_type);
+                    html += `<div class="tree-node-content level-1">
+                        ${depIcon}
+                        <span class="node-name">${escapeHtml(item.item_name)}</span>
+                        <span class="node-type">${formatItemType(item.item_type || 'Item')}</span>
+                        <span class="node-workspace">${escapeHtml(item.workspace || '')}</span>
+                    </div>`;
+                });
+                if (downstream_items.length > 20) {
+                    html += `<div class="tree-node-content level-1" style="color: var(--text-muted);">... and ${downstream_items.length - 20} more</div>`;
+                }
+                html += `</div></div>`;
+            }
+
+            html += '</div>';
+            graphContainer.innerHTML = html;
+        }
+
+        // Render item stats
+        function renderItemStats(data) {
+            document.getElementById('matchingTables').textContent = data.tables_used_count || 0;
+            document.getElementById('directConsumers').textContent = data.tables_provided_count || 0;
+            document.getElementById('downstreamItems').textContent = data.downstream_count || 0;
+            document.getElementById('totalImpact').textContent = data.total_impact || 0;
+
+            // Update labels for item mode
+            document.querySelector('#statsGrid .stat-card:nth-child(1) p').textContent = 'Tables Used';
+            document.querySelector('#statsGrid .stat-card:nth-child(2) p').textContent = 'Tables Provided';
         }
 
         // Select table and load impact
