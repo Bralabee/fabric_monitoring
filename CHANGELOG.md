@@ -2,7 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.26 (January 2026) - Extended Lineage Extraction
+
+### Added
+- **Extended Lineage Extraction** - Now captures 6 item types (up from 3):
+  - **SemanticModel**: Datasources, source types, connection details
+  - **Dataflow**: Datasources with connection details
+  - **Report**: Upstream dataset binding, cross-workspace flag
+
+- **New Extraction Methods** (`scripts/extract_lineage.py`):
+  - `get_semantic_models()` - Fetch datasets/models in workspace
+  - `get_dataflows()` - Fetch dataflows in workspace
+  - `get_reports()` - Fetch reports in workspace
+  - `get_item_connections()` - Fetch item-level connections
+  - `get_dataset_datasources()` - Power BI dataset sources
+  - `get_dataset_tables()` - Dataset table metadata
+  - `get_report_definition()` - Report details with dataset binding
+  - `get_dataflow_datasources()` - Dataflow sources
+
+- **ItemConnectionsExtractor Module** (`core/item_connections.py`):
+  - Standalone module for Fabric `/connections` endpoint
+  - Power BI `/datasources` endpoint support
+  - Factory function `create_item_connections_extractor()`
+
+- **AdminScannerClient Enhancements** (`core/admin_scanner.py`):
+  - `datasetSchema=True` and `datasetExpressions=True` by default
+  - Extended `normalize_lineage_results()` for richer metadata
+  - Captures table/column counts, expressions, upstream datasets
+
+### Changed
+- **Iterative LineageExtractor** now captures rich data for all item types:
+  - SemanticModel: Datasource count, source types, connection IDs
+  - Dataflow: Datasource count, connection details
+  - Report: Bound dataset ID, cross-workspace dependencies
+- **Lineage Summary** now shows counts for all 6 item types
+
+### Technical Details
+- All 6 item types now have parity with rich data extraction
+- Reports capture `Cross Workspace` flag for cross-workspace dataset dependencies
+- Semantic Models show datasource types (SQL, AzureBlob, etc.)
+
+---
+
 ## 0.3.25 (January 2026) - Table Lineage Panel & Frontend UX
+
 
 ### Added
 - **Table Lineage Panel** (`lineage_explorer/static/index.html`):

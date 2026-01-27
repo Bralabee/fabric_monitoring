@@ -144,7 +144,18 @@ The explorer includes a Table Lineage Panel for filtering items:
 | Mode | Command | Data Captured | Use Case |
 |------|---------|---------------|----------|
 | `scanner` | `make extract-lineage` | Warehouses only, no relationships | Quick inventory |
-| `iterative` | `make extract-lineage-full` | Lakehouses, Shortcuts, Mirrored DBs, connections | **Rich visualization** |
+| `iterative` | `make extract-lineage-full` | **6 item types**: Mirrored DBs, Lakehouses, KQL DBs, Semantic Models, Dataflows, Reports | **Rich visualization** |
+
+### Item Types Extracted (Iterative Mode)
+
+| Item Type | Rich Data |
+|-----------|-----------|
+| MirroredDatabase | Source connection, database, connection ID |
+| Lakehouse Shortcut | Target path, source type |
+| KQL Shortcut | Target path, source type |
+| SemanticModel | Datasources, source types, connections |
+| Dataflow | Datasources, connection details |
+| Report | Upstream dataset ID, cross-workspace flag |
 
 ### File Naming Patterns
 

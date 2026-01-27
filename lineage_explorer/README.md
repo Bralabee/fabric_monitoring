@@ -146,9 +146,18 @@ docker compose up -d neo4j
 
 ## Data Source
 
-Reads from `exports/lineage/` directory - auto-detects both:
-- `lineage_scanner_*.json` (from Admin Scanner mode - preferred)
-- `mirrored_lineage_*.csv` (from iterative mode - legacy)
+Reads from `exports/lineage/` directory - auto-detects:
+- `lineage_*.json` (from iterative mode - **preferred**, has 6 item types with rich data)
+- `lineage_scanner_*.json` (from Admin Scanner mode - warehouses only)
+- `mirrored_lineage_*.csv` (legacy)
+
+### Extraction Modes
+
+| Mode | File Pattern | Item Types |
+|------|--------------|------------|
+| `iterative` | `lineage_*.json` | MirroredDB, Shortcuts, SemanticModels, Dataflows, Reports |
+| `scanner` | `lineage_scanner_*.json` | Warehouses only |
+
 
 ## Design & Navigation
 
