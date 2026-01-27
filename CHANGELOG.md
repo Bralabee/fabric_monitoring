@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.27 (January 2026) - Table-Level Impact Analysis Dashboard
+
+### Added
+- **Table Impact Analysis Dashboard** (`lineage_explorer/static/table_impact.html`):
+  - New standalone page for source table impact analysis
+  - Search tables by name (partial match) with consumer counts
+  - Visual impact tree showing downstream dependencies
+  - Stats cards: Matching tables, direct consumers, downstream items, total impact
+  - CSV export for impact analysis results
+  - Integrated navigation across all dashboard pages
+
+- **New API Endpoints** (`lineage_explorer/api_extended.py`):
+  - `GET /api/tables/search?q={name}` - Search tables with consumer counts
+  - `GET /api/tables/{table_id}/impact` - Full downstream impact analysis
+  - `GET /api/tables` - List all tables with pagination
+
+- **Impact Analysis Features**:
+  - Recursive downstream traversal: Table → Items → Downstream Items
+  - Depth-based impact visualization (up to 10 levels)
+  - Path tracking through dependency chains
+  - Direct consumer vs downstream separation
+
+### Changed
+- **Dashboard Navigation** (`dashboard.html`):
+  - Added "Table Impact" link to navigation bar
+
+---
+
 ## 0.3.26 (January 2026) - Extended Lineage Extraction
 
 ### Added

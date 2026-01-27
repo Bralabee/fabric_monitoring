@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table Impact Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        /* CSS Variables (matching graph view light theme) */
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left,
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .logo svg {
+            width: 24px;
+            height: 24px;
+            color: var(--accent-cyan);
+        }
+
+        /* Main Navigation */
+        .main-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 16px;
+            padding: 4px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .nav-link.active {
+            color: var(--accent-cyan);
+            background: var(--bg-secondary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-link svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Search Section */
+        .search-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .search-section h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-section h2 svg {
+            width: 22px;
+            height: 22px;
+            color: var(--accent-cyan);
+        }
+
+        .search-form {
+            display: flex;
+            gap: 12px;
+            max-width: 600px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            background: var(--bg-secondary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent-cyan);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0891b2;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Results Section */
+        .results-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .results-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Table Card */
+        .table-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .table-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-header h3 svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-cyan {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent-cyan);
+        }
+
+        .badge-green {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg-tertiary);
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        th.text-right {
+            text-align: right;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        td.text-right {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        tr.selected td {
+            background: rgba(6, 182, 212, 0.08);
+        }
+
+        tr.clickable {
+            cursor: pointer;
+        }
+
+        .table-name {
+            font-weight: 500;
+            color: var(--accent-cyan);
+        }
+
+        .item-type {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .type-lakehouse {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        .type-semantic {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent-purple);
+        }
+
+        .type-report {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--accent-amber);
+        }
+
+        .type-default {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-blue);
+        }
+
+        /* Impact Graph Section */
+        .graph-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .graph-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .graph-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .graph-container {
+            min-height: 400px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* Impact Tree */
+        .impact-tree {
+            width: 100%;
+            padding: 16px;
+        }
+
+        .tree-node {
+            margin-bottom: 8px;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        .tree-node-content.level-0 {
+            border-left-color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.08);
+        }
+
+        .tree-node-content.level-1 {
+            border-left-color: var(--accent-green);
+            margin-left: 24px;
+        }
+
+        .tree-node-content.level-2 {
+            border-left-color: var(--accent-purple);
+            margin-left: 48px;
+        }
+
+        .tree-node-content.level-3 {
+            border-left-color: var(--accent-amber);
+            margin-left: 72px;
+        }
+
+        .node-icon {
+            width: 20px;
+            height: 20px;
+            opacity: 0.7;
+        }
+
+        .node-name {
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .node-type {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .node-workspace {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .stat-icon.cyan {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent-cyan);
+        }
+
+        .stat-icon.green {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        .stat-icon.purple {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent-purple);
+        }
+
+        .stat-icon.amber {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--accent-amber);
+        }
+
+        .stat-info h4 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .stat-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Loading */
+        .loading {
+            opacity: 0.6;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .table-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Export button */
+        .export-btn {
+            margin-left: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path
+                        d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span>Table Impact Analysis</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <nav class="main-nav">
+                <a href="/" class="nav-link" title="Graph View">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+                    </svg>
+                    Graph
+                </a>
+                <a href="/dashboard.html" class="nav-link" title="Statistics Dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10M12 20V4M6 20v-6" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/table_impact.html" class="nav-link active" title="Table Impact Analysis">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Table Impact
+                </a>
+                <a href="/query_explorer.html" class="nav-link" title="Neo4j Query Explorer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    Queries
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Search Section -->
+        <section class="search-section">
+            <h2>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                Search Source Tables
+            </h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
+                Search for a Snowflake table name to see all downstream Fabric dependencies.
+            </p>
+            <form class="search-form" id="searchForm">
+                <input type="text" class="search-input" id="tableSearch"
+                    placeholder="Enter table name (e.g., fact_lead, dim_customer)..." autocomplete="off">
+                <button type="submit" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    Search
+                </button>
+            </form>
+        </section>
+
+        <!-- Stats Grid -->
+        <section class="stats-grid" id="statsGrid" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-icon cyan">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h4 id="matchingTables">0</h4>
+                    <p>Matching Tables</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h4 id="directConsumers">0</h4>
+                    <p>Direct Consumers</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h4 id="downstreamItems">0</h4>
+                    <p>Downstream Items</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon amber">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h4 id="totalImpact">0</h4>
+                    <p>Total Impact</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section">
+            <!-- Matching Tables -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h3>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            style="color: var(--accent-cyan);">
+                            <path
+                                d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Matching Tables
+                    </h3>
+                    <span class="badge badge-cyan" id="tableCount">0 tables</span>
+                </div>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Table Name</th>
+                                <th>Schema</th>
+                                <th>Database</th>
+                                <th class="text-right">Consumers</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablesBody">
+                            <tr>
+                                <td colspan="4" class="empty-state">
+                                    <p>Search for a table to see results</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Impact Visualization -->
+            <div class="graph-section">
+                <div class="graph-header">
+                    <h3>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            style="color: var(--accent-green);">
+                            <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                        Impact Visualization
+                    </h3>
+                    <button class="btn btn-secondary export-btn" id="exportBtn" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                        </svg>
+                        Export
+                    </button>
+                </div>
+                <div class="graph-container" id="graphContainer">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                        <p>Select a table from the left to see its downstream impact</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Downstream Items Table -->
+        <section class="table-card" id="downstreamSection" style="display: none;">
+            <div class="table-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="color: var(--accent-purple);">
+                        <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    All Downstream Dependencies
+                </h3>
+                <span class="badge badge-green" id="downstreamCount">0 items</span>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Type</th>
+                            <th>Workspace</th>
+                            <th class="text-right">Depth</th>
+                        </tr>
+                    </thead>
+                    <tbody id="downstreamBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // State
+        let selectedTableId = null;
+        let currentImpactData = null;
+
+        // DOM elements
+        const searchForm = document.getElementById('searchForm');
+        const tableSearch = document.getElementById('tableSearch');
+        const tablesBody = document.getElementById('tablesBody');
+        const tableCount = document.getElementById('tableCount');
+        const graphContainer = document.getElementById('graphContainer');
+        const statsGrid = document.getElementById('statsGrid');
+        const downstreamSection = document.getElementById('downstreamSection');
+        const downstreamBody = document.getElementById('downstreamBody');
+        const downstreamCount = document.getElementById('downstreamCount');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // Search tables
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = tableSearch.value.trim();
+            if (!query) return;
+
+            tablesBody.innerHTML = '<tr><td colspan="4" class="loading">Searching...</td></tr>';
+
+            try {
+                const response = await fetch(`/api/tables/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (data.tables && data.tables.length > 0) {
+                    renderTablesResults(data.tables);
+                    tableCount.textContent = `${data.count} tables`;
+                } else {
+                    tablesBody.innerHTML = '<tr><td colspan="4" class="empty-state"><p>No tables found matching your search</p></td></tr>';
+                    tableCount.textContent = '0 tables';
+                }
+            } catch (error) {
+                console.error('Search failed:', error);
+                tablesBody.innerHTML = `<tr><td colspan="4" class="empty-state"><p style="color: var(--accent-red);">Search failed: ${error.message}</p></td></tr>`;
+            }
+        });
+
+        // Render tables results
+        function renderTablesResults(tables) {
+            tablesBody.innerHTML = tables.map(table => `
+                <tr class="clickable ${selectedTableId === table.table_id ? 'selected' : ''}" 
+                    data-table-id="${table.table_id}">
+                    <td class="table-name">${escapeHtml(table.table_name)}</td>
+                    <td>${escapeHtml(table.schema || 'dbo')}</td>
+                    <td>${escapeHtml(table.database || '-')}</td>
+                    <td class="text-right">${table.consumer_count}</td>
+                </tr>
+            `).join('');
+
+            // Add click handlers
+            tablesBody.querySelectorAll('tr.clickable').forEach(row => {
+                row.addEventListener('click', () => {
+                    const tableId = row.dataset.tableId;
+                    selectTable(tableId);
+                });
+            });
+        }
+
+        // Select table and load impact
+        async function selectTable(tableId) {
+            selectedTableId = tableId;
+
+            // Update selected state
+            tablesBody.querySelectorAll('tr').forEach(row => {
+                row.classList.toggle('selected', row.dataset.tableId === tableId);
+            });
+
+            graphContainer.innerHTML = '<div class="loading">Loading impact analysis...</div>';
+            statsGrid.style.display = 'none';
+            downstreamSection.style.display = 'none';
+
+            try {
+                const response = await fetch(`/api/tables/${encodeURIComponent(tableId)}/impact`);
+                const data = await response.json();
+
+                currentImpactData = data;
+                renderImpactVisualization(data);
+                renderStats(data);
+                renderDownstreamTable(data);
+                exportBtn.style.display = 'flex';
+            } catch (error) {
+                console.error('Impact analysis failed:', error);
+                graphContainer.innerHTML = `<div class="empty-state"><p style="color: var(--accent-red);">Impact analysis failed: ${error.message}</p></div>`;
+            }
+        }
+
+        // Render impact visualization as tree
+        function renderImpactVisualization(data) {
+            const { table, direct_consumers, downstream_items } = data;
+
+            if (!direct_consumers.length && !downstream_items.length) {
+                graphContainer.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <p>No downstream dependencies found for this table</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="impact-tree">';
+
+            // Root: Table node
+            html += `
+                <div class="tree-node">
+                    <div class="tree-node-content level-0">
+                        <svg class="node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <span class="node-name">${escapeHtml(table.name)}</span>
+                        <span class="node-type">Table</span>
+                        <span class="node-workspace">${escapeHtml(table.database || '')} • ${escapeHtml(table.schema || 'dbo')}</span>
+                    </div>
+                </div>
+            `;
+
+            // Direct consumers (Level 1)
+            direct_consumers.forEach(consumer => {
+                html += renderTreeNode(consumer, 1);
+
+                // Find downstream items from this consumer
+                const consumerDownstream = downstream_items.filter(d => d.source_id === consumer.item_id);
+                consumerDownstream.forEach(downstream => {
+                    const depth = Math.min(downstream.depth + 1, 3);
+                    html += renderTreeNode(downstream, depth);
+                });
+            });
+
+            html += '</div>';
+            graphContainer.innerHTML = html;
+        }
+
+        function renderTreeNode(item, level) {
+            const levelClass = `level-${Math.min(level, 3)}`;
+            const icon = getItemIcon(item.item_type);
+
+            return `
+                <div class="tree-node">
+                    <div class="tree-node-content ${levelClass}">
+                        ${icon}
+                        <span class="node-name">${escapeHtml(item.item_name)}</span>
+                        <span class="node-type">${escapeHtml(item.item_type)}</span>
+                        <span class="node-workspace">${escapeHtml(item.workspace || '')}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getItemIcon(itemType) {
+            const icons = {
+                'Lakehouse': '<svg class="node-icon" style="color: var(--accent-green);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" /></svg>',
+                'SemanticModel': '<svg class="node-icon" style="color: var(--accent-purple);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>',
+                'Report': '<svg class="node-icon" style="color: var(--accent-amber);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
+                'MirroredDatabase': '<svg class="node-icon" style="color: var(--accent-cyan);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>'
+            };
+            return icons[itemType] || '<svg class="node-icon" style="color: var(--accent-blue);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
+        }
+
+        // Render stats
+        function renderStats(data) {
+            document.getElementById('matchingTables').textContent = '1';
+            document.getElementById('directConsumers').textContent = data.direct_consumer_count;
+            document.getElementById('downstreamItems').textContent = data.downstream_count;
+            document.getElementById('totalImpact').textContent = data.total_impact;
+            statsGrid.style.display = 'grid';
+        }
+
+        // Render downstream table
+        function renderDownstreamTable(data) {
+            const allItems = [
+                ...data.direct_consumers.map(d => ({ ...d, depth: 0 })),
+                ...data.downstream_items
+            ];
+
+            if (allItems.length === 0) {
+                downstreamSection.style.display = 'none';
+                return;
+            }
+
+            downstreamBody.innerHTML = allItems.map(item => `
+                <tr>
+                    <td>${escapeHtml(item.item_name)}</td>
+                    <td><span class="item-type ${getTypeClass(item.item_type)}">${escapeHtml(item.item_type)}</span></td>
+                    <td>${escapeHtml(item.workspace || '-')}</td>
+                    <td class="text-right">${item.depth}</td>
+                </tr>
+            `).join('');
+
+            downstreamCount.textContent = `${allItems.length} items`;
+            downstreamSection.style.display = 'block';
+        }
+
+        function getTypeClass(itemType) {
+            const classes = {
+                'Lakehouse': 'type-lakehouse',
+                'SemanticModel': 'type-semantic',
+                'Report': 'type-report'
+            };
+            return classes[itemType] || 'type-default';
+        }
+
+        // Export functionality
+        exportBtn.addEventListener('click', () => {
+            if (!currentImpactData) return;
+
+            const csvRows = [
+                ['Item Name', 'Item Type', 'Workspace', 'Depth', 'Relationship'].join(','),
+                ...currentImpactData.direct_consumers.map(d =>
+                    [d.item_name, d.item_type, d.workspace || '', '0', 'Direct Consumer'].join(',')
+                ),
+                ...currentImpactData.downstream_items.map(d =>
+                    [d.item_name, d.item_type, d.workspace || '', d.depth, 'Downstream'].join(',')
+                )
+            ];
+
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `table_impact_${currentImpactData.table.name}_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Utility
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>

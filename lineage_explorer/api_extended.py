@@ -880,3 +880,185 @@ async def get_chain_depth_stats():
         logger.error(f"Chain stats query failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ==================== TABLE IMPACT ANALYSIS ENDPOINTS ====================
+
+@extended_router.get("/api/tables/search")
+async def search_tables(
+    q: str = Query(..., min_length=1, description="Table name search query"),
+    limit: int = Query(default=50, ge=1, le=200)
+):
+    """
+    Search tables by name with consumer counts.
+    
+    Args:
+        q: Search term (partial match)
+        limit: Maximum results
+        
+    Returns:
+        List of matching tables with direct consumer counts
+    """
+    _require_neo4j()
+    
+    try:
+        query = """
+        MATCH (t:Table)
+        WHERE toLower(t.name) CONTAINS toLower($search)
+        
+        // Count direct consumers (MIRRORS + USES_TABLE)
+        OPTIONAL MATCH (item:FabricItem)-[:MIRRORS|USES_TABLE]->(t)
+        
+        WITH t, count(DISTINCT item) as consumer_count
+        
+        RETURN 
+            t.id as table_id,
+            t.name as table_name,
+            t.schema as schema,
+            t.database as database,
+            t.full_path as full_path,
+            consumer_count
+        ORDER BY consumer_count DESC, t.name
+        LIMIT $limit
+        """
+        results = _neo4j_client.run_query(query, {"search": q, "limit": limit})
+        return {
+            "query": q,
+            "tables": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        logger.error(f"Table search failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/tables/{table_id}/impact")
+async def get_table_impact(
+    table_id: str,
+    max_depth: int = Query(default=10, ge=1, le=20)
+):
+    """
+    Get full downstream impact analysis for a table.
+    
+    Traces from Table → Direct Consumers → All Downstream Items.
+    
+    Args:
+        table_id: Table ID
+        max_depth: Maximum traversal depth
+        
+    Returns:
+        Impact tree with all downstream dependencies
+    """
+    _require_neo4j()
+    
+    try:
+        # First get table info
+        table_query = """
+        MATCH (t:Table {id: $table_id})
+        RETURN t.id as id, t.name as name, t.schema as schema, 
+               t.database as database, t.full_path as full_path
+        """
+        table_results = _neo4j_client.run_query(table_query, {"table_id": table_id})
+        
+        if not table_results:
+            raise HTTPException(status_code=404, detail=f"Table not found: {table_id}")
+        
+        table_info = table_results[0]
+        
+        # Get direct consumers (items that MIRROR or USE this table)
+        consumers_query = """
+        MATCH (t:Table {id: $table_id})<-[:MIRRORS|USES_TABLE]-(item:FabricItem)
+        OPTIONAL MATCH (w:Workspace)-[:CONTAINS]->(item)
+        RETURN 
+            item.id as item_id,
+            item.name as item_name,
+            item.type as item_type,
+            w.name as workspace,
+            'direct' as relationship
+        """
+        direct_consumers = _neo4j_client.run_query(consumers_query, {"table_id": table_id})
+        
+        # Get full downstream impact from each direct consumer
+        all_downstream = []
+        consumer_ids = [c["item_id"] for c in direct_consumers]
+        
+        if consumer_ids:
+            downstream_query = """
+            UNWIND $item_ids as start_id
+            MATCH path = (start:FabricItem {id: start_id})<-[:DEPENDS_ON*1..10]-(downstream)
+            WHERE length(path) <= $max_depth
+            OPTIONAL MATCH (w:Workspace)-[:CONTAINS]->(downstream)
+            RETURN DISTINCT
+                start.id as source_id,
+                start.name as source_name,
+                downstream.id as item_id,
+                downstream.name as item_name,
+                downstream.type as item_type,
+                w.name as workspace,
+                length(path) as depth,
+                [n in nodes(path) | n.name] as path_names
+            ORDER BY depth
+            """
+            all_downstream = _neo4j_client.run_query(
+                downstream_query, 
+                {"item_ids": consumer_ids, "max_depth": max_depth}
+            )
+        
+        return {
+            "table": table_info,
+            "direct_consumers": direct_consumers,
+            "direct_consumer_count": len(direct_consumers),
+            "downstream_items": all_downstream,
+            "downstream_count": len(all_downstream),
+            "total_impact": len(direct_consumers) + len(all_downstream)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Table impact analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/tables")
+async def list_tables(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0)
+):
+    """
+    List all tables with consumer statistics.
+    
+    Returns:
+        Paginated list of tables with consumer counts
+    """
+    _require_neo4j()
+    
+    try:
+        query = """
+        MATCH (t:Table)
+        OPTIONAL MATCH (item:FabricItem)-[:MIRRORS|USES_TABLE]->(t)
+        WITH t, count(DISTINCT item) as consumer_count
+        RETURN 
+            t.id as table_id,
+            t.name as table_name,
+            t.schema as schema,
+            t.database as database,
+            consumer_count
+        ORDER BY consumer_count DESC, t.name
+        SKIP $offset
+        LIMIT $limit
+        """
+        results = _neo4j_client.run_query(query, {"limit": limit, "offset": offset})
+        
+        # Get total count
+        count_query = "MATCH (t:Table) RETURN count(t) as total"
+        total = _neo4j_client.run_query(count_query)[0]["total"]
+        
+        return {
+            "tables": results,
+            "count": len(results),
+            "total": total,
+            "offset": offset,
+            "limit": limit
+        }
+    except Exception as e:
+        logger.error(f"List tables failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
