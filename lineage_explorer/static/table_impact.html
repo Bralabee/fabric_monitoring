@@ -966,7 +966,8 @@
             downstreamSection.style.display = 'none';
 
             try {
-                const response = await fetch(`/api/tables/${encodeURIComponent(tableId)}/impact`);
+                // Use query parameter endpoint to handle table IDs with special characters (like slashes)
+                const response = await fetch(`/api/tables/impact?id=${encodeURIComponent(tableId)}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.detail || `HTTP ${response.status}`);

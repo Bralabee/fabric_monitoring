@@ -931,6 +931,20 @@ async def search_tables(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@extended_router.get("/api/tables/impact")
+async def get_table_impact_by_query(
+    id: str = Query(..., description="Table ID or name to analyze"),
+    max_depth: int = Query(default=10, ge=1, le=20)
+):
+    """
+    Get table impact via query parameter.
+    
+    This endpoint handles table IDs containing special characters like slashes.
+    Preferred over the path-based endpoint.
+    """
+    return await _get_table_impact_impl(id, max_depth)
+
+
 @extended_router.get("/api/tables/{table_id}/impact")
 async def get_table_impact(
     table_id: str,
@@ -948,6 +962,11 @@ async def get_table_impact(
     Returns:
         Impact tree with all downstream dependencies
     """
+    return await _get_table_impact_impl(table_id, max_depth)
+
+
+async def _get_table_impact_impl(table_id: str, max_depth: int = 10):
+    """Shared implementation for table impact analysis."""
     _require_neo4j()
     
     try:
