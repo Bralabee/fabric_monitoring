@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fabric Lineage Explorer</title>
-    
+
     <!-- D3.js -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+        rel="stylesheet">
+
     <style>
         /* =================================================================
            CSS Reset & Variables
            ================================================================= */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         :root {
             --bg-primary: #f8fafc;
             --bg-secondary: #ffffff;
@@ -32,14 +39,14 @@
             --accent-amber: #f59e0b;
             --accent-red: #ef4444;
             --accent-purple: #8b5cf6;
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             --radius-sm: 6px;
             --radius-md: 8px;
             --radius-lg: 12px;
         }
-        
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-primary);
@@ -47,7 +54,7 @@
             overflow: hidden;
             height: 100vh;
         }
-        
+
         /* =================================================================
            Layout Structure
            ================================================================= */
@@ -56,7 +63,7 @@
             flex-direction: column;
             height: 100vh;
         }
-        
+
         /* Header */
         .header {
             height: 56px;
@@ -69,13 +76,14 @@
             flex-shrink: 0;
             z-index: 100;
         }
-        
-        .header-left, .header-right {
+
+        .header-left,
+        .header-right {
             display: flex;
             align-items: center;
             gap: 16px;
         }
-        
+
         .logo {
             display: flex;
             align-items: center;
@@ -83,24 +91,31 @@
             font-weight: 600;
             font-size: 15px;
         }
-        
-        .logo svg { width: 24px; height: 24px; color: var(--accent-blue); }
-        
+
+        .logo svg {
+            width: 24px;
+            height: 24px;
+            color: var(--accent-blue);
+        }
+
         .stats-badge {
             display: flex;
             gap: 8px;
             font-size: 12px;
         }
-        
+
         .stats-badge .stat {
             background: var(--bg-tertiary);
             padding: 4px 10px;
             border-radius: 999px;
             color: var(--text-secondary);
         }
-        
-        .stats-badge .stat strong { color: var(--text-primary); font-weight: 600; }
-        
+
+        .stats-badge .stat strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
         /* Main Navigation */
         .main-nav {
             display: flex;
@@ -111,7 +126,7 @@
             background: var(--bg-tertiary);
             border-radius: var(--radius-md);
         }
-        
+
         .nav-link {
             display: flex;
             align-items: center;
@@ -124,18 +139,18 @@
             border-radius: var(--radius-sm);
             transition: all 0.2s;
         }
-        
+
         .nav-link:hover {
             color: var(--text-primary);
             background: var(--bg-secondary);
         }
-        
+
         .nav-link.active {
             color: var(--accent-blue);
             background: var(--bg-secondary);
             box-shadow: var(--shadow-sm);
         }
-        
+
         .nav-link svg {
             width: 16px;
             height: 16px;
@@ -149,23 +164,25 @@
             font-size: 12px;
             color: var(--text-muted);
         }
-        
+
         .neo4j-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: var(--accent-red);
         }
-        
-        .neo4j-dot.connected { background: var(--accent-green); }
-        
+
+        .neo4j-dot.connected {
+            background: var(--accent-green);
+        }
+
         /* Main Content Area */
         .main-content {
             display: flex;
             flex: 1;
             overflow: hidden;
         }
-        
+
         /* Sidebar */
         .sidebar {
             width: 280px;
@@ -176,9 +193,11 @@
             overflow: hidden;
             transition: margin-left 0.3s ease;
         }
-        
-        .sidebar.collapsed { margin-left: -280px; }
-        
+
+        .sidebar.collapsed {
+            margin-left: -280px;
+        }
+
         .sidebar-header {
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
@@ -186,7 +205,7 @@
             align-items: center;
             justify-content: space-between;
         }
-        
+
         .sidebar-header h2 {
             font-size: 13px;
             font-weight: 600;
@@ -194,25 +213,25 @@
             letter-spacing: 0.5px;
             color: var(--text-secondary);
         }
-        
+
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
             padding: 12px;
         }
-        
+
         /* Filter Sections */
         .filter-section {
             margin-bottom: 16px;
         }
-        
+
         .filter-section-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 8px;
         }
-        
+
         .filter-section-title {
             font-size: 11px;
             font-weight: 600;
@@ -220,7 +239,7 @@
             letter-spacing: 0.5px;
             color: var(--text-muted);
         }
-        
+
         .filter-count {
             font-size: 11px;
             color: var(--text-muted);
@@ -228,13 +247,13 @@
             padding: 2px 6px;
             border-radius: 4px;
         }
-        
+
         /* Search Input */
         .search-wrapper {
             position: relative;
             margin-bottom: 12px;
         }
-        
+
         .search-wrapper svg {
             position: absolute;
             left: 10px;
@@ -244,7 +263,7 @@
             height: 16px;
             color: var(--text-muted);
         }
-        
+
         .search-input {
             width: 100%;
             padding: 8px 10px 8px 34px;
@@ -254,20 +273,20 @@
             background: var(--bg-primary);
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-        
+
         .search-input:focus {
             outline: none;
             border-color: var(--accent-blue);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
-        
+
         /* Chips */
         .chip-container {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
         }
-        
+
         .chip {
             display: inline-flex;
             align-items: center;
@@ -279,28 +298,30 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
-        .chip:hover { border-color: var(--accent-blue); }
-        
+
+        .chip:hover {
+            border-color: var(--accent-blue);
+        }
+
         .chip.active {
             background: var(--accent-blue);
             color: white;
             border-color: var(--accent-blue);
         }
-        
+
         /* Graph Container */
         .graph-container {
             flex: 1;
             position: relative;
             overflow: hidden;
         }
-        
+
         #graph {
             width: 100%;
             height: 100%;
             background: var(--bg-primary);
         }
-        
+
         /* Buttons */
         .btn {
             display: inline-flex;
@@ -316,18 +337,45 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
-        .btn:hover { background: var(--bg-tertiary); }
-        .btn.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .btn-icon { padding: 8px; }
-        .btn-icon svg { width: 16px; height: 16px; }
-        
-        .btn-sm { padding: 4px 8px; font-size: 12px; }
-        .btn-ghost { border: none; background: transparent; }
-        .btn-ghost:hover { background: var(--bg-tertiary); }
-        
+
+        .btn:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .btn.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-icon {
+            padding: 8px;
+        }
+
+        .btn-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .btn-ghost {
+            border: none;
+            background: transparent;
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-tertiary);
+        }
+
         /* Toolbar */
         .toolbar {
             position: absolute;
@@ -337,7 +385,7 @@
             gap: 8px;
             z-index: 10;
         }
-        
+
         .toolbar-group {
             display: flex;
             background: var(--bg-secondary);
@@ -345,15 +393,17 @@
             box-shadow: var(--shadow-md);
             overflow: hidden;
         }
-        
+
         .toolbar-group .btn {
             border-radius: 0;
             border: none;
             border-right: 1px solid var(--border-color);
         }
-        
-        .toolbar-group .btn:last-child { border-right: none; }
-        
+
+        .toolbar-group .btn:last-child {
+            border-right: none;
+        }
+
         /* Zoom Controls */
         .zoom-controls {
             position: absolute;
@@ -364,11 +414,11 @@
             gap: 4px;
             z-index: 10;
         }
-        
+
         .zoom-controls .btn {
             box-shadow: var(--shadow-md);
         }
-        
+
         /* Minimap */
         .minimap {
             position: absolute;
@@ -383,7 +433,7 @@
             overflow: hidden;
             z-index: 10;
         }
-        
+
         .minimap-header {
             padding: 6px 10px;
             background: var(--bg-tertiary);
@@ -393,17 +443,17 @@
             color: var(--text-muted);
             border-bottom: 1px solid var(--border-color);
         }
-        
+
         .minimap-content {
             height: calc(100% - 28px);
         }
-        
+
         .minimap-viewport {
             fill: none;
             stroke: var(--accent-blue);
             stroke-width: 1.5;
         }
-        
+
         /* Legend */
         .legend {
             position: absolute;
@@ -417,7 +467,7 @@
             z-index: 10;
             width: 180px;
         }
-        
+
         .legend h4 {
             font-size: 10px;
             font-weight: 600;
@@ -425,7 +475,7 @@
             color: var(--text-muted);
             margin-bottom: 8px;
         }
-        
+
         .legend-gradient {
             width: 100%;
             height: 12px;
@@ -433,14 +483,14 @@
             background: linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #8b5cf6);
             margin-bottom: 4px;
         }
-        
+
         .legend-labels {
             display: flex;
             justify-content: space-between;
             font-size: 9px;
             color: var(--text-muted);
         }
-        
+
         /* Detail Panel */
         .detail-panel {
             position: absolute;
@@ -457,9 +507,11 @@
             z-index: 20;
             overflow: hidden;
         }
-        
-        .detail-panel.open { display: flex; }
-        
+
+        .detail-panel.open {
+            display: flex;
+        }
+
         .detail-panel-header {
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
@@ -467,7 +519,7 @@
             align-items: center;
             gap: 10px;
         }
-        
+
         .detail-panel-header h3 {
             flex: 1;
             font-size: 14px;
@@ -476,17 +528,17 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .detail-panel-content {
             flex: 1;
             overflow-y: auto;
             padding: 12px 16px;
         }
-        
+
         .detail-section {
             margin-bottom: 16px;
         }
-        
+
         .detail-section-title {
             font-size: 10px;
             font-weight: 600;
@@ -495,7 +547,7 @@
             color: var(--text-muted);
             margin-bottom: 8px;
         }
-        
+
         .detail-field {
             display: flex;
             justify-content: space-between;
@@ -503,18 +555,30 @@
             border-bottom: 1px solid var(--border-color);
             font-size: 13px;
         }
-        
-        .detail-field:last-child { border-bottom: none; }
-        .detail-field .label { color: var(--text-secondary); }
-        .detail-field .value { font-weight: 500; }
-        .detail-field .value.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-        
+
+        .detail-field:last-child {
+            border-bottom: none;
+        }
+
+        .detail-field .label {
+            color: var(--text-secondary);
+        }
+
+        .detail-field .value {
+            font-weight: 500;
+        }
+
+        .detail-field .value.mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+
         /* Connection List */
         .connection-list {
             max-height: 200px;
             overflow-y: auto;
         }
-        
+
         .connection-item {
             display: flex;
             align-items: center;
@@ -524,16 +588,18 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        
-        .connection-item:hover { background: var(--bg-tertiary); }
-        
+
+        .connection-item:hover {
+            background: var(--bg-tertiary);
+        }
+
         .connection-item .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             flex-shrink: 0;
         }
-        
+
         .connection-item .name {
             flex: 1;
             font-size: 12px;
@@ -541,7 +607,7 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .connection-item .direction {
             font-size: 10px;
             color: var(--text-muted);
@@ -549,7 +615,224 @@
             background: var(--bg-tertiary);
             border-radius: 4px;
         }
-        
+
+        /* Table Lineage Panel */
+        .table-lineage-panel {
+            position: absolute;
+            top: 12px;
+            right: 350px;
+            width: 380px;
+            max-height: calc(100% - 24px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            display: none;
+            flex-direction: column;
+            z-index: 19;
+            overflow: hidden;
+        }
+
+        .table-lineage-panel.open {
+            display: flex;
+        }
+
+        .table-lineage-panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-tertiary);
+        }
+
+        .table-lineage-panel-header h3 {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-lineage-panel-header h3 svg {
+            width: 16px;
+            height: 16px;
+            color: var(--accent-blue);
+        }
+
+        .table-lineage-panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        /* Filtered by indicator */
+        .table-filter-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #fef3c7;
+            border-bottom: 1px solid #fcd34d;
+            font-size: 12px;
+            color: #92400e;
+        }
+
+        .table-filter-indicator.active {
+            display: flex;
+        }
+
+        .table-filter-indicator span {
+            flex: 1;
+        }
+
+        .table-filter-indicator strong {
+            font-weight: 600;
+            color: #78350f;
+        }
+
+        .table-filter-indicator button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #92400e;
+            padding: 2px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .table-filter-indicator button:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Table search */
+        .table-search {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .table-search input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            background: var(--bg-primary);
+        }
+
+        .table-search input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .table-search svg {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+        }
+
+        /* Table stats */
+        .table-stats {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-stat {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+        }
+
+        .table-stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .table-stat-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Table cards list */
+        .table-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .table-card {
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .table-card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+        }
+
+        .table-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+
+        .table-card-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .table-card-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .table-card-path {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .table-card-meta {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .table-card-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
         /* Context Menu */
         .context-menu {
             position: fixed;
@@ -562,9 +845,11 @@
             display: none;
             overflow: hidden;
         }
-        
-        .context-menu.visible { display: block; }
-        
+
+        .context-menu.visible {
+            display: block;
+        }
+
         .context-menu-header {
             padding: 10px 14px;
             font-size: 12px;
@@ -572,7 +857,7 @@
             background: var(--bg-tertiary);
             border-bottom: 1px solid var(--border-color);
         }
-        
+
         .context-menu-item {
             display: flex;
             align-items: center;
@@ -582,11 +867,23 @@
             cursor: pointer;
             transition: background 0.15s;
         }
-        
-        .context-menu-item:hover { background: var(--bg-tertiary); }
-        .context-menu-item svg { width: 16px; height: 16px; color: var(--text-muted); }
-        .context-menu-divider { height: 1px; background: var(--border-color); margin: 4px 0; }
-        
+
+        .context-menu-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .context-menu-item svg {
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 4px 0;
+        }
+
         /* Tooltip */
         .tooltip {
             position: fixed;
@@ -601,11 +898,21 @@
             z-index: 1001;
             max-width: 280px;
         }
-        
-        .tooltip.visible { opacity: 1; }
-        .tooltip-header { font-weight: 600; margin-bottom: 4px; }
-        .tooltip-type { color: rgba(255,255,255,0.7); font-size: 11px; }
-        
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-header {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .tooltip-type {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+        }
+
         /* Toast */
         .toast {
             position: fixed;
@@ -623,17 +930,26 @@
             opacity: 0;
             transition: all 0.3s ease;
         }
-        
-        .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-        .toast.success { background: var(--accent-green); }
-        .toast.error { background: var(--accent-red); }
-        
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: var(--accent-green);
+        }
+
+        .toast.error {
+            background: var(--accent-red);
+        }
+
         /* Selection Tools */
         #selection-tools {
             align-items: center;
             gap: 8px;
         }
-        
+
         #selection-count {
             padding: 4px 8px;
             background: var(--accent-blue);
@@ -641,7 +957,7 @@
             border-radius: var(--radius-sm);
             font-weight: 600;
         }
-        
+
         #btn-select-children,
         #btn-select-descendants,
         #btn-clear-selection {
@@ -649,50 +965,80 @@
             font-size: 11px;
             font-weight: 600;
         }
-        
+
         /* Graph Nodes & Links */
-        .node { cursor: pointer; }
+        .node {
+            cursor: pointer;
+        }
+
         .node text {
             font-size: 10px;
             fill: var(--text-primary);
             pointer-events: none;
             text-shadow: 0 1px 2px white, 0 -1px 2px white, 1px 0 2px white, -1px 0 2px white;
         }
-        
-        .node.labels-hidden text { display: none; }
-        .node.dimmed { opacity: 0.15; }
-        .node.highlighted { opacity: 1; }
-        .node.selected .node-shape { 
-            stroke: var(--accent-blue); 
-            stroke-width: 3; 
+
+        .node.labels-hidden text {
+            display: none;
+        }
+
+        .node.dimmed {
+            opacity: 0.15;
+        }
+
+        .node.highlighted {
+            opacity: 1;
+        }
+
+        .node.selected .node-shape {
+            stroke: var(--accent-blue);
+            stroke-width: 3;
             filter: drop-shadow(0 0 6px var(--accent-blue));
         }
+
         .node.selected .node-glow {
             opacity: 0.8;
         }
-        
+
         .link {
             stroke: #cbd5e1;
             stroke-width: 1.5;
             fill: none;
             opacity: 0.5;
         }
-        
+
         /* Inward arrows (incoming data) - green */
-        .link.inward { stroke: var(--accent-green); opacity: 0.6; }
-        
+        .link.inward {
+            stroke: var(--accent-green);
+            opacity: 0.6;
+        }
+
         /* Outward arrows (outgoing data) - blue */
-        .link.outward { stroke: var(--accent-blue); opacity: 0.6; }
-        
-        .link.highlighted { stroke-width: 2.5; opacity: 1; }
-        .link.dimmed { opacity: 0.1; }
-        .link.path-highlighted { stroke: var(--accent-amber); stroke-width: 3; opacity: 1; }
-        
+        .link.outward {
+            stroke: var(--accent-blue);
+            opacity: 0.6;
+        }
+
+        .link.highlighted {
+            stroke-width: 2.5;
+            opacity: 1;
+        }
+
+        .link.dimmed {
+            opacity: 0.1;
+        }
+
+        .link.path-highlighted {
+            stroke: var(--accent-amber);
+            stroke-width: 3;
+            opacity: 1;
+        }
+
         .particle {
             fill: var(--accent-blue);
             opacity: 0.8;
         }
-        
+
         /* Path Finder Panel */
         .path-finder-panel {
             position: absolute;
@@ -707,9 +1053,11 @@
             z-index: 25;
             transition: transform 0.3s ease;
         }
-        
-        .path-finder-panel.open { transform: translateX(-50%) translateY(0); }
-        
+
+        .path-finder-panel.open {
+            transform: translateX(-50%) translateY(0);
+        }
+
         .path-finder-header {
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
@@ -717,7 +1065,7 @@
             align-items: center;
             justify-content: space-between;
         }
-        
+
         .path-finder-header h3 {
             display: flex;
             align-items: center;
@@ -725,15 +1073,21 @@
             font-size: 14px;
             font-weight: 600;
         }
-        
-        .path-finder-header h3 svg { width: 18px; height: 18px; color: var(--accent-blue); }
-        
-        .path-finder-content { padding: 16px; }
-        
+
+        .path-finder-header h3 svg {
+            width: 18px;
+            height: 18px;
+            color: var(--accent-blue);
+        }
+
+        .path-finder-content {
+            padding: 16px;
+        }
+
         .path-endpoint {
             margin-bottom: 12px;
         }
-        
+
         .path-endpoint label {
             display: block;
             font-size: 11px;
@@ -742,7 +1096,7 @@
             color: var(--text-muted);
             margin-bottom: 6px;
         }
-        
+
         .path-endpoint-value {
             padding: 10px;
             background: var(--bg-tertiary);
@@ -751,20 +1105,24 @@
             display: flex;
             align-items: center;
         }
-        
+
         .path-endpoint-value .placeholder {
             font-size: 12px;
             color: var(--text-muted);
         }
-        
+
         .path-arrow {
             display: flex;
             justify-content: center;
             margin: 8px 0;
         }
-        
-        .path-arrow svg { width: 20px; height: 20px; color: var(--text-muted); }
-        
+
+        .path-arrow svg {
+            width: 20px;
+            height: 20px;
+            color: var(--text-muted);
+        }
+
         .node-badge {
             display: inline-flex;
             align-items: center;
@@ -774,25 +1132,25 @@
             color: white;
             font-weight: 500;
         }
-        
+
         .path-result {
             margin-top: 16px;
             padding-top: 16px;
             border-top: 1px solid var(--border-color);
         }
-        
+
         .path-result-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
         }
-        
+
         .path-steps {
             max-height: 200px;
             overflow-y: auto;
         }
-        
+
         .path-step {
             display: flex;
             align-items: center;
@@ -802,9 +1160,11 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        
-        .path-step:hover { background: var(--bg-tertiary); }
-        
+
+        .path-step:hover {
+            background: var(--bg-tertiary);
+        }
+
         .step-number {
             width: 24px;
             height: 24px;
@@ -816,13 +1176,13 @@
             font-size: 11px;
             font-weight: 600;
         }
-        
+
         .step-node {
             flex: 1;
             font-size: 13px;
             font-weight: 500;
         }
-        
+
         .step-type {
             font-size: 10px;
             color: var(--text-muted);
@@ -830,15 +1190,19 @@
             background: var(--bg-tertiary);
             border-radius: 4px;
         }
-        
+
         .path-connector {
             display: flex;
             justify-content: center;
             padding: 4px 0;
         }
-        
-        .path-connector svg { width: 16px; height: 16px; color: var(--text-muted); }
-        
+
+        .path-connector svg {
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+        }
+
         /* Analysis Panel */
         .analysis-panel {
             position: absolute;
@@ -855,9 +1219,11 @@
             flex-direction: column;
             overflow: hidden;
         }
-        
-        .analysis-panel.open { display: flex; }
-        
+
+        .analysis-panel.open {
+            display: flex;
+        }
+
         .analysis-header {
             padding: 12px 16px;
             border-bottom: 1px solid var(--border-color);
@@ -865,7 +1231,7 @@
             align-items: center;
             justify-content: space-between;
         }
-        
+
         .analysis-header h3 {
             display: flex;
             align-items: center;
@@ -873,9 +1239,12 @@
             font-size: 14px;
             font-weight: 600;
         }
-        
-        .analysis-header h3 svg { width: 18px; height: 18px; }
-        
+
+        .analysis-header h3 svg {
+            width: 18px;
+            height: 18px;
+        }
+
         .analysis-origin {
             padding: 12px 16px;
             background: var(--bg-tertiary);
@@ -884,21 +1253,23 @@
             gap: 8px;
             font-size: 12px;
         }
-        
-        .analysis-origin .label { color: var(--text-muted); }
-        
+
+        .analysis-origin .label {
+            color: var(--text-muted);
+        }
+
         .analysis-count {
             padding: 12px 16px;
             font-size: 13px;
             border-bottom: 1px solid var(--border-color);
         }
-        
+
         .analysis-results {
             flex: 1;
             overflow-y: auto;
             padding: 8px;
         }
-        
+
         .analysis-item {
             display: flex;
             align-items: center;
@@ -908,13 +1279,36 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        
-        .analysis-item:hover { background: var(--bg-tertiary); }
-        .analysis-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .analysis-item .name { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .analysis-item .type { font-size: 10px; color: var(--text-muted); }
-        .analysis-item .depth { font-size: 10px; color: var(--accent-blue); }
-        
+
+        .analysis-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .analysis-item .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .analysis-item .name {
+            flex: 1;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .analysis-item .type {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .analysis-item .depth {
+            font-size: 10px;
+            color: var(--accent-blue);
+        }
+
         /* Loading Overlay */
         .loading-overlay {
             position: absolute;
@@ -926,9 +1320,11 @@
             gap: 12px;
             z-index: 50;
         }
-        
-        .loading-overlay.visible { display: flex; }
-        
+
+        .loading-overlay.visible {
+            display: flex;
+        }
+
         .spinner {
             width: 24px;
             height: 24px;
@@ -937,9 +1333,13 @@
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
-        
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         /* Empty State */
         .empty-state {
             position: absolute;
@@ -951,20 +1351,48 @@
             color: var(--text-muted);
             z-index: 5;
         }
-        
-        .empty-state.visible { display: flex; }
-        .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; }
-        .empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text-secondary); }
-        .empty-state p { font-size: 14px; }
-        
+
+        .empty-state.visible {
+            display: flex;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
-            .sidebar { width: 100%; position: absolute; z-index: 30; }
-            .sidebar.collapsed { transform: translateX(-100%); margin-left: 0; }
-            .minimap, .legend { display: none; }
+            .sidebar {
+                width: 100%;
+                position: absolute;
+                z-index: 30;
+            }
+
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+                margin-left: 0;
+            }
+
+            .minimap,
+            .legend {
+                display: none;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="app-container">
         <!-- Header -->
@@ -972,13 +1400,16 @@
             <div class="header-left">
                 <button class="btn btn-icon btn-ghost" id="btn-toggle-sidebar" title="Toggle Sidebar">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
                     </svg>
                 </button>
                 <div class="logo">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
-                        <path d="M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+                        <path d="M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
                     </svg>
                     <span>Fabric Lineage Explorer</span>
                 </div>
@@ -992,19 +1423,21 @@
                 <nav class="main-nav">
                     <a href="/" class="nav-link active" title="Graph View">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
                         </svg>
                         Graph
                     </a>
                     <a href="/dashboard.html" class="nav-link" title="Statistics Dashboard">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 20V10M12 20V4M6 20v-6"/>
+                            <path d="M18 20V10M12 20V4M6 20v-6" />
                         </svg>
                         Dashboard
                     </a>
                     <a href="/query_explorer.html" class="nav-link" title="Neo4j Query Explorer">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
                         </svg>
                         Queries
                     </a>
@@ -1015,14 +1448,14 @@
                 </div>
                 <button class="btn btn-sm" id="btn-refresh">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                        <path d="M23 4v6h-6M1 20v-6h6"/>
-                        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                        <path d="M23 4v6h-6M1 20v-6h6" />
+                        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
                     </svg>
                     Refresh
                 </button>
             </div>
         </header>
-        
+
         <div class="main-content">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
@@ -1034,11 +1467,12 @@
                     <!-- Search -->
                     <div class="search-wrapper">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
                         </svg>
                         <input type="text" class="search-input" id="filter-search" placeholder="Search nodes...">
                     </div>
-                    
+
                     <!-- Workspace Filter -->
                     <div class="filter-section">
                         <div class="filter-section-header">
@@ -1047,7 +1481,7 @@
                         </div>
                         <div class="chip-container" id="filter-workspaces"></div>
                     </div>
-                    
+
                     <!-- Item Type Filter -->
                     <div class="filter-section">
                         <div class="filter-section-header">
@@ -1056,7 +1490,7 @@
                         </div>
                         <div class="chip-container" id="filter-item-types"></div>
                     </div>
-                    
+
                     <!-- Source Type Filter -->
                     <div class="filter-section">
                         <div class="filter-section-header">
@@ -1067,44 +1501,60 @@
                     </div>
                 </div>
             </aside>
-            
+
             <!-- Graph Container -->
             <div class="graph-container">
                 <div id="graph"></div>
-                
+
                 <!-- Toolbar -->
                 <div class="toolbar">
                     <div class="toolbar-group">
                         <button class="btn btn-icon active" data-layout="force" title="Force Layout">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="3"/><circle cx="4" cy="4" r="2"/><circle cx="20" cy="4" r="2"/>
-                                <circle cx="4" cy="20" r="2"/><circle cx="20" cy="20" r="2"/>
-                                <line x1="6" y1="6" x2="9" y2="9"/><line x1="15" y1="9" x2="18" y2="6"/>
+                                <circle cx="12" cy="12" r="3" />
+                                <circle cx="4" cy="4" r="2" />
+                                <circle cx="20" cy="4" r="2" />
+                                <circle cx="4" cy="20" r="2" />
+                                <circle cx="20" cy="20" r="2" />
+                                <line x1="6" y1="6" x2="9" y2="9" />
+                                <line x1="15" y1="9" x2="18" y2="6" />
                             </svg>
                         </button>
                         <button class="btn btn-icon" data-layout="radial" title="Radial Layout">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="12" r="6" />
+                                <circle cx="12" cy="12" r="2" />
                             </svg>
                         </button>
                     </div>
                     <div class="toolbar-group">
                         <button class="btn btn-icon active" id="btn-toggle-particles" title="Toggle Particles">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 3v18M3 12h18"/>
-                                <circle cx="12" cy="12" r="1"/>
-                                <circle cx="12" cy="6" r="1"/><circle cx="12" cy="18" r="1"/>
-                                <circle cx="6" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>
+                                <path d="M12 3v18M3 12h18" />
+                                <circle cx="12" cy="12" r="1" />
+                                <circle cx="12" cy="6" r="1" />
+                                <circle cx="12" cy="18" r="1" />
+                                <circle cx="6" cy="12" r="1" />
+                                <circle cx="18" cy="12" r="1" />
                             </svg>
                         </button>
                         <button class="btn btn-icon active" id="btn-toggle-labels" title="Toggle Labels">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
+                                <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+                            </svg>
+                        </button>
+                        <button class="btn btn-icon" id="btn-toggle-tables" title="Toggle Table Lineage Panel">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <line x1="3" y1="9" x2="21" y2="9" />
+                                <line x1="9" y1="21" x2="9" y2="9" />
                             </svg>
                         </button>
                     </div>
                     <div class="toolbar-group" id="selection-tools" style="display: none;">
-                        <span id="selection-count" style="font-size: 11px; color: var(--text-muted); margin-right: 8px;">0 selected</span>
+                        <span id="selection-count"
+                            style="font-size: 11px; color: var(--text-muted); margin-right: 8px;">0 selected</span>
                         <button class="btn btn-sm" id="btn-select-children" title="Select Direct Children (1 Level)">
                             Children
                         </button>
@@ -1116,34 +1566,37 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Zoom Controls -->
                 <div class="zoom-controls">
                     <button class="btn btn-icon" id="btn-zoom-in" title="Zoom In">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                            <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            <line x1="11" y1="8" x2="11" y2="14" />
+                            <line x1="8" y1="11" x2="14" y2="11" />
                         </svg>
                     </button>
                     <button class="btn btn-icon" id="btn-zoom-out" title="Zoom Out">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                            <line x1="8" y1="11" x2="14" y2="11"/>
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            <line x1="8" y1="11" x2="14" y2="11" />
                         </svg>
                     </button>
                     <button class="btn btn-icon" id="btn-fit-view" title="Fit to View (F)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
                         </svg>
                     </button>
                 </div>
-                
+
                 <!-- Minimap -->
                 <div class="minimap">
                     <div class="minimap-header">Overview</div>
                     <div class="minimap-content" id="minimap"></div>
                 </div>
-                
+
                 <!-- Legend -->
                 <div class="legend">
                     <h4>Centrality (Connections)</h4>
@@ -1153,7 +1606,67 @@
                         <span>Low (Leaf)</span>
                     </div>
                 </div>
-                
+
+                <!-- Table Lineage Panel -->
+                <div class="table-lineage-panel" id="table-lineage-panel">
+                    <div class="table-lineage-panel-header">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <line x1="3" y1="9" x2="21" y2="9" />
+                                <line x1="9" y1="21" x2="9" y2="9" />
+                            </svg>
+                            Table Lineage
+                        </h3>
+                        <button class="btn btn-icon btn-sm btn-ghost" id="btn-close-table-lineage"
+                            onclick="document.getElementById('table-lineage-panel').classList.remove('open'); document.getElementById('btn-toggle-tables').classList.remove('active');">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="table-filter-indicator" id="table-filter-indicator">
+                        <span>Filtered by: <strong id="table-filter-name">Node Name</strong></span>
+                        <button onclick="TableLineage.clearFilter()" title="Clear filter">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                height="14">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="table-lineage-panel-content">
+                        <div class="table-search">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input type="text" id="table-search-input" placeholder="Search tables..."
+                                oninput="TableLineage.search(this.value)">
+                        </div>
+                        <div class="table-stats" id="table-stats">
+                            <div class="table-stat">
+                                <div class="table-stat-value" id="table-count">0</div>
+                                <div class="table-stat-label">Items</div>
+                            </div>
+                            <div class="table-stat">
+                                <div class="table-stat-value" id="shortcut-count">0</div>
+                                <div class="table-stat-label">Shortcuts</div>
+                            </div>
+                            <div class="table-stat">
+                                <div class="table-stat-value" id="flow-count">0</div>
+                                <div class="table-stat-label">Total</div>
+                            </div>
+                        </div>
+                        <div class="table-cards" id="table-cards">
+                            <p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">
+                                Loading table lineage data...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Detail Panel -->
                 <div class="detail-panel" id="detail-panel">
                     <div class="detail-panel-header">
@@ -1161,26 +1674,28 @@
                         <h3 id="detail-title">Node Name</h3>
                         <button class="btn btn-icon btn-sm btn-ghost" id="btn-close-detail">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
                         </button>
                     </div>
                     <div class="detail-panel-content" id="detail-content"></div>
                 </div>
-                
+
                 <!-- Path Finder Panel -->
                 <div class="path-finder-panel" id="path-finder-panel">
                     <div class="path-finder-header">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                                <polyline points="22 4 12 14.01 9 11.01"/>
+                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
                             </svg>
                             Path Finder
                         </h3>
                         <button class="btn btn-icon btn-sm btn-ghost" id="btn-close-pathfinder">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
                         </button>
                     </div>
@@ -1193,7 +1708,7 @@
                         </div>
                         <div class="path-arrow">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 5v14M19 12l-7 7-7-7"/>
+                                <path d="M12 5v14M19 12l-7 7-7-7" />
                             </svg>
                         </div>
                         <div class="path-endpoint">
@@ -1202,7 +1717,8 @@
                                 <span class="placeholder">Right-click → "Set as Path Target"</span>
                             </div>
                         </div>
-                        <button class="btn" style="width:100%;margin-top:12px;" id="btn-find-path" disabled>Find Path</button>
+                        <button class="btn" style="width:100%;margin-top:12px;" id="btn-find-path" disabled>Find
+                            Path</button>
                         <div class="path-result" id="path-result" style="display:none;">
                             <div class="path-result-header">
                                 <span id="path-length">Path: 0 steps</span>
@@ -1212,21 +1728,21 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Analysis Panel -->
                 <div class="analysis-panel" id="analysis-panel"></div>
-                
+
                 <!-- Loading Overlay -->
                 <div class="loading-overlay" id="loading-overlay">
                     <div class="spinner"></div>
                     <span id="loading-message">Loading...</span>
                 </div>
-                
+
                 <!-- Empty State -->
                 <div class="empty-state" id="empty-state">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 6v6l4 2"/>
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 6v6l4 2" />
                     </svg>
                     <h3>No Data to Display</h3>
                     <p>Adjust your filters or refresh the data.</p>
@@ -1236,745 +1752,750 @@
     </div>
 
     <script>
-    /**
-     * Fabric Lineage Explorer - Unified Version
-     * 
-     * Features:
-     * - Centrality-based heat map coloring (red=hub, blue=leaf)
-     * - Size based on connection count
-     * - Force-directed and Radial layouts
-     * - Sidebar filters (workspace, item type, source type)
-     * - Minimap navigation
-     * - Animated particles
-     * - Detail panel
-     * - Neo4j integration (path finding, upstream/downstream analysis)
-     * - Context menu
-     * - Keyboard shortcuts
-     */
-    
-    // =============================================================================
-    // State Management
-    // =============================================================================
-    
-    const state = {
-        graph: null,
-        filteredGraph: null,
-        filters: { search: '', workspaces: new Set(), itemTypes: new Set(), sourceTypes: new Set() },
-        selectedNodes: new Set(),  // Changed to Set for multi-select
-        sidebarOpen: true,
-        particlesEnabled: true,
-        labelsVisible: true,
-        currentLayout: 'force',
-        simulation: null,
-        svg: null,
-        zoom: null,
-        particleTimer: null,
-        minimapSvg: null,
-        nodeDegrees: new Map(),
-        maxDegree: 1,
-        neo4j: {
-            connected: false,
-            pathSource: null,
-            pathTarget: null,
-            currentPath: []
-        }
-    };
-    
-    // =============================================================================
-    // Configuration
-    // =============================================================================
-    
-    const CONFIG = {
-        force: { linkDistance: 100, linkStrength: 0.3, chargeStrength: -400, collisionRadius: 40 },
-        animation: { particleInterval: 800, particleDuration: 2000, maxParticles: 5 },
-        minNodeSize: 6,
-        maxNodeSize: 32
-    };
-    
-    // =============================================================================
-    // Utilities
-    // =============================================================================
-    
-    const truncate = (str, len = 20) => !str ? '' : str.length > len ? str.substring(0, len - 1) + '…' : str;
-    const formatNumber = (num) => new Intl.NumberFormat().format(num || 0);
-    const debounce = (fn, delay) => { let timer = null; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); }; };
-    
-    // Centrality color scale (red → orange → yellow → green → blue → purple)
-    const centralityColor = d3.scaleSequential()
-        .domain([0, 1])
-        .interpolator(d3.interpolateSpectral);
-    
-    function getNodeColor(node) {
-        const degree = state.nodeDegrees.get(node.id) || 0;
-        const normalized = state.maxDegree > 0 ? degree / state.maxDegree : 0;
-        return centralityColor(1 - normalized); // Invert so high = red
-    }
-    
-    function getNodeSize(node) {
-        const degree = state.nodeDegrees.get(node.id) || 0;
-        const baseSize = node.type === 'workspace' ? 10 : node.type === 'source' ? 8 : 6;
-        const sizeBoost = Math.sqrt(degree) * 2.5;
-        return Math.min(Math.max(baseSize + sizeBoost, CONFIG.minNodeSize), CONFIG.maxNodeSize);
-    }
-    
-    // =============================================================================
-    // API Layer
-    // =============================================================================
-    
-    const API = {
-        async fetchGraph() {
-            const response = await fetch('/api/graph');
-            if (!response.ok) throw new Error('Failed to load graph');
-            return response.json();
-        },
-        async fetchStats() {
-            const response = await fetch('/api/stats');
-            if (!response.ok) throw new Error('Failed to load stats');
-            return response.json();
-        },
-        async refresh() {
-            const response = await fetch('/api/refresh', { method: 'POST' });
-            if (!response.ok) throw new Error('Refresh failed');
-            return response.json();
-        }
-    };
-    
-    const Neo4jAPI = {
-        baseUrl: '/api/neo4j',
-        async checkHealth() {
-            try {
-                const r = await fetch(`${this.baseUrl}/health`);
-                const d = await r.json();
-                return d.healthy === true;
-            } catch { return false; }
-        },
-        async upstream(itemId, depth = 5) {
-            const r = await fetch(`${this.baseUrl}/upstream/${itemId}?depth=${depth}`);
-            if (!r.ok) throw new Error('Failed');
-            return r.json();
-        },
-        async downstream(itemId, depth = 5) {
-            const r = await fetch(`${this.baseUrl}/downstream/${itemId}?depth=${depth}`);
-            if (!r.ok) throw new Error('Failed');
-            return r.json();
-        },
-        async findPath(fromId, toId) {
-            const r = await fetch(`${this.baseUrl}/path?source_id=${fromId}&target_id=${toId}`);
-            if (!r.ok) throw new Error('Failed');
-            return r.json();
-        }
-    };
-    
-    // =============================================================================
-    // Data Processing
-    // =============================================================================
-    
-    function processGraphData(data) {
-        const nodes = [];
-        const links = [];
-        const nodeMap = new Map();
-        
-        // Process workspaces
-        (data.workspaces || []).forEach(ws => {
-            const node = { id: ws.id, type: 'workspace', label: ws.name, data: ws };
-            nodes.push(node);
-            nodeMap.set(ws.id, node);
-        });
-        
-        // Process items
-        (data.items || []).forEach(item => {
-            const node = { id: item.id, type: 'item', label: item.name, itemType: item.item_type, workspaceId: item.workspace_id, data: item };
-            nodes.push(node);
-            nodeMap.set(item.id, node);
-        });
-        
-        // Process external sources
-        (data.external_sources || []).forEach(source => {
-            const node = { id: source.id, type: 'source', label: source.display_name, sourceType: source.source_type, data: source };
-            nodes.push(node);
-            nodeMap.set(source.id, node);
-        });
-        
-        // Process edges
-        (data.edges || []).forEach(edge => {
-            if (nodeMap.has(edge.source_id) && nodeMap.has(edge.target_id)) {
-                links.push({ source: edge.source_id, target: edge.target_id, type: edge.edge_type });
+        /**
+         * Fabric Lineage Explorer - Unified Version
+         * 
+         * Features:
+         * - Centrality-based heat map coloring (red=hub, blue=leaf)
+         * - Size based on connection count
+         * - Force-directed and Radial layouts
+         * - Sidebar filters (workspace, item type, source type)
+         * - Minimap navigation
+         * - Animated particles
+         * - Detail panel
+         * - Neo4j integration (path finding, upstream/downstream analysis)
+         * - Context menu
+         * - Keyboard shortcuts
+         */
+
+        // =============================================================================
+        // State Management
+        // =============================================================================
+
+        const state = {
+            graph: null,
+            filteredGraph: null,
+            filters: { search: '', workspaces: new Set(), itemTypes: new Set(), sourceTypes: new Set() },
+            selectedNodes: new Set(),  // Changed to Set for multi-select
+            sidebarOpen: true,
+            particlesEnabled: true,
+            labelsVisible: true,
+            currentLayout: 'force',
+            simulation: null,
+            svg: null,
+            zoom: null,
+            particleTimer: null,
+            minimapSvg: null,
+            nodeDegrees: new Map(),
+            maxDegree: 1,
+            neo4j: {
+                connected: false,
+                pathSource: null,
+                pathTarget: null,
+                currentPath: []
             }
-        });
-        
-        // Calculate degrees
-        state.nodeDegrees.clear();
-        nodes.forEach(n => state.nodeDegrees.set(n.id, 0));
-        links.forEach(link => {
-            const sId = typeof link.source === 'object' ? link.source.id : link.source;
-            const tId = typeof link.target === 'object' ? link.target.id : link.target;
-            state.nodeDegrees.set(sId, (state.nodeDegrees.get(sId) || 0) + 1);
-            state.nodeDegrees.set(tId, (state.nodeDegrees.get(tId) || 0) + 1);
-        });
-        state.maxDegree = Math.max(...state.nodeDegrees.values(), 1);
-        
-        return { nodes, links };
-    }
-    
-    function applyFilters(graph) {
-        if (!graph) return null;
-        const { search, workspaces, itemTypes, sourceTypes } = state.filters;
-        const searchLower = search.toLowerCase();
-        
-        const filteredNodes = graph.nodes.filter(node => {
-            if (searchLower && !node.label.toLowerCase().includes(searchLower)) return false;
-            if (node.type === 'workspace') return workspaces.size === 0 || workspaces.has(node.id);
-            if (node.type === 'item') {
-                const wsMatch = workspaces.size === 0 || workspaces.has(node.workspaceId);
-                const typeMatch = itemTypes.size === 0 || itemTypes.has(node.itemType);
-                return wsMatch && typeMatch;
+        };
+
+        // =============================================================================
+        // Configuration
+        // =============================================================================
+
+        const CONFIG = {
+            force: { linkDistance: 100, linkStrength: 0.3, chargeStrength: -400, collisionRadius: 40 },
+            animation: { particleInterval: 800, particleDuration: 2000, maxParticles: 5 },
+            minNodeSize: 6,
+            maxNodeSize: 32
+        };
+
+        // =============================================================================
+        // Utilities
+        // =============================================================================
+
+        const truncate = (str, len = 20) => !str ? '' : str.length > len ? str.substring(0, len - 1) + '…' : str;
+        const formatNumber = (num) => new Intl.NumberFormat().format(num || 0);
+        const debounce = (fn, delay) => { let timer = null; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); }; };
+
+        // Centrality color scale (red → orange → yellow → green → blue → purple)
+        const centralityColor = d3.scaleSequential()
+            .domain([0, 1])
+            .interpolator(d3.interpolateSpectral);
+
+        function getNodeColor(node) {
+            const degree = state.nodeDegrees.get(node.id) || 0;
+            const normalized = state.maxDegree > 0 ? degree / state.maxDegree : 0;
+            return centralityColor(1 - normalized); // Invert so high = red
+        }
+
+        function getNodeSize(node) {
+            const degree = state.nodeDegrees.get(node.id) || 0;
+            const baseSize = node.type === 'workspace' ? 10 : node.type === 'source' ? 8 : 6;
+            const sizeBoost = Math.sqrt(degree) * 2.5;
+            return Math.min(Math.max(baseSize + sizeBoost, CONFIG.minNodeSize), CONFIG.maxNodeSize);
+        }
+
+        // =============================================================================
+        // API Layer
+        // =============================================================================
+
+        const API = {
+            async fetchGraph() {
+                const response = await fetch('/api/graph');
+                if (!response.ok) throw new Error('Failed to load graph');
+                return response.json();
+            },
+            async fetchStats() {
+                const response = await fetch('/api/stats');
+                if (!response.ok) throw new Error('Failed to load stats');
+                return response.json();
+            },
+            async refresh() {
+                const response = await fetch('/api/refresh', { method: 'POST' });
+                if (!response.ok) throw new Error('Refresh failed');
+                return response.json();
             }
-            if (node.type === 'source') return sourceTypes.size === 0 || sourceTypes.has(node.sourceType);
-            return true;
-        });
-        
-        const visibleIds = new Set(filteredNodes.map(n => n.id));
-        const filteredLinks = graph.links.filter(link => {
-            const sId = typeof link.source === 'object' ? link.source.id : link.source;
-            const tId = typeof link.target === 'object' ? link.target.id : link.target;
-            return visibleIds.has(sId) && visibleIds.has(tId);
-        });
-        
-        return { nodes: filteredNodes, links: filteredLinks };
-    }
-    
-    // =============================================================================
-    // Graph Visualization
-    // =============================================================================
-    
-    const Graph = {
-        init() {
-            const container = document.getElementById('graph');
-            const width = container.clientWidth;
-            const height = container.clientHeight;
-            
-            d3.select('#graph').selectAll('*').remove();
-            
-            state.svg = d3.select('#graph')
-                .append('svg')
-                .attr('width', '100%')
-                .attr('height', '100%')
-                .attr('viewBox', [0, 0, width, height]);
-            
-            // Defs for markers
-            const defs = state.svg.append('defs');
-            defs.append('marker')
-                .attr('id', 'arrow')
-                .attr('viewBox', '0 -5 10 10')
-                .attr('refX', 20)
-                .attr('refY', 0)
-                .attr('markerWidth', 5)
-                .attr('markerHeight', 5)
-                .attr('orient', 'auto')
-                .append('path')
-                .attr('d', 'M0,-5L10,0L0,5')
-                .attr('fill', '#94a3b8');
-            
-            state.zoom = d3.zoom()
-                .scaleExtent([0.1, 4])
-                .on('zoom', (event) => {
-                    state.svg.select('g.main').attr('transform', event.transform);
+        };
+
+        const Neo4jAPI = {
+            baseUrl: '/api/neo4j',
+            async checkHealth() {
+                try {
+                    const r = await fetch(`${this.baseUrl}/health`);
+                    const d = await r.json();
+                    return d.healthy === true;
+                } catch { return false; }
+            },
+            async upstream(itemId, depth = 5) {
+                const r = await fetch(`${this.baseUrl}/upstream/${itemId}?depth=${depth}`);
+                if (!r.ok) throw new Error('Failed');
+                return r.json();
+            },
+            async downstream(itemId, depth = 5) {
+                const r = await fetch(`${this.baseUrl}/downstream/${itemId}?depth=${depth}`);
+                if (!r.ok) throw new Error('Failed');
+                return r.json();
+            },
+            async findPath(fromId, toId) {
+                const r = await fetch(`${this.baseUrl}/path?source_id=${fromId}&target_id=${toId}`);
+                if (!r.ok) throw new Error('Failed');
+                return r.json();
+            }
+        };
+
+        // =============================================================================
+        // Data Processing
+        // =============================================================================
+
+        function processGraphData(data) {
+            const nodes = [];
+            const links = [];
+            const nodeMap = new Map();
+
+            // Process workspaces
+            (data.workspaces || []).forEach(ws => {
+                const node = { id: ws.id, type: 'workspace', label: ws.name, data: ws };
+                nodes.push(node);
+                nodeMap.set(ws.id, node);
+            });
+
+            // Process items
+            (data.items || []).forEach(item => {
+                const node = { id: item.id, type: 'item', label: item.name, itemType: item.item_type, workspaceId: item.workspace_id, data: item };
+                nodes.push(node);
+                nodeMap.set(item.id, node);
+            });
+
+            // Process external sources
+            (data.external_sources || []).forEach(source => {
+                const node = { id: source.id, type: 'source', label: source.display_name, sourceType: source.source_type, data: source };
+                nodes.push(node);
+                nodeMap.set(source.id, node);
+            });
+
+            // Process edges
+            (data.edges || []).forEach(edge => {
+                if (nodeMap.has(edge.source_id) && nodeMap.has(edge.target_id)) {
+                    links.push({ source: edge.source_id, target: edge.target_id, type: edge.edge_type });
+                }
+            });
+
+            // Calculate degrees
+            state.nodeDegrees.clear();
+            nodes.forEach(n => state.nodeDegrees.set(n.id, 0));
+            links.forEach(link => {
+                const sId = typeof link.source === 'object' ? link.source.id : link.source;
+                const tId = typeof link.target === 'object' ? link.target.id : link.target;
+                state.nodeDegrees.set(sId, (state.nodeDegrees.get(sId) || 0) + 1);
+                state.nodeDegrees.set(tId, (state.nodeDegrees.get(tId) || 0) + 1);
+            });
+            state.maxDegree = Math.max(...state.nodeDegrees.values(), 1);
+
+            return { nodes, links };
+        }
+
+        function applyFilters(graph) {
+            if (!graph) return null;
+            const { search, workspaces, itemTypes, sourceTypes } = state.filters;
+            const searchLower = search.toLowerCase();
+
+            const filteredNodes = graph.nodes.filter(node => {
+                if (searchLower && !node.label.toLowerCase().includes(searchLower)) return false;
+                if (node.type === 'workspace') return workspaces.size === 0 || workspaces.has(node.id);
+                if (node.type === 'item') {
+                    const wsMatch = workspaces.size === 0 || workspaces.has(node.workspaceId);
+                    const typeMatch = itemTypes.size === 0 || itemTypes.has(node.itemType);
+                    return wsMatch && typeMatch;
+                }
+                if (node.type === 'source') return sourceTypes.size === 0 || sourceTypes.has(node.sourceType);
+                return true;
+            });
+
+            const visibleIds = new Set(filteredNodes.map(n => n.id));
+            const filteredLinks = graph.links.filter(link => {
+                const sId = typeof link.source === 'object' ? link.source.id : link.source;
+                const tId = typeof link.target === 'object' ? link.target.id : link.target;
+                return visibleIds.has(sId) && visibleIds.has(tId);
+            });
+
+            return { nodes: filteredNodes, links: filteredLinks };
+        }
+
+        // =============================================================================
+        // Graph Visualization
+        // =============================================================================
+
+        const Graph = {
+            init() {
+                const container = document.getElementById('graph');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+
+                d3.select('#graph').selectAll('*').remove();
+
+                state.svg = d3.select('#graph')
+                    .append('svg')
+                    .attr('width', '100%')
+                    .attr('height', '100%')
+                    .attr('viewBox', [0, 0, width, height]);
+
+                // Defs for markers
+                const defs = state.svg.append('defs');
+                defs.append('marker')
+                    .attr('id', 'arrow')
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 20)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 5)
+                    .attr('markerHeight', 5)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('d', 'M0,-5L10,0L0,5')
+                    .attr('fill', '#94a3b8');
+
+                state.zoom = d3.zoom()
+                    .scaleExtent([0.1, 4])
+                    .on('zoom', (event) => {
+                        state.svg.select('g.main').attr('transform', event.transform);
+                        Minimap.update();
+                    });
+
+                state.svg.call(state.zoom);
+                state.svg.on('click', (event) => {
+                    if (event.target.tagName === 'svg') this.deselectNode();
+                });
+
+                state.svg.append('g').attr('class', 'main');
+                Minimap.init();
+            },
+
+            render(data) {
+                if (!data || !data.nodes.length) {
+                    document.getElementById('empty-state').classList.add('visible');
+                    return;
+                }
+                document.getElementById('empty-state').classList.remove('visible');
+
+                const container = document.getElementById('graph');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+
+                const mainGroup = state.svg.select('g.main');
+                mainGroup.selectAll('*').remove();
+
+                const linkGroup = mainGroup.append('g').attr('class', 'links');
+                mainGroup.append('g').attr('class', 'particles');
+                const nodeGroup = mainGroup.append('g').attr('class', 'nodes');
+
+                this.createSimulation(data, width, height);
+
+                // Links - classify as inward or outward based on selected node
+                const links = linkGroup.selectAll('path')
+                    .data(data.links)
+                    .join('path')
+                    .attr('class', d => {
+                        // Outward: link source is selected/hovered node (data flows out)
+                        // Inward: link target is selected/hovered node (data flows in)
+                        return 'link outward';
+                    })
+                    .attr('marker-end', 'url(#arrow)')
+                    .attr('fill', 'none');
+
+                // Nodes
+                const nodes = nodeGroup.selectAll('g')
+                    .data(data.nodes)
+                    .join('g')
+                    .attr('class', d => `node ${state.labelsVisible ? '' : 'labels-hidden'}`)
+                    .call(this.drag(state.simulation))
+                    .on('click', (event, d) => {
+                        event.stopPropagation();
+                        this.selectNode(d, event.ctrlKey || event.metaKey);  // Multi-select with Ctrl/Cmd
+                    })
+                    .on('mouseenter', (event, d) => {
+                        // Only show hover highlight if no nodes selected
+                        if (state.selectedNodes.size === 0) {
+                            this.highlightConnections(d);
+                        }
+                        Tooltip.show(event, d);
+                    })
+                    .on('mouseleave', () => {
+                        // Only clear highlight if no nodes selected
+                        if (state.selectedNodes.size === 0) {
+                            this.clearHighlight();
+                        }
+                        Tooltip.hide();
+                    })
+                    .on('contextmenu', (event, d) => ContextMenu.show(event, d));
+
+                // Draw nodes
+                nodes.each(function (d) {
+                    const node = d3.select(this);
+                    const color = getNodeColor(d);
+                    const size = getNodeSize(d);
+
+                    // Glow
+                    node.append('circle')
+                        .attr('class', 'node-glow')
+                        .attr('r', size + 4)
+                        .attr('fill', color)
+                        .attr('filter', 'blur(4px)')
+                        .attr('opacity', 0.4);
+
+                    // Main shape
+                    node.append('circle')
+                        .attr('class', 'node-shape')
+                        .attr('r', size)
+                        .attr('fill', color)
+                        .attr('stroke', '#fff')
+                        .attr('stroke-width', 2);
+
+                    // Label
+                    node.append('text')
+                        .attr('dy', size + 14)
+                        .attr('text-anchor', 'middle')
+                        .text(truncate(d.label, 16));
+                });
+
+                // Tick
+                state.simulation.on('tick', () => {
+                    links.attr('d', d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
+                    nodes.attr('transform', d => `translate(${d.x},${d.y})`);
                     Minimap.update();
                 });
-            
-            state.svg.call(state.zoom);
-            state.svg.on('click', (event) => {
-                if (event.target.tagName === 'svg') this.deselectNode();
-            });
-            
-            state.svg.append('g').attr('class', 'main');
-            Minimap.init();
-        },
-        
-        render(data) {
-            if (!data || !data.nodes.length) {
-                document.getElementById('empty-state').classList.add('visible');
-                return;
-            }
-            document.getElementById('empty-state').classList.remove('visible');
-            
-            const container = document.getElementById('graph');
-            const width = container.clientWidth;
-            const height = container.clientHeight;
-            
-            const mainGroup = state.svg.select('g.main');
-            mainGroup.selectAll('*').remove();
-            
-            const linkGroup = mainGroup.append('g').attr('class', 'links');
-            mainGroup.append('g').attr('class', 'particles');
-            const nodeGroup = mainGroup.append('g').attr('class', 'nodes');
-            
-            this.createSimulation(data, width, height);
-            
-            // Links - classify as inward or outward based on selected node
-            const links = linkGroup.selectAll('path')
-                .data(data.links)
-                .join('path')
-                .attr('class', d => {
-                    // Outward: link source is selected/hovered node (data flows out)
-                    // Inward: link target is selected/hovered node (data flows in)
-                    return 'link outward';
-                })
-                .attr('marker-end', 'url(#arrow)')
-                .attr('fill', 'none');
-            
-            // Nodes
-            const nodes = nodeGroup.selectAll('g')
-                .data(data.nodes)
-                .join('g')
-                .attr('class', d => `node ${state.labelsVisible ? '' : 'labels-hidden'}`)
-                .call(this.drag(state.simulation))
-                .on('click', (event, d) => { 
-                    event.stopPropagation(); 
-                    this.selectNode(d, event.ctrlKey || event.metaKey);  // Multi-select with Ctrl/Cmd
-                })
-                .on('mouseenter', (event, d) => { 
-                    // Only show hover highlight if no nodes selected
-                    if (state.selectedNodes.size === 0) {
-                        this.highlightConnections(d); 
-                    }
-                    Tooltip.show(event, d); 
-                })
-                .on('mouseleave', () => { 
-                    // Only clear highlight if no nodes selected
-                    if (state.selectedNodes.size === 0) {
-                        this.clearHighlight(); 
-                    }
-                    Tooltip.hide(); 
-                })
-                .on('contextmenu', (event, d) => ContextMenu.show(event, d));
-            
-            // Draw nodes
-            nodes.each(function(d) {
-                const node = d3.select(this);
-                const color = getNodeColor(d);
-                const size = getNodeSize(d);
-                
-                // Glow
-                node.append('circle')
-                    .attr('class', 'node-glow')
-                    .attr('r', size + 4)
-                    .attr('fill', color)
-                    .attr('filter', 'blur(4px)')
-                    .attr('opacity', 0.4);
-                
-                // Main shape
-                node.append('circle')
-                    .attr('class', 'node-shape')
-                    .attr('r', size)
-                    .attr('fill', color)
-                    .attr('stroke', '#fff')
-                    .attr('stroke-width', 2);
-                
-                // Label
-                node.append('text')
-                    .attr('dy', size + 14)
-                    .attr('text-anchor', 'middle')
-                    .text(truncate(d.label, 16));
-            });
-            
-            // Tick
-            state.simulation.on('tick', () => {
-                links.attr('d', d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
-                nodes.attr('transform', d => `translate(${d.x},${d.y})`);
-                Minimap.update();
-            });
-            
-            if (state.particlesEnabled) Particles.start();
-            setTimeout(() => this.fitToView(), 500);
-        },
-        
-        createSimulation(data, width, height) {
-            if (state.simulation) state.simulation.stop();
-            
-            if (state.currentLayout === 'radial') {
-                this.createRadialLayout(data, width, height);
-            } else {
-                state.simulation = d3.forceSimulation(data.nodes)
-                    .force('link', d3.forceLink(data.links).id(d => d.id).distance(CONFIG.force.linkDistance).strength(CONFIG.force.linkStrength))
-                    .force('charge', d3.forceManyBody().strength(CONFIG.force.chargeStrength).distanceMax(500))
-                    .force('center', d3.forceCenter(width / 2, height / 2))
-                    .force('collision', d3.forceCollide().radius(d => getNodeSize(d) + 10));
-            }
-        },
-        
-        createRadialLayout(data, width, height) {
-            const centerX = width / 2, centerY = height / 2;
-            const radius = Math.min(width, height) / 2.5;
-            
-            const workspaces = data.nodes.filter(n => n.type === 'workspace');
-            const items = data.nodes.filter(n => n.type === 'item');
-            const sources = data.nodes.filter(n => n.type === 'source');
-            
-            workspaces.forEach((node, i) => {
-                const angle = (i / workspaces.length) * 2 * Math.PI - Math.PI / 2;
-                node.fx = centerX + radius * 0.35 * Math.cos(angle);
-                node.fy = centerY + radius * 0.35 * Math.sin(angle);
-            });
-            
-            items.forEach((node, i) => {
-                const angle = (i / items.length) * 2 * Math.PI - Math.PI / 2;
-                node.fx = centerX + radius * 0.7 * Math.cos(angle);
-                node.fy = centerY + radius * 0.7 * Math.sin(angle);
-            });
-            
-            sources.forEach((node, i) => {
-                const angle = (i / sources.length) * 2 * Math.PI - Math.PI / 2;
-                node.fx = centerX + radius * Math.cos(angle);
-                node.fy = centerY + radius * Math.sin(angle);
-            });
-            
-            state.simulation = d3.forceSimulation(data.nodes)
-                .force('link', d3.forceLink(data.links).id(d => d.id).strength(0))
-                .alphaDecay(0.1);
-        },
-        
-        drag(simulation) {
-            return d3.drag()
-                .on('start', (event) => {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    event.subject.fx = event.subject.x;
-                    event.subject.fy = event.subject.y;
-                })
-                .on('drag', (event) => {
-                    event.subject.fx = event.x;
-                    event.subject.fy = event.y;
-                })
-                .on('end', (event) => {
-                    if (!event.active) simulation.alphaTarget(0);
-                    if (state.currentLayout === 'force') {
-                        event.subject.fx = null;
-                        event.subject.fy = null;
-                    }
-                });
-        },
-        
-        selectNode(node, multiSelect = false) {
-            if (multiSelect) {
-                // Toggle selection with Ctrl+Click
-                if (state.selectedNodes.has(node.id)) {
-                    state.selectedNodes.delete(node.id);
+
+                if (state.particlesEnabled) Particles.start();
+                setTimeout(() => this.fitToView(), 500);
+            },
+
+            createSimulation(data, width, height) {
+                if (state.simulation) state.simulation.stop();
+
+                if (state.currentLayout === 'radial') {
+                    this.createRadialLayout(data, width, height);
                 } else {
+                    state.simulation = d3.forceSimulation(data.nodes)
+                        .force('link', d3.forceLink(data.links).id(d => d.id).distance(CONFIG.force.linkDistance).strength(CONFIG.force.linkStrength))
+                        .force('charge', d3.forceManyBody().strength(CONFIG.force.chargeStrength).distanceMax(500))
+                        .force('center', d3.forceCenter(width / 2, height / 2))
+                        .force('collision', d3.forceCollide().radius(d => getNodeSize(d) + 10));
+                }
+            },
+
+            createRadialLayout(data, width, height) {
+                const centerX = width / 2, centerY = height / 2;
+                const radius = Math.min(width, height) / 2.5;
+
+                const workspaces = data.nodes.filter(n => n.type === 'workspace');
+                const items = data.nodes.filter(n => n.type === 'item');
+                const sources = data.nodes.filter(n => n.type === 'source');
+
+                workspaces.forEach((node, i) => {
+                    const angle = (i / workspaces.length) * 2 * Math.PI - Math.PI / 2;
+                    node.fx = centerX + radius * 0.35 * Math.cos(angle);
+                    node.fy = centerY + radius * 0.35 * Math.sin(angle);
+                });
+
+                items.forEach((node, i) => {
+                    const angle = (i / items.length) * 2 * Math.PI - Math.PI / 2;
+                    node.fx = centerX + radius * 0.7 * Math.cos(angle);
+                    node.fy = centerY + radius * 0.7 * Math.sin(angle);
+                });
+
+                sources.forEach((node, i) => {
+                    const angle = (i / sources.length) * 2 * Math.PI - Math.PI / 2;
+                    node.fx = centerX + radius * Math.cos(angle);
+                    node.fy = centerY + radius * Math.sin(angle);
+                });
+
+                state.simulation = d3.forceSimulation(data.nodes)
+                    .force('link', d3.forceLink(data.links).id(d => d.id).strength(0))
+                    .alphaDecay(0.1);
+            },
+
+            drag(simulation) {
+                return d3.drag()
+                    .on('start', (event) => {
+                        if (!event.active) simulation.alphaTarget(0.3).restart();
+                        event.subject.fx = event.subject.x;
+                        event.subject.fy = event.subject.y;
+                    })
+                    .on('drag', (event) => {
+                        event.subject.fx = event.x;
+                        event.subject.fy = event.y;
+                    })
+                    .on('end', (event) => {
+                        if (!event.active) simulation.alphaTarget(0);
+                        if (state.currentLayout === 'force') {
+                            event.subject.fx = null;
+                            event.subject.fy = null;
+                        }
+                    });
+            },
+
+            selectNode(node, multiSelect = false) {
+                if (multiSelect) {
+                    // Toggle selection with Ctrl+Click
+                    if (state.selectedNodes.has(node.id)) {
+                        state.selectedNodes.delete(node.id);
+                    } else {
+                        state.selectedNodes.add(node.id);
+                    }
+                } else {
+                    // Single select - clear others
+                    state.selectedNodes.clear();
                     state.selectedNodes.add(node.id);
                 }
-            } else {
-                // Single select - clear others
-                state.selectedNodes.clear();
-                state.selectedNodes.add(node.id);
-            }
-            
-            state.svg.selectAll('.node').classed('selected', d => state.selectedNodes.has(d.id));
-            this.highlightConnections();
-            this.updateSelectionUI();
-            
-            // Show detail panel for first selected node
-            if (state.selectedNodes.size === 1) {
-                DetailPanel.show(node);
-            } else if (state.selectedNodes.size > 1) {
-                DetailPanel.hide();
-            }
-        },
-        
-        deselectNode() {
-            state.selectedNodes.clear();
-            state.svg.selectAll('.node').classed('selected', false);
-            this.clearHighlight();
-            this.updateSelectionUI();
-            DetailPanel.hide();
-        },
-        
-        updateSelectionUI() {
-            const count = state.selectedNodes.size;
-            const selectionTools = document.getElementById('selection-tools');
-            const selectionCount = document.getElementById('selection-count');
-            
-            if (selectionTools && selectionCount) {
-                if (count > 0) {
-                    selectionTools.style.display = 'flex';
-                    selectionCount.textContent = `${count} selected`;
-                } else {
-                    selectionTools.style.display = 'none';
+
+                state.svg.selectAll('.node').classed('selected', d => state.selectedNodes.has(d.id));
+                this.highlightConnections();
+                this.updateSelectionUI();
+
+                // Show detail panel for first selected node
+                if (state.selectedNodes.size === 1) {
+                    DetailPanel.show(node);
+                    // Filter table lineage by selected node
+                    TableLineage.filterByNode(node.label);
+                } else if (state.selectedNodes.size > 1) {
+                    DetailPanel.hide();
+                    TableLineage.clearFilter();
                 }
-            }
-        },
-        
-        selectChildren(levels = 1) {
-            if (!state.filteredGraph || state.selectedNodes.size === 0) return;
-            
-            const newSelections = new Set(state.selectedNodes);
-            let currentLevel = new Set(state.selectedNodes);
-            
-            for (let i = 0; i < levels; i++) {
-                const nextLevel = new Set();
+            },
+
+            deselectNode() {
+                state.selectedNodes.clear();
+                state.svg.selectAll('.node').classed('selected', false);
+                this.clearHighlight();
+                this.updateSelectionUI();
+                DetailPanel.hide();
+                // Clear table lineage filter when deselecting
+                TableLineage.clearFilter();
+            },
+
+            updateSelectionUI() {
+                const count = state.selectedNodes.size;
+                const selectionTools = document.getElementById('selection-tools');
+                const selectionCount = document.getElementById('selection-count');
+
+                if (selectionTools && selectionCount) {
+                    if (count > 0) {
+                        selectionTools.style.display = 'flex';
+                        selectionCount.textContent = `${count} selected`;
+                    } else {
+                        selectionTools.style.display = 'none';
+                    }
+                }
+            },
+
+            selectChildren(levels = 1) {
+                if (!state.filteredGraph || state.selectedNodes.size === 0) return;
+
+                const newSelections = new Set(state.selectedNodes);
+                let currentLevel = new Set(state.selectedNodes);
+
+                for (let i = 0; i < levels; i++) {
+                    const nextLevel = new Set();
+                    state.filteredGraph.links.forEach(link => {
+                        const sId = typeof link.source === 'object' ? link.source.id : link.source;
+                        const tId = typeof link.target === 'object' ? link.target.id : link.target;
+                        if (currentLevel.has(sId)) {
+                            nextLevel.add(tId);
+                            newSelections.add(tId);
+                        }
+                    });
+                    currentLevel = nextLevel;
+                    if (currentLevel.size === 0) break;
+                }
+
+                state.selectedNodes = newSelections;
+                state.svg.selectAll('.node').classed('selected', d => state.selectedNodes.has(d.id));
+                this.highlightConnections();
+                this.updateSelectionUI();
+                DetailPanel.hide();
+            },
+
+            highlightConnections(hoverNode = null) {
+                if (!state.filteredGraph) return;
+
+                // Use hover node if provided, otherwise use selected nodes
+                const nodesToHighlight = hoverNode ? [hoverNode.id] : Array.from(state.selectedNodes);
+                if (nodesToHighlight.length === 0) return;
+
+                const connectedIds = new Set(nodesToHighlight);
                 state.filteredGraph.links.forEach(link => {
                     const sId = typeof link.source === 'object' ? link.source.id : link.source;
                     const tId = typeof link.target === 'object' ? link.target.id : link.target;
-                    if (currentLevel.has(sId)) {
-                        nextLevel.add(tId);
-                        newSelections.add(tId);
+                    nodesToHighlight.forEach(nodeId => {
+                        if (sId === nodeId) connectedIds.add(tId);
+                        if (tId === nodeId) connectedIds.add(sId);
+                    });
+                });
+
+                state.svg.selectAll('.node')
+                    .classed('highlighted', d => connectedIds.has(d.id))
+                    .classed('dimmed', d => !connectedIds.has(d.id));
+
+                state.svg.selectAll('.link')
+                    .classed('highlighted', d => {
+                        const sId = typeof d.source === 'object' ? d.source.id : d.source;
+                        const tId = typeof d.target === 'object' ? d.target.id : d.target;
+                        return nodesToHighlight.some(nodeId => sId === nodeId || tId === nodeId);
+                    })
+                    .classed('dimmed', d => {
+                        const sId = typeof d.source === 'object' ? d.source.id : d.source;
+                        const tId = typeof d.target === 'object' ? d.target.id : d.target;
+                        return !nodesToHighlight.some(nodeId => sId === nodeId || tId === nodeId);
+                    })
+                    .classed('inward', d => {
+                        const tId = typeof d.target === 'object' ? d.target.id : d.target;
+                        return nodesToHighlight.includes(tId);  // Green for arrows coming IN
+                    })
+                    .classed('outward', d => {
+                        const sId = typeof d.source === 'object' ? d.source.id : d.source;
+                        return nodesToHighlight.includes(sId);  // Blue for arrows going OUT
+                    });
+            },
+
+            clearHighlight() {
+                state.svg.selectAll('.node').classed('highlighted', false).classed('dimmed', false);
+                state.svg.selectAll('.link')
+                    .classed('highlighted', false)
+                    .classed('dimmed', false)
+                    .classed('inward', false)
+                    .classed('outward', false);
+            },
+
+            focusNode(nodeId) {
+                const node = state.filteredGraph?.nodes.find(n => n.id === nodeId);
+                if (!node || node.x === undefined) return;
+                const container = document.getElementById('graph');
+                const transform = d3.zoomIdentity
+                    .translate(container.clientWidth / 2, container.clientHeight / 2)
+                    .scale(1.5)
+                    .translate(-node.x, -node.y);
+                state.svg.transition().duration(750).call(state.zoom.transform, transform);
+                this.selectNode(node);
+            },
+
+            fitToView() {
+                if (!state.filteredGraph?.nodes.length) return;
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                state.filteredGraph.nodes.forEach(node => {
+                    if (node.x !== undefined) {
+                        minX = Math.min(minX, node.x); maxX = Math.max(maxX, node.x);
+                        minY = Math.min(minY, node.y); maxY = Math.max(maxY, node.y);
                     }
                 });
-                currentLevel = nextLevel;
-                if (currentLevel.size === 0) break;
+                if (minX === Infinity) return;
+
+                const container = document.getElementById('graph');
+                const width = container.clientWidth, height = container.clientHeight, padding = 80;
+                const graphWidth = maxX - minX + padding * 2, graphHeight = maxY - minY + padding * 2;
+                const scale = Math.min(width / graphWidth, height / graphHeight, 2);
+                const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2;
+
+                const transform = d3.zoomIdentity
+                    .translate(width / 2, height / 2)
+                    .scale(scale)
+                    .translate(-centerX, -centerY);
+                state.svg.transition().duration(750).call(state.zoom.transform, transform);
+            },
+
+            zoomIn() { state.svg.transition().duration(300).call(state.zoom.scaleBy, 1.4); },
+            zoomOut() { state.svg.transition().duration(300).call(state.zoom.scaleBy, 0.7); }
+        };
+
+        // =============================================================================
+        // Particles
+        // =============================================================================
+
+        const Particles = {
+            start() {
+                this.stop();
+                if (!state.particlesEnabled || !state.filteredGraph?.links.length) return;
+                const particleGroup = state.svg.select('g.particles');
+
+                state.particleTimer = setInterval(() => {
+                    if (!state.filteredGraph?.links.length) return;
+                    const numParticles = Math.min(CONFIG.animation.maxParticles, state.filteredGraph.links.length);
+                    for (let i = 0; i < numParticles; i++) {
+                        const link = state.filteredGraph.links[Math.floor(Math.random() * state.filteredGraph.links.length)];
+                        if (link.source.x !== undefined && link.target.x !== undefined) {
+                            particleGroup.append('circle')
+                                .attr('class', 'particle')
+                                .attr('r', 2.5)
+                                .attr('cx', link.source.x)
+                                .attr('cy', link.source.y)
+                                .transition()
+                                .duration(CONFIG.animation.particleDuration + Math.random() * 600)
+                                .ease(d3.easeLinear)
+                                .attr('cx', link.target.x)
+                                .attr('cy', link.target.y)
+                                .remove();
+                        }
+                    }
+                }, CONFIG.animation.particleInterval);
+            },
+            stop() {
+                if (state.particleTimer) { clearInterval(state.particleTimer); state.particleTimer = null; }
+                state.svg?.select('g.particles').selectAll('*').remove();
+            },
+            toggle() {
+                state.particlesEnabled = !state.particlesEnabled;
+                document.getElementById('btn-toggle-particles')?.classList.toggle('active', state.particlesEnabled);
+                state.particlesEnabled ? this.start() : this.stop();
             }
-            
-            state.selectedNodes = newSelections;
-            state.svg.selectAll('.node').classed('selected', d => state.selectedNodes.has(d.id));
-            this.highlightConnections();
-            this.updateSelectionUI();
-            DetailPanel.hide();
-        },
-        
-        highlightConnections(hoverNode = null) {
-            if (!state.filteredGraph) return;
-            
-            // Use hover node if provided, otherwise use selected nodes
-            const nodesToHighlight = hoverNode ? [hoverNode.id] : Array.from(state.selectedNodes);
-            if (nodesToHighlight.length === 0) return;
-            
-            const connectedIds = new Set(nodesToHighlight);
-            state.filteredGraph.links.forEach(link => {
-                const sId = typeof link.source === 'object' ? link.source.id : link.source;
-                const tId = typeof link.target === 'object' ? link.target.id : link.target;
-                nodesToHighlight.forEach(nodeId => {
-                    if (sId === nodeId) connectedIds.add(tId);
-                    if (tId === nodeId) connectedIds.add(sId);
-                });
-            });
-            
-            state.svg.selectAll('.node')
-                .classed('highlighted', d => connectedIds.has(d.id))
-                .classed('dimmed', d => !connectedIds.has(d.id));
-            
-            state.svg.selectAll('.link')
-                .classed('highlighted', d => {
-                    const sId = typeof d.source === 'object' ? d.source.id : d.source;
-                    const tId = typeof d.target === 'object' ? d.target.id : d.target;
-                    return nodesToHighlight.some(nodeId => sId === nodeId || tId === nodeId);
-                })
-                .classed('dimmed', d => {
-                    const sId = typeof d.source === 'object' ? d.source.id : d.source;
-                    const tId = typeof d.target === 'object' ? d.target.id : d.target;
-                    return !nodesToHighlight.some(nodeId => sId === nodeId || tId === nodeId);
-                })
-                .classed('inward', d => {
-                    const tId = typeof d.target === 'object' ? d.target.id : d.target;
-                    return nodesToHighlight.includes(tId);  // Green for arrows coming IN
-                })
-                .classed('outward', d => {
-                    const sId = typeof d.source === 'object' ? d.source.id : d.source;
-                    return nodesToHighlight.includes(sId);  // Blue for arrows going OUT
-                });
-        },
-        
-        clearHighlight() {
-            state.svg.selectAll('.node').classed('highlighted', false).classed('dimmed', false);
-            state.svg.selectAll('.link')
-                .classed('highlighted', false)
-                .classed('dimmed', false)
-                .classed('inward', false)
-                .classed('outward', false);
-        },
-        
-        focusNode(nodeId) {
-            const node = state.filteredGraph?.nodes.find(n => n.id === nodeId);
-            if (!node || node.x === undefined) return;
-            const container = document.getElementById('graph');
-            const transform = d3.zoomIdentity
-                .translate(container.clientWidth / 2, container.clientHeight / 2)
-                .scale(1.5)
-                .translate(-node.x, -node.y);
-            state.svg.transition().duration(750).call(state.zoom.transform, transform);
-            this.selectNode(node);
-        },
-        
-        fitToView() {
-            if (!state.filteredGraph?.nodes.length) return;
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            state.filteredGraph.nodes.forEach(node => {
-                if (node.x !== undefined) {
-                    minX = Math.min(minX, node.x); maxX = Math.max(maxX, node.x);
-                    minY = Math.min(minY, node.y); maxY = Math.max(maxY, node.y);
-                }
-            });
-            if (minX === Infinity) return;
-            
-            const container = document.getElementById('graph');
-            const width = container.clientWidth, height = container.clientHeight, padding = 80;
-            const graphWidth = maxX - minX + padding * 2, graphHeight = maxY - minY + padding * 2;
-            const scale = Math.min(width / graphWidth, height / graphHeight, 2);
-            const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2;
-            
-            const transform = d3.zoomIdentity
-                .translate(width / 2, height / 2)
-                .scale(scale)
-                .translate(-centerX, -centerY);
-            state.svg.transition().duration(750).call(state.zoom.transform, transform);
-        },
-        
-        zoomIn() { state.svg.transition().duration(300).call(state.zoom.scaleBy, 1.4); },
-        zoomOut() { state.svg.transition().duration(300).call(state.zoom.scaleBy, 0.7); }
-    };
-    
-    // =============================================================================
-    // Particles
-    // =============================================================================
-    
-    const Particles = {
-        start() {
-            this.stop();
-            if (!state.particlesEnabled || !state.filteredGraph?.links.length) return;
-            const particleGroup = state.svg.select('g.particles');
-            
-            state.particleTimer = setInterval(() => {
-                if (!state.filteredGraph?.links.length) return;
-                const numParticles = Math.min(CONFIG.animation.maxParticles, state.filteredGraph.links.length);
-                for (let i = 0; i < numParticles; i++) {
-                    const link = state.filteredGraph.links[Math.floor(Math.random() * state.filteredGraph.links.length)];
-                    if (link.source.x !== undefined && link.target.x !== undefined) {
-                        particleGroup.append('circle')
-                            .attr('class', 'particle')
-                            .attr('r', 2.5)
-                            .attr('cx', link.source.x)
-                            .attr('cy', link.source.y)
-                            .transition()
-                            .duration(CONFIG.animation.particleDuration + Math.random() * 600)
-                            .ease(d3.easeLinear)
-                            .attr('cx', link.target.x)
-                            .attr('cy', link.target.y)
-                            .remove();
+        };
+
+        // =============================================================================
+        // Minimap
+        // =============================================================================
+
+        const Minimap = {
+            init() {
+                const container = document.getElementById('minimap');
+                if (!container) return;
+                state.minimapSvg = d3.select(container).append('svg').attr('width', '100%').attr('height', '100%');
+            },
+            update: debounce(function () {
+                if (!state.minimapSvg || !state.filteredGraph?.nodes.length) return;
+                const mainContainer = document.getElementById('graph');
+                const miniContainer = document.getElementById('minimap');
+                if (!mainContainer || !miniContainer) return;
+
+                const mainWidth = mainContainer.clientWidth, mainHeight = mainContainer.clientHeight;
+                const miniWidth = miniContainer.clientWidth, miniHeight = miniContainer.clientHeight;
+
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                state.filteredGraph.nodes.forEach(node => {
+                    if (node.x !== undefined) {
+                        minX = Math.min(minX, node.x); maxX = Math.max(maxX, node.x);
+                        minY = Math.min(minY, node.y); maxY = Math.max(maxY, node.y);
                     }
-                }
-            }, CONFIG.animation.particleInterval);
-        },
-        stop() {
-            if (state.particleTimer) { clearInterval(state.particleTimer); state.particleTimer = null; }
-            state.svg?.select('g.particles').selectAll('*').remove();
-        },
-        toggle() {
-            state.particlesEnabled = !state.particlesEnabled;
-            document.getElementById('btn-toggle-particles')?.classList.toggle('active', state.particlesEnabled);
-            state.particlesEnabled ? this.start() : this.stop();
-        }
-    };
-    
-    // =============================================================================
-    // Minimap
-    // =============================================================================
-    
-    const Minimap = {
-        init() {
-            const container = document.getElementById('minimap');
-            if (!container) return;
-            state.minimapSvg = d3.select(container).append('svg').attr('width', '100%').attr('height', '100%');
-        },
-        update: debounce(function() {
-            if (!state.minimapSvg || !state.filteredGraph?.nodes.length) return;
-            const mainContainer = document.getElementById('graph');
-            const miniContainer = document.getElementById('minimap');
-            if (!mainContainer || !miniContainer) return;
-            
-            const mainWidth = mainContainer.clientWidth, mainHeight = mainContainer.clientHeight;
-            const miniWidth = miniContainer.clientWidth, miniHeight = miniContainer.clientHeight;
-            
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            state.filteredGraph.nodes.forEach(node => {
-                if (node.x !== undefined) {
-                    minX = Math.min(minX, node.x); maxX = Math.max(maxX, node.x);
-                    minY = Math.min(minY, node.y); maxY = Math.max(maxY, node.y);
-                }
-            });
-            if (minX === Infinity) return;
-            
-            const padding = 20;
-            const graphWidth = maxX - minX + padding * 2, graphHeight = maxY - minY + padding * 2;
-            const scale = Math.min(miniWidth / graphWidth, miniHeight / graphHeight);
-            const offsetX = (miniWidth - graphWidth * scale) / 2, offsetY = (miniHeight - graphHeight * scale) / 2;
-            
-            state.minimapSvg.selectAll('*').remove();
-            
-            state.minimapSvg.selectAll('line')
-                .data(state.filteredGraph.links)
-                .join('line')
-                .attr('x1', d => offsetX + (d.source.x - minX + padding) * scale)
-                .attr('y1', d => offsetY + (d.source.y - minY + padding) * scale)
-                .attr('x2', d => offsetX + (d.target.x - minX + padding) * scale)
-                .attr('y2', d => offsetY + (d.target.y - minY + padding) * scale)
-                .attr('stroke', 'rgba(148, 163, 184, 0.3)')
-                .attr('stroke-width', 0.5);
-            
-            state.minimapSvg.selectAll('circle')
-                .data(state.filteredGraph.nodes)
-                .join('circle')
-                .attr('cx', d => offsetX + (d.x - minX + padding) * scale)
-                .attr('cy', d => offsetY + (d.y - minY + padding) * scale)
-                .attr('r', 2)
-                .attr('fill', d => getNodeColor(d));
-            
-            const transform = d3.zoomTransform(state.svg.node());
-            const vpWidth = mainWidth / transform.k, vpHeight = mainHeight / transform.k;
-            const vpX = -transform.x / transform.k, vpY = -transform.y / transform.k;
-            
-            state.minimapSvg.append('rect')
-                .attr('class', 'minimap-viewport')
-                .attr('x', offsetX + (vpX - minX + padding) * scale)
-                .attr('y', offsetY + (vpY - minY + padding) * scale)
-                .attr('width', vpWidth * scale)
-                .attr('height', vpHeight * scale);
-        }, 50)
-    };
-    
-    // =============================================================================
-    // Tooltip
-    // =============================================================================
-    
-    const Tooltip = {
-        element: null,
-        init() {
-            this.element = document.createElement('div');
-            this.element.className = 'tooltip';
-            document.body.appendChild(this.element);
-        },
-        show(event, node) {
-            if (!this.element) this.init();
-            const degree = state.nodeDegrees.get(node.id) || 0;
-            this.element.innerHTML = `
+                });
+                if (minX === Infinity) return;
+
+                const padding = 20;
+                const graphWidth = maxX - minX + padding * 2, graphHeight = maxY - minY + padding * 2;
+                const scale = Math.min(miniWidth / graphWidth, miniHeight / graphHeight);
+                const offsetX = (miniWidth - graphWidth * scale) / 2, offsetY = (miniHeight - graphHeight * scale) / 2;
+
+                state.minimapSvg.selectAll('*').remove();
+
+                state.minimapSvg.selectAll('line')
+                    .data(state.filteredGraph.links)
+                    .join('line')
+                    .attr('x1', d => offsetX + (d.source.x - minX + padding) * scale)
+                    .attr('y1', d => offsetY + (d.source.y - minY + padding) * scale)
+                    .attr('x2', d => offsetX + (d.target.x - minX + padding) * scale)
+                    .attr('y2', d => offsetY + (d.target.y - minY + padding) * scale)
+                    .attr('stroke', 'rgba(148, 163, 184, 0.3)')
+                    .attr('stroke-width', 0.5);
+
+                state.minimapSvg.selectAll('circle')
+                    .data(state.filteredGraph.nodes)
+                    .join('circle')
+                    .attr('cx', d => offsetX + (d.x - minX + padding) * scale)
+                    .attr('cy', d => offsetY + (d.y - minY + padding) * scale)
+                    .attr('r', 2)
+                    .attr('fill', d => getNodeColor(d));
+
+                const transform = d3.zoomTransform(state.svg.node());
+                const vpWidth = mainWidth / transform.k, vpHeight = mainHeight / transform.k;
+                const vpX = -transform.x / transform.k, vpY = -transform.y / transform.k;
+
+                state.minimapSvg.append('rect')
+                    .attr('class', 'minimap-viewport')
+                    .attr('x', offsetX + (vpX - minX + padding) * scale)
+                    .attr('y', offsetY + (vpY - minY + padding) * scale)
+                    .attr('width', vpWidth * scale)
+                    .attr('height', vpHeight * scale);
+            }, 50)
+        };
+
+        // =============================================================================
+        // Tooltip
+        // =============================================================================
+
+        const Tooltip = {
+            element: null,
+            init() {
+                this.element = document.createElement('div');
+                this.element.className = 'tooltip';
+                document.body.appendChild(this.element);
+            },
+            show(event, node) {
+                if (!this.element) this.init();
+                const degree = state.nodeDegrees.get(node.id) || 0;
+                this.element.innerHTML = `
                 <div class="tooltip-header">${truncate(node.label, 30)}</div>
                 <div class="tooltip-type">${node.type}${node.itemType ? ` • ${node.itemType}` : ''}${node.sourceType ? ` • ${node.sourceType}` : ''}</div>
                 <div class="tooltip-type">${degree} connection${degree !== 1 ? 's' : ''}</div>
             `;
-            this.element.style.left = `${event.pageX + 16}px`;
-            this.element.style.top = `${event.pageY + 16}px`;
-            this.element.classList.add('visible');
-        },
-        hide() { this.element?.classList.remove('visible'); }
-    };
-    
-    // =============================================================================
-    // Detail Panel
-    // =============================================================================
-    
-    const DetailPanel = {
-        show(node) {
-            const panel = document.getElementById('detail-panel');
-            const dot = document.getElementById('detail-dot');
-            const title = document.getElementById('detail-title');
-            const content = document.getElementById('detail-content');
-            if (!panel) return;
-            
-            dot.style.background = getNodeColor(node);
-            title.textContent = truncate(node.label, 25);
-            
-            const connections = this.getConnections(node);
-            const degree = state.nodeDegrees.get(node.id) || 0;
-            const centrality = state.maxDegree > 0 ? ((degree / state.maxDegree) * 100).toFixed(0) : 0;
-            
-            content.innerHTML = `
+                this.element.style.left = `${event.pageX + 16}px`;
+                this.element.style.top = `${event.pageY + 16}px`;
+                this.element.classList.add('visible');
+            },
+            hide() { this.element?.classList.remove('visible'); }
+        };
+
+        // =============================================================================
+        // Detail Panel
+        // =============================================================================
+
+        const DetailPanel = {
+            show(node) {
+                const panel = document.getElementById('detail-panel');
+                const dot = document.getElementById('detail-dot');
+                const title = document.getElementById('detail-title');
+                const content = document.getElementById('detail-content');
+                if (!panel) return;
+
+                dot.style.background = getNodeColor(node);
+                title.textContent = truncate(node.label, 25);
+
+                const connections = this.getConnections(node);
+                const degree = state.nodeDegrees.get(node.id) || 0;
+                const centrality = state.maxDegree > 0 ? ((degree / state.maxDegree) * 100).toFixed(0) : 0;
+
+                content.innerHTML = `
                 <div class="detail-section">
                     <div class="detail-section-title">Details</div>
                     <div class="detail-field"><span class="label">Type</span><span class="value">${node.type}</span></div>
@@ -1988,7 +2509,7 @@
                     <div class="detail-section-title">Connections (${connections.length})</div>
                     <div class="connection-list">
                         ${connections.length === 0 ? '<p style="color:var(--text-muted);font-size:12px;">No connections</p>' :
-                            connections.map(c => `
+                        connections.map(c => `
                                 <div class="connection-item" onclick="Graph.focusNode('${c.id}')">
                                     <span class="dot" style="background:${getNodeColor(c)}"></span>
                                     <span class="name">${truncate(c.label, 18)}</span>
@@ -1998,39 +2519,39 @@
                     </div>
                 </div>
             `;
-            panel.classList.add('open');
-        },
-        hide() { document.getElementById('detail-panel')?.classList.remove('open'); },
-        getConnections(node) {
-            if (!state.filteredGraph) return [];
-            const connections = [];
-            state.filteredGraph.links.forEach(link => {
-                const sId = typeof link.source === 'object' ? link.source.id : link.source;
-                const tId = typeof link.target === 'object' ? link.target.id : link.target;
-                if (sId === node.id) {
-                    const target = state.filteredGraph.nodes.find(n => n.id === tId);
-                    if (target) connections.push({ ...target, direction: 'outbound' });
-                }
-                if (tId === node.id) {
-                    const source = state.filteredGraph.nodes.find(n => n.id === sId);
-                    if (source) connections.push({ ...source, direction: 'inbound' });
-                }
-            });
-            return connections;
-        }
-    };
-    
-    // =============================================================================
-    // Context Menu
-    // =============================================================================
-    
-    const ContextMenu = {
-        element: null,
-        currentNode: null,
-        init() {
-            this.element = document.createElement('div');
-            this.element.className = 'context-menu';
-            this.element.innerHTML = `
+                panel.classList.add('open');
+            },
+            hide() { document.getElementById('detail-panel')?.classList.remove('open'); },
+            getConnections(node) {
+                if (!state.filteredGraph) return [];
+                const connections = [];
+                state.filteredGraph.links.forEach(link => {
+                    const sId = typeof link.source === 'object' ? link.source.id : link.source;
+                    const tId = typeof link.target === 'object' ? link.target.id : link.target;
+                    if (sId === node.id) {
+                        const target = state.filteredGraph.nodes.find(n => n.id === tId);
+                        if (target) connections.push({ ...target, direction: 'outbound' });
+                    }
+                    if (tId === node.id) {
+                        const source = state.filteredGraph.nodes.find(n => n.id === sId);
+                        if (source) connections.push({ ...source, direction: 'inbound' });
+                    }
+                });
+                return connections;
+            }
+        };
+
+        // =============================================================================
+        // Context Menu
+        // =============================================================================
+
+        const ContextMenu = {
+            element: null,
+            currentNode: null,
+            init() {
+                this.element = document.createElement('div');
+                this.element.className = 'context-menu';
+                this.element.innerHTML = `
                 <div class="context-menu-header" id="context-menu-header">Node Actions</div>
                 <div class="context-menu-item" data-action="upstream">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -2059,107 +2580,107 @@
                     Copy Node ID
                 </div>
             `;
-            document.body.appendChild(this.element);
-            document.addEventListener('click', () => this.hide());
-            this.element.addEventListener('click', (e) => this.handleClick(e));
-        },
-        show(event, node) {
-            event.preventDefault();
-            event.stopPropagation();
-            if (!this.element) this.init();
-            this.currentNode = node;
-            document.getElementById('context-menu-header').textContent = truncate(node.label, 25);
-            this.element.style.left = `${event.clientX}px`;
-            this.element.style.top = `${event.clientY}px`;
-            this.element.classList.add('visible');
-            requestAnimationFrame(() => {
-                const rect = this.element.getBoundingClientRect();
-                if (rect.right > window.innerWidth) this.element.style.left = `${event.clientX - rect.width}px`;
-                if (rect.bottom > window.innerHeight) this.element.style.top = `${event.clientY - rect.height}px`;
-            });
-        },
-        hide() { this.element?.classList.remove('visible'); },
-        async handleClick(event) {
-            const item = event.target.closest('.context-menu-item');
-            if (!item || !this.currentNode) return;
-            const action = item.dataset.action;
-            const node = this.currentNode;
-            this.hide();
-            switch (action) {
-                case 'upstream': await Analysis.showUpstream(node.id); break;
-                case 'downstream': await Analysis.showDownstream(node.id); break;
-                case 'path-source': PathFinder.setSource(node); break;
-                case 'path-target': PathFinder.setTarget(node); break;
-                case 'focus': Graph.focusNode(node.id); break;
-                case 'copy-id': await navigator.clipboard.writeText(node.id); Toast.show('Node ID copied!', 'success'); break;
-            }
-        }
-    };
-    
-    // =============================================================================
-    // Path Finder
-    // =============================================================================
-    
-    const PathFinder = {
-        setSource(node) {
-            state.neo4j.pathSource = node;
-            this.updateUI();
-            document.getElementById('path-finder-panel').classList.add('open');
-        },
-        setTarget(node) {
-            state.neo4j.pathTarget = node;
-            this.updateUI();
-            document.getElementById('path-finder-panel').classList.add('open');
-        },
-        updateUI() {
-            const srcDisplay = document.getElementById('path-source-display');
-            const tgtDisplay = document.getElementById('path-target-display');
-            const findBtn = document.getElementById('btn-find-path');
-            
-            if (state.neo4j.pathSource) {
-                srcDisplay.innerHTML = `<span class="node-badge" style="background:${getNodeColor(state.neo4j.pathSource)}">${truncate(state.neo4j.pathSource.label, 20)}</span>`;
-            } else {
-                srcDisplay.innerHTML = '<span class="placeholder">Right-click → "Set as Path Source"</span>';
-            }
-            
-            if (state.neo4j.pathTarget) {
-                tgtDisplay.innerHTML = `<span class="node-badge" style="background:${getNodeColor(state.neo4j.pathTarget)}">${truncate(state.neo4j.pathTarget.label, 20)}</span>`;
-            } else {
-                tgtDisplay.innerHTML = '<span class="placeholder">Right-click → "Set as Path Target"</span>';
-            }
-            
-            findBtn.disabled = !state.neo4j.pathSource || !state.neo4j.pathTarget;
-        },
-        async find() {
-            if (!state.neo4j.pathSource || !state.neo4j.pathTarget) return;
-            const findBtn = document.getElementById('btn-find-path');
-            findBtn.disabled = true;
-            findBtn.textContent = 'Finding...';
-            
-            try {
-                const result = await Neo4jAPI.findPath(state.neo4j.pathSource.id, state.neo4j.pathTarget.id);
-                let pathNodes = result.paths?.[0]?.path || result.path || [];
-                
-                if (pathNodes.length > 0) {
-                    state.neo4j.currentPath = pathNodes;
-                    this.displayResult(pathNodes);
-                    this.highlightPath(pathNodes);
-                } else {
-                    document.getElementById('path-result').style.display = 'block';
-                    document.getElementById('path-length').textContent = 'No path found';
-                    document.getElementById('path-steps').innerHTML = '<p style="color:var(--text-muted);">These nodes are not connected.</p>';
+                document.body.appendChild(this.element);
+                document.addEventListener('click', () => this.hide());
+                this.element.addEventListener('click', (e) => this.handleClick(e));
+            },
+            show(event, node) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (!this.element) this.init();
+                this.currentNode = node;
+                document.getElementById('context-menu-header').textContent = truncate(node.label, 25);
+                this.element.style.left = `${event.clientX}px`;
+                this.element.style.top = `${event.clientY}px`;
+                this.element.classList.add('visible');
+                requestAnimationFrame(() => {
+                    const rect = this.element.getBoundingClientRect();
+                    if (rect.right > window.innerWidth) this.element.style.left = `${event.clientX - rect.width}px`;
+                    if (rect.bottom > window.innerHeight) this.element.style.top = `${event.clientY - rect.height}px`;
+                });
+            },
+            hide() { this.element?.classList.remove('visible'); },
+            async handleClick(event) {
+                const item = event.target.closest('.context-menu-item');
+                if (!item || !this.currentNode) return;
+                const action = item.dataset.action;
+                const node = this.currentNode;
+                this.hide();
+                switch (action) {
+                    case 'upstream': await Analysis.showUpstream(node.id); break;
+                    case 'downstream': await Analysis.showDownstream(node.id); break;
+                    case 'path-source': PathFinder.setSource(node); break;
+                    case 'path-target': PathFinder.setTarget(node); break;
+                    case 'focus': Graph.focusNode(node.id); break;
+                    case 'copy-id': await navigator.clipboard.writeText(node.id); Toast.show('Node ID copied!', 'success'); break;
                 }
-            } catch (e) {
-                Toast.show('Failed to find path', 'error');
             }
-            
-            findBtn.disabled = false;
-            findBtn.textContent = 'Find Path';
-        },
-        displayResult(pathNodes) {
-            document.getElementById('path-result').style.display = 'block';
-            document.getElementById('path-length').textContent = `Path: ${pathNodes.length} steps`;
-            document.getElementById('path-steps').innerHTML = pathNodes.map((node, i) => `
+        };
+
+        // =============================================================================
+        // Path Finder
+        // =============================================================================
+
+        const PathFinder = {
+            setSource(node) {
+                state.neo4j.pathSource = node;
+                this.updateUI();
+                document.getElementById('path-finder-panel').classList.add('open');
+            },
+            setTarget(node) {
+                state.neo4j.pathTarget = node;
+                this.updateUI();
+                document.getElementById('path-finder-panel').classList.add('open');
+            },
+            updateUI() {
+                const srcDisplay = document.getElementById('path-source-display');
+                const tgtDisplay = document.getElementById('path-target-display');
+                const findBtn = document.getElementById('btn-find-path');
+
+                if (state.neo4j.pathSource) {
+                    srcDisplay.innerHTML = `<span class="node-badge" style="background:${getNodeColor(state.neo4j.pathSource)}">${truncate(state.neo4j.pathSource.label, 20)}</span>`;
+                } else {
+                    srcDisplay.innerHTML = '<span class="placeholder">Right-click → "Set as Path Source"</span>';
+                }
+
+                if (state.neo4j.pathTarget) {
+                    tgtDisplay.innerHTML = `<span class="node-badge" style="background:${getNodeColor(state.neo4j.pathTarget)}">${truncate(state.neo4j.pathTarget.label, 20)}</span>`;
+                } else {
+                    tgtDisplay.innerHTML = '<span class="placeholder">Right-click → "Set as Path Target"</span>';
+                }
+
+                findBtn.disabled = !state.neo4j.pathSource || !state.neo4j.pathTarget;
+            },
+            async find() {
+                if (!state.neo4j.pathSource || !state.neo4j.pathTarget) return;
+                const findBtn = document.getElementById('btn-find-path');
+                findBtn.disabled = true;
+                findBtn.textContent = 'Finding...';
+
+                try {
+                    const result = await Neo4jAPI.findPath(state.neo4j.pathSource.id, state.neo4j.pathTarget.id);
+                    let pathNodes = result.paths?.[0]?.path || result.path || [];
+
+                    if (pathNodes.length > 0) {
+                        state.neo4j.currentPath = pathNodes;
+                        this.displayResult(pathNodes);
+                        this.highlightPath(pathNodes);
+                    } else {
+                        document.getElementById('path-result').style.display = 'block';
+                        document.getElementById('path-length').textContent = 'No path found';
+                        document.getElementById('path-steps').innerHTML = '<p style="color:var(--text-muted);">These nodes are not connected.</p>';
+                    }
+                } catch (e) {
+                    Toast.show('Failed to find path', 'error');
+                }
+
+                findBtn.disabled = false;
+                findBtn.textContent = 'Find Path';
+            },
+            displayResult(pathNodes) {
+                document.getElementById('path-result').style.display = 'block';
+                document.getElementById('path-length').textContent = `Path: ${pathNodes.length} steps`;
+                document.getElementById('path-steps').innerHTML = pathNodes.map((node, i) => `
                 <div class="path-step" onclick="Graph.focusNode('${node.id}')">
                     <span class="step-number">${i + 1}</span>
                     <span class="step-node">${node.name}</span>
@@ -2167,85 +2688,85 @@
                 </div>
                 ${i < pathNodes.length - 1 ? '<div class="path-connector"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>' : ''}
             `).join('');
-        },
-        highlightPath(pathNodes) {
-            const pathIds = new Set(pathNodes.map(n => n.id));
-            const edgeSet = new Set();
-            for (let i = 0; i < pathNodes.length - 1; i++) {
-                edgeSet.add(`${pathNodes[i].id}-${pathNodes[i + 1].id}`);
-                edgeSet.add(`${pathNodes[i + 1].id}-${pathNodes[i].id}`);
+            },
+            highlightPath(pathNodes) {
+                const pathIds = new Set(pathNodes.map(n => n.id));
+                const edgeSet = new Set();
+                for (let i = 0; i < pathNodes.length - 1; i++) {
+                    edgeSet.add(`${pathNodes[i].id}-${pathNodes[i + 1].id}`);
+                    edgeSet.add(`${pathNodes[i + 1].id}-${pathNodes[i].id}`);
+                }
+
+                state.svg.selectAll('.node')
+                    .classed('path-highlighted', d => pathIds.has(d.id))
+                    .classed('dimmed', d => !pathIds.has(d.id));
+
+                state.svg.selectAll('.link')
+                    .classed('path-highlighted', d => {
+                        const sId = typeof d.source === 'object' ? d.source.id : d.source;
+                        const tId = typeof d.target === 'object' ? d.target.id : d.target;
+                        return edgeSet.has(`${sId}-${tId}`);
+                    })
+                    .classed('dimmed', d => {
+                        const sId = typeof d.source === 'object' ? d.source.id : d.source;
+                        const tId = typeof d.target === 'object' ? d.target.id : d.target;
+                        return !edgeSet.has(`${sId}-${tId}`);
+                    });
+            },
+            clearResult() {
+                state.neo4j.currentPath = [];
+                document.getElementById('path-result').style.display = 'none';
+                Graph.clearHighlight();
+            },
+            close() {
+                document.getElementById('path-finder-panel').classList.remove('open');
+                Graph.clearHighlight();
             }
-            
-            state.svg.selectAll('.node')
-                .classed('path-highlighted', d => pathIds.has(d.id))
-                .classed('dimmed', d => !pathIds.has(d.id));
-            
-            state.svg.selectAll('.link')
-                .classed('path-highlighted', d => {
+        };
+
+        // =============================================================================
+        // Analysis (Upstream/Downstream)
+        // =============================================================================
+
+        const Analysis = {
+            async showUpstream(nodeId) {
+                Loading.show('Finding upstream sources...');
+                try {
+                    const result = await Neo4jAPI.upstream(nodeId, 10);
+                    const upstream = result.dependencies || result.upstream || [];
+                    this.highlightResults(nodeId, upstream);
+                    this.showPanel('Upstream Sources', nodeId, upstream, 'upstream');
+                } catch (e) { Toast.show('Failed to find upstream', 'error'); }
+                Loading.hide();
+            },
+            async showDownstream(nodeId) {
+                Loading.show('Finding downstream impact...');
+                try {
+                    const result = await Neo4jAPI.downstream(nodeId, 10);
+                    const downstream = result.impacted_items || result.downstream || [];
+                    this.highlightResults(nodeId, downstream);
+                    this.showPanel('Downstream Impact', nodeId, downstream, 'downstream');
+                } catch (e) { Toast.show('Failed to find downstream', 'error'); }
+                Loading.hide();
+            },
+            highlightResults(originId, results) {
+                const ids = new Set([originId, ...results.map(r => r.id)]);
+                state.svg.selectAll('.node')
+                    .classed('analysis-origin', d => d.id === originId)
+                    .classed('analysis-result', d => d.id !== originId && ids.has(d.id))
+                    .classed('dimmed', d => !ids.has(d.id));
+                state.svg.selectAll('.link').classed('dimmed', d => {
                     const sId = typeof d.source === 'object' ? d.source.id : d.source;
                     const tId = typeof d.target === 'object' ? d.target.id : d.target;
-                    return edgeSet.has(`${sId}-${tId}`);
-                })
-                .classed('dimmed', d => {
-                    const sId = typeof d.source === 'object' ? d.source.id : d.source;
-                    const tId = typeof d.target === 'object' ? d.target.id : d.target;
-                    return !edgeSet.has(`${sId}-${tId}`);
+                    return !ids.has(sId) || !ids.has(tId);
                 });
-        },
-        clearResult() {
-            state.neo4j.currentPath = [];
-            document.getElementById('path-result').style.display = 'none';
-            Graph.clearHighlight();
-        },
-        close() {
-            document.getElementById('path-finder-panel').classList.remove('open');
-            Graph.clearHighlight();
-        }
-    };
-    
-    // =============================================================================
-    // Analysis (Upstream/Downstream)
-    // =============================================================================
-    
-    const Analysis = {
-        async showUpstream(nodeId) {
-            Loading.show('Finding upstream sources...');
-            try {
-                const result = await Neo4jAPI.upstream(nodeId, 10);
-                const upstream = result.dependencies || result.upstream || [];
-                this.highlightResults(nodeId, upstream);
-                this.showPanel('Upstream Sources', nodeId, upstream, 'upstream');
-            } catch (e) { Toast.show('Failed to find upstream', 'error'); }
-            Loading.hide();
-        },
-        async showDownstream(nodeId) {
-            Loading.show('Finding downstream impact...');
-            try {
-                const result = await Neo4jAPI.downstream(nodeId, 10);
-                const downstream = result.impacted_items || result.downstream || [];
-                this.highlightResults(nodeId, downstream);
-                this.showPanel('Downstream Impact', nodeId, downstream, 'downstream');
-            } catch (e) { Toast.show('Failed to find downstream', 'error'); }
-            Loading.hide();
-        },
-        highlightResults(originId, results) {
-            const ids = new Set([originId, ...results.map(r => r.id)]);
-            state.svg.selectAll('.node')
-                .classed('analysis-origin', d => d.id === originId)
-                .classed('analysis-result', d => d.id !== originId && ids.has(d.id))
-                .classed('dimmed', d => !ids.has(d.id));
-            state.svg.selectAll('.link').classed('dimmed', d => {
-                const sId = typeof d.source === 'object' ? d.source.id : d.source;
-                const tId = typeof d.target === 'object' ? d.target.id : d.target;
-                return !ids.has(sId) || !ids.has(tId);
-            });
-        },
-        showPanel(title, originId, results, direction) {
-            const panel = document.getElementById('analysis-panel');
-            const originNode = state.filteredGraph?.nodes.find(n => n.id === originId);
-            const icon = direction === 'upstream' ? '<path d="M12 19V5M5 12l7-7 7 7"/>' : '<path d="M12 5v14M19 12l-7 7-7-7"/>';
-            
-            panel.innerHTML = `
+            },
+            showPanel(title, originId, results, direction) {
+                const panel = document.getElementById('analysis-panel');
+                const originNode = state.filteredGraph?.nodes.find(n => n.id === originId);
+                const icon = direction === 'upstream' ? '<path d="M12 19V5M5 12l7-7 7 7"/>' : '<path d="M12 5v14M19 12l-7 7-7-7"/>';
+
+                panel.innerHTML = `
                 <div class="analysis-header">
                     <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg>${title}</h3>
                     <button class="btn btn-icon btn-sm btn-ghost" id="btn-close-analysis">
@@ -2267,258 +2788,500 @@
                 </div>
                 <button class="btn btn-ghost" style="width:100%;margin:8px 0;" id="btn-clear-analysis">Clear Highlight</button>
             `;
-            
-            panel.classList.add('open');
-            document.getElementById('btn-close-analysis')?.addEventListener('click', () => { panel.classList.remove('open'); Graph.clearHighlight(); });
-            document.getElementById('btn-clear-analysis')?.addEventListener('click', () => Graph.clearHighlight());
-        }
-    };
-    
-    // =============================================================================
-    // Loading & Toast
-    // =============================================================================
-    
-    const Loading = {
-        show(msg = 'Loading...') {
-            document.getElementById('loading-message').textContent = msg;
-            document.getElementById('loading-overlay').classList.add('visible');
-        },
-        hide() { document.getElementById('loading-overlay').classList.remove('visible'); }
-    };
-    
-    const Toast = {
-        element: null,
-        show(message, type = 'info') {
-            if (!this.element) {
-                this.element = document.createElement('div');
-                this.element.className = 'toast';
-                document.body.appendChild(this.element);
+
+                panel.classList.add('open');
+                document.getElementById('btn-close-analysis')?.addEventListener('click', () => { panel.classList.remove('open'); Graph.clearHighlight(); });
+                document.getElementById('btn-clear-analysis')?.addEventListener('click', () => Graph.clearHighlight());
             }
-            this.element.textContent = message;
-            this.element.className = `toast ${type}`;
-            this.element.offsetHeight; // Trigger reflow
-            this.element.classList.add('visible');
-            setTimeout(() => this.element.classList.remove('visible'), 3000);
-        }
-    };
-    
-    // =============================================================================
-    // UI & Event Handlers
-    // =============================================================================
-    
-    const UI = {
-        init() {
-            this.bindEvents();
-            this.initFilters();
-            this.checkNeo4j();
-        },
-        
-        bindEvents() {
-            document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => {
-                state.sidebarOpen = !state.sidebarOpen;
-                document.getElementById('sidebar')?.classList.toggle('collapsed', !state.sidebarOpen);
-            });
-            
-            document.getElementById('btn-toggle-particles')?.addEventListener('click', () => Particles.toggle());
-            
-            document.getElementById('btn-toggle-labels')?.addEventListener('click', () => {
-                state.labelsVisible = !state.labelsVisible;
-                document.getElementById('btn-toggle-labels')?.classList.toggle('active', state.labelsVisible);
-                state.svg.selectAll('.node').classed('labels-hidden', !state.labelsVisible);
-            });
-            
-            document.getElementById('btn-refresh')?.addEventListener('click', () => App.refresh());
-            
-            document.querySelectorAll('[data-layout]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const layout = btn.dataset.layout;
-                    if (layout === state.currentLayout) return;
-                    document.querySelectorAll('[data-layout]').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    state.currentLayout = layout;
-                    state.filteredGraph = applyFilters(state.graph);
-                    Graph.render(state.filteredGraph);
-                });
-            });
-            
-            document.getElementById('btn-zoom-in')?.addEventListener('click', () => Graph.zoomIn());
-            document.getElementById('btn-zoom-out')?.addEventListener('click', () => Graph.zoomOut());
-            document.getElementById('btn-fit-view')?.addEventListener('click', () => Graph.fitToView());
-            
-            // Multi-selection controls
-            document.getElementById('btn-select-children')?.addEventListener('click', () => Graph.selectChildren(1));
-            document.getElementById('btn-select-descendants')?.addEventListener('click', () => Graph.selectChildren(10));  // 10 levels
-            document.getElementById('btn-clear-selection')?.addEventListener('click', () => Graph.deselectNode());
-            
-            const searchInput = document.getElementById('filter-search');
-            searchInput?.addEventListener('input', debounce((e) => {
-                state.filters.search = e.target.value;
-                this.applyFiltersAndRender();
-            }, 200));
-            
-            document.getElementById('btn-reset-filters')?.addEventListener('click', () => {
-                state.filters.search = '';
-                state.filters.workspaces.clear();
-                state.filters.itemTypes.clear();
-                state.filters.sourceTypes.clear();
-                searchInput.value = '';
-                this.updateFilterChips();
-                this.applyFiltersAndRender();
-            });
-            
-            document.getElementById('btn-close-detail')?.addEventListener('click', () => { DetailPanel.hide(); Graph.deselectNode(); });
-            document.getElementById('btn-close-pathfinder')?.addEventListener('click', () => PathFinder.close());
-            document.getElementById('btn-find-path')?.addEventListener('click', () => PathFinder.find());
-            document.getElementById('btn-clear-path')?.addEventListener('click', () => PathFinder.clearResult());
-            
-            // Keyboard shortcuts
-            document.addEventListener('keydown', (e) => {
-                if (e.target.tagName === 'INPUT') return;
-                switch (e.key) {
-                    case 'f': Graph.fitToView(); break;
-                    case '+': case '=': Graph.zoomIn(); break;
-                    case '-': Graph.zoomOut(); break;
-                    case 'Escape': Graph.deselectNode(); PathFinder.close(); break;
-                    case '/': e.preventDefault(); searchInput?.focus(); break;
+        };
+
+        // =============================================================================
+        // Loading & Toast
+        // =============================================================================
+
+        const Loading = {
+            show(msg = 'Loading...') {
+                document.getElementById('loading-message').textContent = msg;
+                document.getElementById('loading-overlay').classList.add('visible');
+            },
+            hide() { document.getElementById('loading-overlay').classList.remove('visible'); }
+        };
+
+        const Toast = {
+            element: null,
+            show(message, type = 'info') {
+                if (!this.element) {
+                    this.element = document.createElement('div');
+                    this.element.className = 'toast';
+                    document.body.appendChild(this.element);
                 }
-            });
-        },
-        
-        initFilters() {
-            if (!state.graph) return;
-            
-            // Workspaces
-            const wsContainer = document.getElementById('filter-workspaces');
-            if (wsContainer) {
-                const workspaces = state.graph.nodes.filter(n => n.type === 'workspace');
-                wsContainer.innerHTML = workspaces.map(ws => `<button class="chip" data-id="${ws.id}" data-filter="workspace">${truncate(ws.label, 12)}</button>`).join('');
-                wsContainer.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => this.toggleFilter('workspaces', chip.dataset.id, chip)));
-                document.getElementById('ws-count').textContent = `0/${workspaces.length}`;
+                this.element.textContent = message;
+                this.element.className = `toast ${type}`;
+                this.element.offsetHeight; // Trigger reflow
+                this.element.classList.add('visible');
+                setTimeout(() => this.element.classList.remove('visible'), 3000);
             }
-            
-            // Item types
-            const itemContainer = document.getElementById('filter-item-types');
-            if (itemContainer) {
+        };
+
+        // =============================================================================
+        // UI & Event Handlers
+        // =============================================================================
+
+        const UI = {
+            init() {
+                this.bindEvents();
+                this.initFilters();
+                this.checkNeo4j();
+            },
+
+            bindEvents() {
+                document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => {
+                    state.sidebarOpen = !state.sidebarOpen;
+                    document.getElementById('sidebar')?.classList.toggle('collapsed', !state.sidebarOpen);
+                });
+
+                document.getElementById('btn-toggle-particles')?.addEventListener('click', () => Particles.toggle());
+
+                document.getElementById('btn-toggle-labels')?.addEventListener('click', () => {
+                    state.labelsVisible = !state.labelsVisible;
+                    document.getElementById('btn-toggle-labels')?.classList.toggle('active', state.labelsVisible);
+                    state.svg.selectAll('.node').classed('labels-hidden', !state.labelsVisible);
+                });
+
+                document.getElementById('btn-refresh')?.addEventListener('click', () => App.refresh());
+
+                document.querySelectorAll('[data-layout]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const layout = btn.dataset.layout;
+                        if (layout === state.currentLayout) return;
+                        document.querySelectorAll('[data-layout]').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        state.currentLayout = layout;
+                        state.filteredGraph = applyFilters(state.graph);
+                        Graph.render(state.filteredGraph);
+                    });
+                });
+
+                document.getElementById('btn-zoom-in')?.addEventListener('click', () => Graph.zoomIn());
+                document.getElementById('btn-zoom-out')?.addEventListener('click', () => Graph.zoomOut());
+                document.getElementById('btn-fit-view')?.addEventListener('click', () => Graph.fitToView());
+
+                // Multi-selection controls
+                document.getElementById('btn-select-children')?.addEventListener('click', () => Graph.selectChildren(1));
+                document.getElementById('btn-select-descendants')?.addEventListener('click', () => Graph.selectChildren(10));  // 10 levels
+                document.getElementById('btn-clear-selection')?.addEventListener('click', () => Graph.deselectNode());
+
+                const searchInput = document.getElementById('filter-search');
+                searchInput?.addEventListener('input', debounce((e) => {
+                    state.filters.search = e.target.value;
+                    this.applyFiltersAndRender();
+                }, 200));
+
+                document.getElementById('btn-reset-filters')?.addEventListener('click', () => {
+                    state.filters.search = '';
+                    state.filters.workspaces.clear();
+                    state.filters.itemTypes.clear();
+                    state.filters.sourceTypes.clear();
+                    searchInput.value = '';
+                    this.updateFilterChips();
+                    this.applyFiltersAndRender();
+                });
+
+                document.getElementById('btn-close-detail')?.addEventListener('click', () => { DetailPanel.hide(); Graph.deselectNode(); });
+                document.getElementById('btn-close-pathfinder')?.addEventListener('click', () => PathFinder.close());
+                document.getElementById('btn-find-path')?.addEventListener('click', () => PathFinder.find());
+                document.getElementById('btn-clear-path')?.addEventListener('click', () => PathFinder.clearResult());
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT') return;
+                    switch (e.key) {
+                        case 'f': Graph.fitToView(); break;
+                        case '+': case '=': Graph.zoomIn(); break;
+                        case '-': Graph.zoomOut(); break;
+                        case 'Escape': Graph.deselectNode(); PathFinder.close(); break;
+                        case '/': e.preventDefault(); searchInput?.focus(); break;
+                    }
+                });
+            },
+
+            initFilters() {
+                if (!state.graph) return;
+
+                // Workspaces
+                const wsContainer = document.getElementById('filter-workspaces');
+                if (wsContainer) {
+                    const workspaces = state.graph.nodes.filter(n => n.type === 'workspace');
+                    wsContainer.innerHTML = workspaces.map(ws => `<button class="chip" data-id="${ws.id}" data-filter="workspace">${truncate(ws.label, 12)}</button>`).join('');
+                    wsContainer.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => this.toggleFilter('workspaces', chip.dataset.id, chip)));
+                    document.getElementById('ws-count').textContent = `0/${workspaces.length}`;
+                }
+
+                // Item types
+                const itemContainer = document.getElementById('filter-item-types');
+                if (itemContainer) {
+                    const itemTypes = [...new Set(state.graph.nodes.filter(n => n.type === 'item').map(n => n.itemType))].filter(Boolean);
+                    itemContainer.innerHTML = itemTypes.map(type => `<button class="chip" data-id="${type}" data-filter="itemType">${type}</button>`).join('');
+                    itemContainer.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => this.toggleFilter('itemTypes', chip.dataset.id, chip)));
+                    document.getElementById('item-count').textContent = `0/${itemTypes.length}`;
+                }
+
+                // Source types
+                const sourceContainer = document.getElementById('filter-source-types');
+                if (sourceContainer) {
+                    const sourceTypes = [...new Set(state.graph.nodes.filter(n => n.type === 'source').map(n => n.sourceType))].filter(Boolean);
+                    sourceContainer.innerHTML = sourceTypes.map(type => `<button class="chip" data-id="${type}" data-filter="sourceType">${type}</button>`).join('');
+                    sourceContainer.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => this.toggleFilter('sourceTypes', chip.dataset.id, chip)));
+                    document.getElementById('source-count').textContent = `0/${sourceTypes.length}`;
+                }
+            },
+
+            toggleFilter(filterName, value, chipEl) {
+                const filterSet = state.filters[filterName];
+                if (filterSet.has(value)) { filterSet.delete(value); chipEl.classList.remove('active'); }
+                else { filterSet.add(value); chipEl.classList.add('active'); }
+                this.updateFilterCounts();
+                this.applyFiltersAndRender();
+            },
+
+            updateFilterChips() {
+                document.querySelectorAll('#filter-workspaces .chip').forEach(chip => chip.classList.toggle('active', state.filters.workspaces.has(chip.dataset.id)));
+                document.querySelectorAll('#filter-item-types .chip').forEach(chip => chip.classList.toggle('active', state.filters.itemTypes.has(chip.dataset.id)));
+                document.querySelectorAll('#filter-source-types .chip').forEach(chip => chip.classList.toggle('active', state.filters.sourceTypes.has(chip.dataset.id)));
+                this.updateFilterCounts();
+            },
+
+            updateFilterCounts() {
+                if (!state.graph) return;
+                const wsTotal = state.graph.nodes.filter(n => n.type === 'workspace').length;
+                document.getElementById('ws-count').textContent = `${state.filters.workspaces.size}/${wsTotal}`;
                 const itemTypes = [...new Set(state.graph.nodes.filter(n => n.type === 'item').map(n => n.itemType))].filter(Boolean);
-                itemContainer.innerHTML = itemTypes.map(type => `<button class="chip" data-id="${type}" data-filter="itemType">${type}</button>`).join('');
-                itemContainer.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => this.toggleFilter('itemTypes', chip.dataset.id, chip)));
-                document.getElementById('item-count').textContent = `0/${itemTypes.length}`;
-            }
-            
-            // Source types
-            const sourceContainer = document.getElementById('filter-source-types');
-            if (sourceContainer) {
+                document.getElementById('item-count').textContent = `${state.filters.itemTypes.size}/${itemTypes.length}`;
                 const sourceTypes = [...new Set(state.graph.nodes.filter(n => n.type === 'source').map(n => n.sourceType))].filter(Boolean);
-                sourceContainer.innerHTML = sourceTypes.map(type => `<button class="chip" data-id="${type}" data-filter="sourceType">${type}</button>`).join('');
-                sourceContainer.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => this.toggleFilter('sourceTypes', chip.dataset.id, chip)));
-                document.getElementById('source-count').textContent = `0/${sourceTypes.length}`;
-            }
-        },
-        
-        toggleFilter(filterName, value, chipEl) {
-            const filterSet = state.filters[filterName];
-            if (filterSet.has(value)) { filterSet.delete(value); chipEl.classList.remove('active'); }
-            else { filterSet.add(value); chipEl.classList.add('active'); }
-            this.updateFilterCounts();
-            this.applyFiltersAndRender();
-        },
-        
-        updateFilterChips() {
-            document.querySelectorAll('#filter-workspaces .chip').forEach(chip => chip.classList.toggle('active', state.filters.workspaces.has(chip.dataset.id)));
-            document.querySelectorAll('#filter-item-types .chip').forEach(chip => chip.classList.toggle('active', state.filters.itemTypes.has(chip.dataset.id)));
-            document.querySelectorAll('#filter-source-types .chip').forEach(chip => chip.classList.toggle('active', state.filters.sourceTypes.has(chip.dataset.id)));
-            this.updateFilterCounts();
-        },
-        
-        updateFilterCounts() {
-            if (!state.graph) return;
-            const wsTotal = state.graph.nodes.filter(n => n.type === 'workspace').length;
-            document.getElementById('ws-count').textContent = `${state.filters.workspaces.size}/${wsTotal}`;
-            const itemTypes = [...new Set(state.graph.nodes.filter(n => n.type === 'item').map(n => n.itemType))].filter(Boolean);
-            document.getElementById('item-count').textContent = `${state.filters.itemTypes.size}/${itemTypes.length}`;
-            const sourceTypes = [...new Set(state.graph.nodes.filter(n => n.type === 'source').map(n => n.sourceType))].filter(Boolean);
-            document.getElementById('source-count').textContent = `${state.filters.sourceTypes.size}/${sourceTypes.length}`;
-        },
-        
-        applyFiltersAndRender() {
-            state.filteredGraph = applyFilters(state.graph);
-            Graph.render(state.filteredGraph);
-            this.updateStats();
-        },
-        
-        updateStats() {
-            if (!state.filteredGraph) return;
-            document.getElementById('stat-workspaces').textContent = formatNumber(state.filteredGraph.nodes.filter(n => n.type === 'workspace').length);
-            document.getElementById('stat-items').textContent = formatNumber(state.filteredGraph.nodes.filter(n => n.type === 'item').length);
-            document.getElementById('stat-connections').textContent = formatNumber(state.filteredGraph.links.length);
-        },
-        
-        async checkNeo4j() {
-            console.log('Checking Neo4j health...');
-            state.neo4j.connected = await Neo4jAPI.checkHealth();
-            console.log('Neo4j connected:', state.neo4j.connected);
-            const dot = document.getElementById('neo4j-dot');
-            const status = document.getElementById('neo4j-status');
-            dot?.classList.toggle('connected', state.neo4j.connected);
-            if (status) status.textContent = state.neo4j.connected ? 'Neo4j Connected' : 'Neo4j Offline';
-            // Check periodically
-            setInterval(async () => {
+                document.getElementById('source-count').textContent = `${state.filters.sourceTypes.size}/${sourceTypes.length}`;
+            },
+
+            applyFiltersAndRender() {
+                state.filteredGraph = applyFilters(state.graph);
+                Graph.render(state.filteredGraph);
+                this.updateStats();
+            },
+
+            updateStats() {
+                if (!state.filteredGraph) return;
+                document.getElementById('stat-workspaces').textContent = formatNumber(state.filteredGraph.nodes.filter(n => n.type === 'workspace').length);
+                document.getElementById('stat-items').textContent = formatNumber(state.filteredGraph.nodes.filter(n => n.type === 'item').length);
+                document.getElementById('stat-connections').textContent = formatNumber(state.filteredGraph.links.length);
+            },
+
+            async checkNeo4j() {
+                console.log('Checking Neo4j health...');
                 state.neo4j.connected = await Neo4jAPI.checkHealth();
+                console.log('Neo4j connected:', state.neo4j.connected);
+                const dot = document.getElementById('neo4j-dot');
+                const status = document.getElementById('neo4j-status');
                 dot?.classList.toggle('connected', state.neo4j.connected);
                 if (status) status.textContent = state.neo4j.connected ? 'Neo4j Connected' : 'Neo4j Offline';
-            }, 30000);
-        }
-    };
-    
-    // =============================================================================
-    // Application Entry Point
-    // =============================================================================
-    
-    const App = {
-        async init() {
-            Loading.show('Loading lineage data...');
-            try {
-                const graphData = await API.fetchGraph();
-                state.graph = processGraphData(graphData);
-                state.filteredGraph = applyFilters(state.graph);
-                
-                Graph.init();
-                UI.init();
-                UI.updateStats();
-                Graph.render(state.filteredGraph);
-                
-                ContextMenu.init();
-                PathFinder.updateUI();
-                
-                console.log('Fabric Lineage Explorer initialized');
-            } catch (error) {
-                console.error('Failed to initialize:', error);
-                Toast.show('Failed to load graph data', 'error');
+                // Check periodically
+                setInterval(async () => {
+                    state.neo4j.connected = await Neo4jAPI.checkHealth();
+                    dot?.classList.toggle('connected', state.neo4j.connected);
+                    if (status) status.textContent = state.neo4j.connected ? 'Neo4j Connected' : 'Neo4j Offline';
+                }, 30000);
             }
-            Loading.hide();
-        },
-        
-        async refresh() {
-            Loading.show('Refreshing data...');
-            try {
-                await API.refresh();
-                const graphData = await API.fetchGraph();
-                state.graph = processGraphData(graphData);
-                UI.initFilters();
-                state.filteredGraph = applyFilters(state.graph);
-                Graph.render(state.filteredGraph);
-                UI.updateStats();
-                Toast.show('Data refreshed successfully', 'success');
-            } catch (error) {
-                console.error('Refresh failed:', error);
-                Toast.show('Failed to refresh data', 'error');
+        };
+
+        // =============================================================================
+        // Table Lineage Panel
+        // =============================================================================
+
+        const TableLineage = {
+            data: [],
+            filteredData: [],
+            nodeFilter: null,
+            searchTerm: '',
+
+            async init() {
+                await this.load();
+                this.setupEventListeners();
+            },
+
+            async load() {
+                try {
+                    // Use the graph data that's already loaded in state
+                    this.data = [];
+
+                    if (state.graph) {
+                        // Get items that represent tables or data assets
+                        const nodes = state.graph.nodes || [];
+
+                        nodes.forEach(node => {
+                            const itemType = (node.itemType || node.item_type || '').toLowerCase();
+
+                            // Include data assets that represent tables or similar structures
+                            if (itemType.includes('lakehouse') ||
+                                itemType.includes('warehouse') ||
+                                itemType.includes('dataflow') ||
+                                itemType.includes('notebook') ||
+                                itemType.includes('shortcut') ||
+                                node.type === 'item') {
+
+                                this.data.push({
+                                    name: node.label || node.name,
+                                    database: node.workspaceName || 'Fabric',
+                                    schema: node.itemType || node.type || 'item',
+                                    type: itemType.includes('shortcut') ? 'shortcut' : 'mirrored',
+                                    path: `${node.workspaceName || 'Fabric'}/${node.label || node.name}`,
+                                    nodeId: node.id,
+                                    connections: node.connections || 0
+                                });
+                            }
+                        });
+
+                        // Also include external sources as part of the lineage
+                        const sources = nodes.filter(n => n.type === 'source');
+                        sources.forEach(source => {
+                            this.data.push({
+                                name: source.label || source.name,
+                                database: source.sourceType || 'External',
+                                schema: 'source',
+                                type: 'source',
+                                path: source.sourceType ? `${source.sourceType}/${source.label}` : source.label,
+                                nodeId: source.id,
+                                connections: source.connections || 0
+                            });
+                        });
+                    }
+
+                    this.filteredData = [...this.data];
+                    this.updateStats();
+                    this.render();
+                } catch (error) {
+                    console.error('Failed to load table lineage:', error);
+                    this.showError('Failed to load table data');
+                }
+            },
+
+            setupEventListeners() {
+                const toggleBtn = document.getElementById('btn-toggle-tables');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', () => this.toggle());
+                }
+            },
+
+            toggle() {
+                const panel = document.getElementById('table-lineage-panel');
+                const btn = document.getElementById('btn-toggle-tables');
+                if (panel && btn) {
+                    panel.classList.toggle('open');
+                    btn.classList.toggle('active', panel.classList.contains('open'));
+                }
+            },
+
+            show() {
+                const panel = document.getElementById('table-lineage-panel');
+                const btn = document.getElementById('btn-toggle-tables');
+                if (panel && btn) {
+                    panel.classList.add('open');
+                    btn.classList.add('active');
+                }
+            },
+
+            hide() {
+                const panel = document.getElementById('table-lineage-panel');
+                const btn = document.getElementById('btn-toggle-tables');
+                if (panel && btn) {
+                    panel.classList.remove('open');
+                    btn.classList.remove('active');
+                }
+            },
+
+            filterByNode(nodeName) {
+                this.nodeFilter = nodeName;
+                this.applyFilters();
+                this.show();
+
+                // Update the filter indicator
+                const indicator = document.getElementById('table-filter-indicator');
+                const filterName = document.getElementById('table-filter-name');
+                if (indicator && filterName) {
+                    filterName.textContent = nodeName;
+                    indicator.classList.add('active');
+                }
+            },
+
+            clearFilter() {
+                this.nodeFilter = null;
+                this.applyFilters();
+
+                // Hide the filter indicator
+                const indicator = document.getElementById('table-filter-indicator');
+                if (indicator) {
+                    indicator.classList.remove('active');
+                }
+            },
+
+            search(term) {
+                this.searchTerm = term.toLowerCase();
+                this.applyFilters();
+            },
+
+            applyFilters() {
+                let filtered = [...this.data];
+
+                // Apply node filter (case-insensitive partial match)
+                if (this.nodeFilter) {
+                    const filterLower = this.nodeFilter.toLowerCase();
+                    filtered = filtered.filter(t =>
+                        t.name.toLowerCase().includes(filterLower) ||
+                        t.database.toLowerCase().includes(filterLower) ||
+                        t.path.toLowerCase().includes(filterLower) ||
+                        (t.consumers && t.consumers.some(c => c.toLowerCase().includes(filterLower)))
+                    );
+                }
+
+                // Apply search filter
+                if (this.searchTerm) {
+                    filtered = filtered.filter(t =>
+                        t.name.toLowerCase().includes(this.searchTerm) ||
+                        t.database.toLowerCase().includes(this.searchTerm) ||
+                        t.schema.toLowerCase().includes(this.searchTerm) ||
+                        t.path.toLowerCase().includes(this.searchTerm)
+                    );
+                }
+
+                this.filteredData = filtered;
+                this.updateStats();
+                this.render();
+            },
+
+            updateStats() {
+                const tableCount = document.getElementById('table-count');
+                const shortcutCount = document.getElementById('shortcut-count');
+                const flowCount = document.getElementById('flow-count');
+
+                const tables = this.filteredData.filter(t => t.type === 'mirrored');
+                const shortcuts = this.filteredData.filter(t => t.type === 'shortcut');
+
+                if (tableCount) tableCount.textContent = tables.length;
+                if (shortcutCount) shortcutCount.textContent = shortcuts.length;
+                if (flowCount) flowCount.textContent = this.filteredData.length;
+            },
+
+            render() {
+                const container = document.getElementById('table-cards');
+                if (!container) return;
+
+                if (this.filteredData.length === 0) {
+                    container.innerHTML = `
+                        <p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">
+                            ${this.nodeFilter || this.searchTerm ? 'No matching tables found.' : 'No table lineage data available.'}
+                        </p>
+                    `;
+                    return;
+                }
+
+                // Limit to first 100 for performance
+                const displayData = this.filteredData.slice(0, 100);
+
+                container.innerHTML = displayData.map(table => `
+                    <div class="table-card" onclick="TableLineage.focusTable('${table.name}')">
+                        <div class="table-card-header">
+                            <span class="table-card-name">${truncate(table.name, 30)}</span>
+                            <span class="table-card-badge">${table.type}</span>
+                        </div>
+                        <div class="table-card-path">${truncate(table.path, 45)}</div>
+                        <div class="table-card-meta">
+                            <span>📁 ${table.database}</span>
+                            ${table.schema ? `<span>📋 ${table.schema}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+                if (this.filteredData.length > 100) {
+                    container.innerHTML += `
+                        <p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 10px;">
+                            Showing 100 of ${this.filteredData.length} items. Use search to narrow results.
+                        </p>
+                    `;
+                }
+            },
+
+            focusTable(tableName) {
+                // Try to find and focus on a node that matches this table
+                if (state.filteredGraph) {
+                    const node = state.filteredGraph.nodes.find(n =>
+                        n.label.toLowerCase().includes(tableName.toLowerCase())
+                    );
+                    if (node) {
+                        Graph.focusNode(node.id);
+                    }
+                }
+            },
+
+            showError(message) {
+                const container = document.getElementById('table-cards');
+                if (container) {
+                    container.innerHTML = `
+                        <p style="color: var(--accent-red); font-size: 12px; text-align: center; padding: 20px;">
+                            ${message}
+                        </p>
+                    `;
+                }
             }
-            Loading.hide();
-        }
-    };
-    
-    // Initialize on DOM ready
-    document.addEventListener('DOMContentLoaded', () => App.init());
+        };
+
+        // =============================================================================
+        // Application Entry Point
+        // =============================================================================
+
+        const App = {
+            async init() {
+                Loading.show('Loading lineage data...');
+                try {
+                    const graphData = await API.fetchGraph();
+                    state.graph = processGraphData(graphData);
+                    state.filteredGraph = applyFilters(state.graph);
+
+                    Graph.init();
+                    UI.init();
+                    UI.updateStats();
+                    Graph.render(state.filteredGraph);
+
+                    ContextMenu.init();
+                    PathFinder.updateUI();
+                    TableLineage.init();
+
+                    console.log('Fabric Lineage Explorer initialized');
+                } catch (error) {
+                    console.error('Failed to initialize:', error);
+                    Toast.show('Failed to load graph data', 'error');
+                }
+                Loading.hide();
+            },
+
+            async refresh() {
+                Loading.show('Refreshing data...');
+                try {
+                    await API.refresh();
+                    const graphData = await API.fetchGraph();
+                    state.graph = processGraphData(graphData);
+                    UI.initFilters();
+                    state.filteredGraph = applyFilters(state.graph);
+                    Graph.render(state.filteredGraph);
+                    UI.updateStats();
+                    Toast.show('Data refreshed successfully', 'success');
+                } catch (error) {
+                    console.error('Refresh failed:', error);
+                    Toast.show('Failed to refresh data', 'error');
+                }
+                Loading.hide();
+            }
+        };
+
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
 </body>
+
 </html>

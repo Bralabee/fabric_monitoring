@@ -621,3 +621,28 @@ curl -s "http://localhost:8000/api/neo4j/downstream/abc-123-uuid?depth=10" | jq
 ```bash
 curl -s "http://localhost:8000/api/neo4j/path?source_id=abc-123&target_id=xyz-999" | jq
 ```
+
+---
+
+## Table Lineage Panel (v0.3.25)
+
+The frontend includes an interactive Table Lineage Panel for exploring Fabric items alongside the graph.
+
+### Features
+- **Toggle Panel**: Click the table icon in the toolbar (next to labels toggle)
+- **Stats Display**: Shows Items, Shortcuts, and Total counts
+- **Search**: Filter tables by name, database, or path
+- **Node Filtering**: Selecting a graph node automatically filters the panel
+
+### Interaction Flow
+1. Click a node in the graph → Panel shows "Filtered by: [node name]"
+2. Table list filters to show related items
+3. Click X in filter indicator to clear and show all items
+4. Click a table card to focus the corresponding node in the graph
+
+### Data Source
+The panel derives data from the graph state (`state.graph.nodes`), including:
+- Fabric items (Lakehouses, Warehouses, Notebooks, Dataflows)
+- External sources (Snowflake, OneLake, ADLS)
+- Shortcuts and mirrored databases
+

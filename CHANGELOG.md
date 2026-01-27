@@ -2,12 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.25 (January 2026) - Table Lineage Panel & Frontend UX
+
+### Added
+- **Table Lineage Panel** (`lineage_explorer/static/index.html`):
+  - New side panel accessible via toolbar button (table icon)
+  - Displays all Fabric items (Lakehouses, Warehouses, Notebooks, Shortcuts)
+  - Stats display: Items, Shortcuts, Total counts
+  - Search functionality: Filter tables by name, database, or path
+  - Table cards with item details, type badges, and workspace info
+
+- **Node-Based Table Filtering**:
+  - Click a graph node → Table panel filters to related items
+  - "Filtered by: [node name]" indicator shows active filter
+  - Clear filter via X button in indicator bar
+  - Automatic filtering on node selection, clearing on deselection
+
+- **Graph-Table Integration**:
+  - `Graph.selectNode()` now triggers `TableLineage.filterByNode()`
+  - `Graph.deselectNode()` now triggers `TableLineage.clearFilter()`
+  - Click table card to focus corresponding node in graph
+
+### Changed
+- **TableLineage Module**: Uses graph state data directly instead of API calls
+  - Derives table data from `state.graph.nodes`
+  - Includes items with types: Lakehouse, Warehouse, Dataflow, Notebook, Shortcut
+  - Includes external sources (Snowflake, OneLake) for complete lineage view
+
+### Technical Details
+- CSS additions: ~200 lines for panel, cards, filter indicator, stats
+- JavaScript module: `TableLineage` with init/load/filter/search/render
+- HTML additions: Panel structure, search input, stats grid, cards container
+- Toolbar: New toggle button with table grid icon
+
+---
+
 ## 0.3.24 (January 2026) - Dashboard Enrichment & Lineage Automation Release
 
 ### Added
 - **Enhanced Dashboard Statistics** (`lineage_explorer/static/dashboard.html`):
   - 4 new stat cards: Internal Deps (172), External Deps (115), Snowflake (38), OneLake (54)
   - Total dashboard now shows 9 KPI metrics at a glance
+  - **Tables by Database drill-down** - Click to expand and see table names with schema info
   - Neo4j stats integration for enriched dependency counts
 
 - **Impact Analysis Query Category** (`lineage_explorer/static/query_explorer.html`):
@@ -17,6 +53,14 @@ All notable changes to this project will be documented in this file.
     - Workspace Impact Matrix - Cross-workspace failure impact assessment
     - Critical Path Analysis - Longest/most fragile dependency chains
     - Snowflake Source Coverage - Track Snowflake data consumers
+
+- **6 New API Endpoints** (`lineage_explorer/api_extended.py`):
+  - `GET /api/neo4j/tables-by-database/{database}` - Tables in a database with schema info
+  - `GET /api/neo4j/items-by-workspace/{name}` - List items in a workspace
+  - `GET /api/neo4j/external-sources-by-type/{type}` - Sources by type with consumers
+  - `GET /api/neo4j/lineage-chain/{id}` - Full upstream + downstream chain
+  - `GET /api/neo4j/schema-coverage` - Tables by schema with consumer counts
+  - `GET /api/neo4j/dependency-depth` - Items ranked by chain depth
 
 - **Lineage Extraction Automation** (`Makefile`):
   - `make extract-lineage-full` - Iterative mode extraction with shortcuts (rich visualization data)

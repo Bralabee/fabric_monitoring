@@ -131,6 +131,14 @@ make lineage-full
    make lineage-explorer
    ```
 
+### Table Lineage Panel (v0.3.25)
+
+The explorer includes a Table Lineage Panel for filtering items:
+- **Open**: Click the table icon in toolbar (next to labels toggle)
+- **Filter by Node**: Click a graph node → panel filters to related items
+- **Search**: Type to filter by name/database/path
+- **Clear Filter**: Click X in the filter indicator bar
+
 ### Extraction Modes
 
 | Mode | Command | Data Captured | Use Case |

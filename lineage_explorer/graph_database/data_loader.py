@@ -129,6 +129,36 @@ class LineageDataLoader:
     MERGE (item)-[r:MIRRORS]->(table)
     """
     
+    # NEW: Table nodes from OneLake shortcuts (table-level lineage)
+    MERGE_SHORTCUT_TABLE = """
+    UNWIND $batch AS row
+    MERGE (t:Table {id: row.table_id})
+    ON CREATE SET
+        t.name = row.table_name,
+        t.schema = row.schema,
+        t.source_item_id = row.source_item_id,
+        t.source_workspace_id = row.source_workspace_id,
+        t.full_path = row.full_path,
+        t.table_type = 'shortcut'
+    """
+    
+    CREATE_SHORTCUT_TABLE_EDGE = """
+    UNWIND $batch AS row
+    MATCH (target:FabricItem {id: row.target_item_id})
+    MATCH (table:Table {id: row.table_id})
+    MERGE (target)-[r:USES_TABLE]->(table)
+    ON CREATE SET
+        r.shortcut_name = row.shortcut_name,
+        r.shortcut_path = row.shortcut_path
+    """
+    
+    CREATE_TABLE_SOURCE_EDGE = """
+    UNWIND $batch AS row
+    MATCH (source:FabricItem {id: row.source_item_id})
+    MATCH (table:Table {id: row.table_id})
+    MERGE (source)-[r:PROVIDES_TABLE]->(table)
+    """
+    
     def __init__(self, client: Neo4jClient):
         """
         Initialize data loader.
@@ -258,9 +288,11 @@ class LineageDataLoader:
         items = {}
         external_sources = {}
         tables = {}
+        shortcut_tables = {}  # NEW: Table nodes from OneLake shortcuts
         internal_edges = []
         external_edges = []
         mirror_edges = []
+        shortcut_table_edges = []  # NEW: Edges linking items to shortcut tables
         
         known_item_ids = set()
         
@@ -306,14 +338,48 @@ class LineageDataLoader:
                 # Check if this is an internal reference
                 upstream_id = conn.get('oneLake', {}).get('itemId')
                 if upstream_id and upstream_id in known_item_ids:
-                    # Internal edge
+                    # Internal edge + extract table from path
+                    table_path = conn.get('oneLake', {}).get('path', '')
+                    workspace_id = conn.get('oneLake', {}).get('workspaceId', '')
+                    
                     internal_edges.append({
                         'source_id': upstream_id,
                         'target_id': item_id,
                         'shortcut_name': record.get('Shortcut Name'),
                         'shortcut_path': record.get('Shortcut Path'),
-                        'table_path': conn.get('oneLake', {}).get('path', '')
+                        'table_path': table_path
                     })
+                    
+                    # NEW: Extract table node from shortcut path (e.g., "Tables/CUSTOMER")
+                    if table_path and table_path.startswith('Tables/'):
+                        table_name = table_path.replace('Tables/', '')
+                        table_id = f"shortcut_{upstream_id}_{table_name}".lower().replace(' ', '_')
+                        
+                        # Extract schema from Shortcut Path (e.g., "/Tables/dbo" -> "dbo")
+                        shortcut_path = record.get('Shortcut Path', '/Tables')
+                        schema = 'dbo'  # default schema
+                        if shortcut_path and shortcut_path.startswith('/Tables/'):
+                            schema_part = shortcut_path.replace('/Tables/', '').strip('/')
+                            if schema_part:  # e.g., "dbo", "GL", "CUSTOMER"
+                                schema = schema_part
+                        
+                        if table_id not in shortcut_tables:
+                            shortcut_tables[table_id] = {
+                                'table_id': table_id,
+                                'table_name': table_name,
+                                'schema': schema,  # NEW: extracted schema
+                                'source_item_id': upstream_id,
+                                'source_workspace_id': workspace_id,
+                                'full_path': table_path
+                            }
+                        
+                        shortcut_table_edges.append({
+                            'target_item_id': item_id,
+                            'table_id': table_id,
+                            'shortcut_name': record.get('Shortcut Name'),
+                            'shortcut_path': record.get('Shortcut Path'),
+                            'source_item_id': upstream_id
+                        })
                 else:
                     # External OneLake reference (cross-tenant or unknown)
                     source_id = self._generate_source_id('OneLake', conn)
@@ -382,6 +448,21 @@ class LineageDataLoader:
         if mirror_edges:
             self.client.run_batch_write(self.CREATE_MIRROR_EDGE, mirror_edges)
         summary['mirror_edges'] = len(mirror_edges)
+        
+        # NEW: Load shortcut tables and edges (table-level lineage)
+        logger.info(f"Loading {len(shortcut_tables)} shortcut tables...")
+        if shortcut_tables:
+            self.client.run_batch_write(self.MERGE_SHORTCUT_TABLE, list(shortcut_tables.values()))
+        summary['shortcut_tables'] = len(shortcut_tables)
+        
+        logger.info(f"Creating {len(shortcut_table_edges)} shortcut table edges...")
+        if shortcut_table_edges:
+            self.client.run_batch_write(self.CREATE_SHORTCUT_TABLE_EDGE, shortcut_table_edges)
+            # Also create PROVIDES_TABLE edges from source items
+            source_edges = [{'source_item_id': e['source_item_id'], 'table_id': e['table_id']} 
+                           for e in shortcut_table_edges]
+            self.client.run_batch_write(self.CREATE_TABLE_SOURCE_EDGE, source_edges)
+        summary['shortcut_table_edges'] = len(shortcut_table_edges)
         
         summary['load_time_ms'] = int((time.time() - start_time) * 1000)
         logger.info(f"Load complete in {summary['load_time_ms']}ms")

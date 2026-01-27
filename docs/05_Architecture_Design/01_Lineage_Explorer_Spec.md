@@ -83,6 +83,11 @@ interface Edge {
 1.  **Node Clicking**: Clicking a node opens a **Side Panel** with detailed metadata (Full Path, Source Connection details, IDs).
 2.  **Edge Highlighting**: Hovering an edge highlights the path.
 3.  **Filter/Search**: A top bar to search for a specific Workspace or Item name and "fly to" it.
+4.  **Table Lineage Panel** (v0.3.25): A side panel showing all Fabric items with:
+    - Node-based filtering (click node → filter panel)
+    - Search functionality
+    - Stats display (Items, Shortcuts, Total)
+    - Click-to-focus integration with graph
 
 ## 5. Implementation Plan
 
