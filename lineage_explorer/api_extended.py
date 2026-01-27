@@ -802,3 +802,81 @@ async def load_data_to_neo4j(
     except Exception as e:
         logger.error(f"Error loading to Neo4j: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== CHAIN DEPTH ANALYSIS ENDPOINTS ====================
+
+@extended_router.get("/api/neo4j/chains/deep")
+async def get_deep_chains(
+    min_depth: int = Query(default=3, ge=2, le=10, description="Minimum chain depth to include")
+):
+    """
+    Find all dependency chains with depth >= min_depth.
+    
+    Returns the deepest interconnected chains in the lineage graph,
+    helping identify complex data pipelines and potential brittleness.
+    
+    Args:
+        min_depth: Minimum chain depth (default: 3)
+        
+    Returns:
+        List of chains sorted by depth (deepest first) with full path information
+    """
+    _require_neo4j()
+    
+    try:
+        chains = _neo4j_queries.get_deep_chains(min_depth)
+        return {
+            "min_depth": min_depth,
+            "chains": chains,
+            "count": len(chains)
+        }
+    except Exception as e:
+        logger.error(f"Deep chains query failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/neo4j/chains/node-depths")
+async def get_node_chain_depths():
+    """
+    Get chain depth metrics for all Fabric items.
+    
+    For each item, returns:
+    - upstream_depth: Maximum depth of upstream dependencies
+    - downstream_depth: Maximum depth of downstream dependents
+    - total_chain_depth: Sum for overall chain centrality
+    
+    Used by the UI "Color by Chain Depth" feature.
+    """
+    _require_neo4j()
+    
+    try:
+        depths = _neo4j_queries.get_node_chain_depths()
+        return {
+            "node_depths": depths,
+            "count": len(depths)
+        }
+    except Exception as e:
+        logger.error(f"Node depths query failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@extended_router.get("/api/neo4j/chains/stats")
+async def get_chain_depth_stats():
+    """
+    Get summary statistics about chain depths in the graph.
+    
+    Returns:
+        - max_depth: Deepest chain in the graph
+        - avg_depth: Average chain depth
+        - chain_count: Total number of multi-hop chains
+        - depth_distribution: Count of chains at each depth level
+    """
+    _require_neo4j()
+    
+    try:
+        return _neo4j_queries.get_chain_depth_stats()
+    except Exception as e:
+        logger.error(f"Chain stats query failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+

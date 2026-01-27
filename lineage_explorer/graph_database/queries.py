@@ -805,3 +805,126 @@ class LineageQueries:
             }
         }
 
+    # ==================== CHAIN DEPTH ANALYSIS ====================
+    
+    def get_deep_chains(self, min_depth: int = 3) -> List[Dict[str, Any]]:
+        """
+        Find all dependency chains with depth >= min_depth.
+        
+        This method identifies the deepest upstream dependency chains in the graph,
+        helping users understand the full interdependency paths from data sources
+        to consuming items.
+        
+        Args:
+            min_depth: Minimum chain depth to include (default: 3)
+            
+        Returns:
+            List of chains with path, depth, start/end nodes, sorted deepest first
+        """
+        return self.client.run_query("""
+            // Find all terminal items (no outgoing DEPENDS_ON)
+            MATCH (terminal:FabricItem)
+            WHERE NOT (terminal)-[:DEPENDS_ON]->()
+            
+            // Trace upstream chains from terminal items
+            MATCH path = (terminal)-[:DEPENDS_ON*2..10]->(upstream)
+            WHERE length(path) >= $min_depth
+            
+            // Get workspace info
+            OPTIONAL MATCH (tw:Workspace)-[:CONTAINS]->(terminal)
+            OPTIONAL MATCH (uw:Workspace)-[:CONTAINS]->(upstream)
+            
+            WITH path, terminal, upstream, tw, uw,
+                 length(path) as depth,
+                 [n in nodes(path) | n.name] as chain_names,
+                 [n in nodes(path) | {id: n.id, name: n.name, type: n.type}] as chain_nodes
+            
+            RETURN DISTINCT
+                terminal.id as terminal_id,
+                terminal.name as terminal_name,
+                terminal.type as terminal_type,
+                tw.name as terminal_workspace,
+                upstream.id as origin_id,
+                upstream.name as origin_name,
+                upstream.type as origin_type,
+                uw.name as origin_workspace,
+                depth,
+                chain_names,
+                chain_nodes
+            ORDER BY depth DESC
+            LIMIT 50
+        """, {"min_depth": min_depth})
+    
+    def get_node_chain_depths(self) -> List[Dict[str, Any]]:
+        """
+        Calculate chain depth metrics for all Fabric items.
+        
+        For each item, computes:
+        - upstream_depth: Maximum depth of upstream dependencies
+        - downstream_depth: Maximum depth of downstream dependents
+        - total_chain_depth: Sum representing overall centrality in chain flow
+        
+        This is used for the UI "Color by Chain Depth" feature.
+        
+        Returns:
+            List of items with their chain depth metrics
+        """
+        return self.client.run_query("""
+            MATCH (item:FabricItem)
+            
+            // Calculate max upstream depth
+            OPTIONAL MATCH upstream_path = (item)-[:DEPENDS_ON*1..10]->(upstream)
+            WITH item, max(length(upstream_path)) as upstream_depth
+            
+            // Calculate max downstream depth
+            OPTIONAL MATCH downstream_path = (item)<-[:DEPENDS_ON*1..10]-(downstream)
+            WITH item, 
+                 coalesce(upstream_depth, 0) as upstream_depth,
+                 max(length(downstream_path)) as downstream_depth_raw
+            
+            WITH item,
+                 upstream_depth,
+                 coalesce(downstream_depth_raw, 0) as downstream_depth
+            
+            RETURN 
+                item.id as item_id,
+                item.name as item_name,
+                item.type as item_type,
+                upstream_depth,
+                downstream_depth,
+                upstream_depth + downstream_depth as total_chain_depth
+            ORDER BY total_chain_depth DESC
+        """)
+    
+    def get_chain_depth_stats(self) -> Dict[str, Any]:
+        """
+        Get summary statistics about chain depths in the graph.
+        
+        Returns:
+            Dict with max_depth, avg_depth, chain_count, depth_distribution
+        """
+        stats = self.client.run_query_single("""
+            MATCH path = (start:FabricItem)-[:DEPENDS_ON*2..10]->(end)
+            WHERE NOT (end)-[:DEPENDS_ON]->()
+            WITH length(path) as depth
+            RETURN 
+                max(depth) as max_depth,
+                avg(depth) as avg_depth,
+                count(*) as chain_count
+        """) or {"max_depth": 0, "avg_depth": 0, "chain_count": 0}
+        
+        # Get depth distribution
+        distribution = self.client.run_query("""
+            MATCH path = (start:FabricItem)-[:DEPENDS_ON*2..10]->(end)
+            WHERE NOT (end)-[:DEPENDS_ON]->()
+            WITH length(path) as depth
+            RETURN depth, count(*) as count
+            ORDER BY depth
+        """)
+        
+        return {
+            "max_depth": stats.get("max_depth", 0),
+            "avg_depth": round(stats.get("avg_depth", 0) or 0, 2),
+            "chain_count": stats.get("chain_count", 0),
+            "depth_distribution": distribution
+        }

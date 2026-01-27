@@ -1599,11 +1599,21 @@
 
                 <!-- Legend -->
                 <div class="legend">
-                    <h4>Centrality (Connections)</h4>
-                    <div class="legend-gradient"></div>
+                    <div class="legend-toggle"
+                        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <h4 id="legend-title">Centrality (Connections)</h4>
+                        <button class="btn btn-sm btn-ghost" id="toggle-color-mode" title="Toggle color mode"
+                            style="font-size:10px;padding:2px 6px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 12a10 10 0 0 1 18-6M22 12a10 10 0 0 1-18 6" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="legend-gradient" id="legend-gradient"></div>
                     <div class="legend-labels">
-                        <span>High (Hub)</span>
-                        <span>Low (Leaf)</span>
+                        <span id="legend-label-high">High (Hub)</span>
+                        <span id="legend-label-low">Low (Leaf)</span>
                     </div>
                 </div>
 
@@ -1788,6 +1798,9 @@
             minimapSvg: null,
             nodeDegrees: new Map(),
             maxDegree: 1,
+            colorMode: 'connections',  // 'connections' or 'chainDepth'
+            chainDepths: new Map(),    // node id -> {upstream, downstream, total}
+            maxChainDepth: 1,
             neo4j: {
                 connected: false,
                 pathSource: null,
@@ -1821,6 +1834,13 @@
             .interpolator(d3.interpolateSpectral);
 
         function getNodeColor(node) {
+            if (state.colorMode === 'chainDepth') {
+                const depthInfo = state.chainDepths.get(node.id);
+                const depth = depthInfo ? depthInfo.total : 0;
+                const normalized = state.maxChainDepth > 0 ? depth / state.maxChainDepth : 0;
+                return centralityColor(1 - normalized); // Invert so high depth = red
+            }
+            // Default: connections mode
             const degree = state.nodeDegrees.get(node.id) || 0;
             const normalized = state.maxDegree > 0 ? degree / state.maxDegree : 0;
             return centralityColor(1 - normalized); // Invert so high = red
@@ -2865,6 +2885,42 @@
                 document.getElementById('btn-zoom-in')?.addEventListener('click', () => Graph.zoomIn());
                 document.getElementById('btn-zoom-out')?.addEventListener('click', () => Graph.zoomOut());
                 document.getElementById('btn-fit-view')?.addEventListener('click', () => Graph.fitToView());
+
+                // Color mode toggle
+                document.getElementById('toggle-color-mode')?.addEventListener('click', async () => {
+                    // Toggle between modes
+                    state.colorMode = state.colorMode === 'connections' ? 'chainDepth' : 'connections';
+
+                    // Fetch chain depths if switching to chain depth mode and not loaded
+                    if (state.colorMode === 'chainDepth' && state.chainDepths.size === 0) {
+                        try {
+                            const response = await fetch('/api/neo4j/chains/node-depths');
+                            if (response.ok) {
+                                const data = await response.json();
+                                let maxDepth = 1;
+                                for (const node of data.node_depths || []) {
+                                    state.chainDepths.set(node.item_id, {
+                                        upstream: node.upstream_depth || 0,
+                                        downstream: node.downstream_depth || 0,
+                                        total: node.total_chain_depth || 0
+                                    });
+                                    if (node.total_chain_depth > maxDepth) maxDepth = node.total_chain_depth;
+                                }
+                                state.maxChainDepth = maxDepth;
+                            }
+                        } catch (e) { console.warn('Failed to load chain depths:', e); }
+                    }
+
+                    // Update legend labels
+                    const isDepth = state.colorMode === 'chainDepth';
+                    document.getElementById('legend-title').textContent = isDepth ? 'Chain Depth' : 'Centrality (Connections)';
+                    document.getElementById('legend-label-high').textContent = isDepth ? 'Deep Chain' : 'High (Hub)';
+                    document.getElementById('legend-label-low').textContent = isDepth ? 'Shallow' : 'Low (Leaf)';
+
+                    // Re-render to apply new colors
+                    Graph.render(state.filteredGraph);
+                    Toast.show(`Color mode: ${isDepth ? 'Chain Depth' : 'Connections'}`, 'info');
+                });
 
                 // Multi-selection controls
                 document.getElementById('btn-select-children')?.addEventListener('click', () => Graph.selectChildren(1));
