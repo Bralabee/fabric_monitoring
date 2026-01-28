@@ -1869,19 +1869,11 @@
         // =============================================================================
 
         const CONFIG = {
-            force: {
-                linkDistance: 80,
-                linkStrength: 0.2,
-                chargeStrength: -200, // Reduced from -400 for faster calculation
-                collisionRadius: 30,
-                theta: 0.9, // Barnes-Hut approximation (higher = faster, less accurate)
-                alphaDecay: 0.05, // Faster convergence (default 0.0228)
-                velocityDecay: 0.6 // More friction to settle faster
-            },
-            animation: { particleInterval: 1200, particleDuration: 2000, maxParticles: 3 }, // Reduced particles
-            minNodeSize: 5, // Slightly smaller for dense graphs
-            maxNodeSize: 24,
-            performanceMode: true // Enable performance optimizations for large graphs
+            force: { linkDistance: 100, linkStrength: 0.3, chargeStrength: -400, collisionRadius: 40 },
+            animation: { particleInterval: 800, particleDuration: 2000, maxParticles: 5 },
+            minNodeSize: 6,
+            maxNodeSize: 32,
+            maxNodes: 500 // Limit nodes for smooth performance - prioritize high-connectivity nodes
         };
 
         // =============================================================================
@@ -2199,7 +2191,31 @@
             });
             state.maxDegree = Math.max(...state.nodeDegrees.values(), 1);
 
-            return { nodes, links };
+            // Limit nodes for performance if too many (keep highest-connectivity nodes)
+            let finalNodes = nodes;
+            let finalLinks = links;
+            if (nodes.length > CONFIG.maxNodes) {
+                console.log(`Limiting graph from ${nodes.length} to ${CONFIG.maxNodes} nodes (prioritizing connectivity)`);
+                // Sort by degree (keep workspaces, then highest connectivity items/sources)
+                const sortedNodes = [...nodes].sort((a, b) => {
+                    // Always keep workspaces first
+                    if (a.type === 'workspace' && b.type !== 'workspace') return -1;
+                    if (b.type === 'workspace' && a.type !== 'workspace') return 1;
+                    // Then by connectivity
+                    return (state.nodeDegrees.get(b.id) || 0) - (state.nodeDegrees.get(a.id) || 0);
+                });
+                finalNodes = sortedNodes.slice(0, CONFIG.maxNodes);
+                const keepIds = new Set(finalNodes.map(n => n.id));
+                finalLinks = links.filter(l => keepIds.has(l.source) && keepIds.has(l.target));
+
+                // Update state warning
+                state.nodeLimitActive = true;
+                state.totalNodesAvailable = nodes.length;
+            } else {
+                state.nodeLimitActive = false;
+            }
+
+            return { nodes: finalNodes, links: finalLinks };
         }
 
         function applyFilters(graph) {
@@ -2335,22 +2351,19 @@
                     })
                     .on('contextmenu', (event, d) => ContextMenu.show(event, d));
 
-                // Draw nodes (simplified for large graphs)
-                const isLargeGraph = data.nodes.length > 500;
+                // Draw nodes
                 nodes.each(function (d) {
                     const node = d3.select(this);
                     const color = getNodeColor(d);
                     const size = getNodeSize(d);
 
-                    // Skip glow for large graphs (expensive blur filter)
-                    if (!isLargeGraph) {
-                        node.append('circle')
-                            .attr('class', 'node-glow')
-                            .attr('r', size + 4)
-                            .attr('fill', color)
-                            .attr('filter', 'blur(4px)')
-                            .attr('opacity', 0.4);
-                    }
+                    // Glow
+                    node.append('circle')
+                        .attr('class', 'node-glow')
+                        .attr('r', size + 4)
+                        .attr('fill', color)
+                        .attr('filter', 'blur(4px)')
+                        .attr('opacity', 0.4);
 
                     // Main shape
                     node.append('circle')
@@ -2358,23 +2371,17 @@
                         .attr('r', size)
                         .attr('fill', color)
                         .attr('stroke', '#fff')
-                        .attr('stroke-width', isLargeGraph ? 1 : 2);
+                        .attr('stroke-width', 2);
 
-                    // Label (shorter for large graphs)
+                    // Label
                     node.append('text')
                         .attr('dy', size + 14)
                         .attr('text-anchor', 'middle')
-                        .text(truncate(d.label, isLargeGraph ? 12 : 16));
+                        .text(truncate(d.label, 16));
                 });
 
-                // Throttled tick for performance (only update every N frames for large graphs)
-                let tickCount = 0;
-                const tickSkip = data.nodes.length > 500 ? 2 : 1; // Skip frames for large graphs
-
+                // Tick
                 state.simulation.on('tick', () => {
-                    tickCount++;
-                    if (tickCount % tickSkip !== 0) return; // Skip rendering on some ticks
-
                     links.attr('d', d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
                     nodes.attr('transform', d => `translate(${d.x},${d.y})`);
                     Minimap.update();
@@ -2387,31 +2394,14 @@
             createSimulation(data, width, height) {
                 if (state.simulation) state.simulation.stop();
 
-                // Performance check: large graphs use optimized settings
-                const isLargeGraph = data.nodes.length > 500;
-                const config = CONFIG.force;
-
                 if (state.currentLayout === 'radial') {
                     this.createRadialLayout(data, width, height);
                 } else {
                     state.simulation = d3.forceSimulation(data.nodes)
-                        .force('link', d3.forceLink(data.links)
-                            .id(d => d.id)
-                            .distance(isLargeGraph ? config.linkDistance * 0.7 : config.linkDistance)
-                            .strength(isLargeGraph ? config.linkStrength * 0.5 : config.linkStrength))
-                        .force('charge', d3.forceManyBody()
-                            .strength(isLargeGraph ? config.chargeStrength * 0.5 : config.chargeStrength)
-                            .theta(config.theta || 0.9) // Barnes-Hut approximation
-                            .distanceMax(isLargeGraph ? 300 : 500))
+                        .force('link', d3.forceLink(data.links).id(d => d.id).distance(CONFIG.force.linkDistance).strength(CONFIG.force.linkStrength))
+                        .force('charge', d3.forceManyBody().strength(CONFIG.force.chargeStrength).distanceMax(500))
                         .force('center', d3.forceCenter(width / 2, height / 2))
-                        .force('collision', d3.forceCollide().radius(d => getNodeSize(d) + (isLargeGraph ? 5 : 10)))
-                        .alphaDecay(config.alphaDecay || 0.0228)
-                        .velocityDecay(config.velocityDecay || 0.4);
-
-                    // For large graphs, stop simulation earlier
-                    if (isLargeGraph) {
-                        state.simulation.alphaMin(0.01); // Stop sooner (default 0.001)
-                    }
+                        .force('collision', d3.forceCollide().radius(d => getNodeSize(d) + 10));
                 }
             },
 
