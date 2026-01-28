@@ -233,7 +233,10 @@ class LineageStatsCalculator:
             
             # Parse connection
             conn = self._parse_connection(record.get('Source Connection'))
-            source_type = conn.get('type') if conn else record.get('Source Type', 'Unknown')
+            # Handle list-type connections (multi-source items)
+            if isinstance(conn, list):
+                conn = conn[0] if conn else None
+            source_type = conn.get('type') if conn and isinstance(conn, dict) else record.get('Source Type', 'Unknown')
             
             # Track dependencies
             if source_type == 'OneLake' and conn:
