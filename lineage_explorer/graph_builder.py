@@ -188,6 +188,12 @@ def build_graph_from_json(json_path: Path) -> LineageGraph:
         if not conn:
             continue
         
+        # Handle list-type connections (multi-source items like SemanticModels)
+        if isinstance(conn, list):
+            conn = conn[0] if conn else {}
+        if not isinstance(conn, dict):
+            continue
+        
         source_type = conn.get('type', str(row.get('Source Type', 'Unknown')))
         
         # OneLake internal reference?
