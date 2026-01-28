@@ -25,6 +25,17 @@ curl -X POST "http://localhost:8000/api/neo4j/load?clear_existing=true"
 curl -X POST "http://localhost:8000/api/neo4j/load?clear_existing=true&include_all_items=true"
 ```
 
+### Performance Optimizations
+- **Large Graph Support** (2,400+ nodes):
+  - Barnes-Hut approximation (theta=0.9) reduces force calculation from O(n²) to O(n log n)
+  - Faster alpha decay (0.05) for quicker simulation convergence
+  - Throttled tick rendering (skip frames for >500 nodes)
+  - Disabled expensive blur glow effects for large graphs
+  - Reduced force strengths and earlier simulation stop (alphaMin=0.01)
+
+### Fixed
+- Handle list-type `Source Connection` values (multi-source SemanticModels)
+
 ---
 
 ## 0.3.29 (January 2026) - Table Impact Graph Revamp
