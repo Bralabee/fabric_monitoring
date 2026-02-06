@@ -991,7 +991,7 @@ LIMIT 20`,
             },
             "Table Analysis": {
                 icon: "📋",
-                description: "Explore mirrored database tables",
+                description: "Explore mirrored database tables, status, and relationships",
                 queries: [
                     {
                         name: "Table Statistics by Database",
@@ -1014,6 +1014,91 @@ RETURN i.name AS fabric_item,
        collect(t.name)[0..3] AS sample_tables
 ORDER BY table_count DESC
 LIMIT 15`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Table Status Distribution",
+                        description: "Breakdown of tables by mirroring status",
+                        query: `MATCH (t:Table)
+RETURN coalesce(t.status, 'unknown') AS status,
+       count(*) AS table_count,
+       round(count(*) * 100.0 / toFloat((MATCH (t2:Table) RETURN count(t2))[0]), 1) AS percentage
+ORDER BY table_count DESC`,
+                        chartType: "pie"
+                    },
+                    {
+                        name: "Tables with Highest Row Counts",
+                        description: "Physical tables sorted by processed rows",
+                        query: `MATCH (t:Table)
+WHERE t.processed_rows IS NOT NULL AND t.processed_rows > 0
+OPTIONAL MATCH (i:FabricItem)-[:MIRRORS]->(t)
+RETURN t.name AS table_name,
+       t.schema AS schema,
+       t.processed_rows AS processed_rows,
+       coalesce(t.status, 'unknown') AS status,
+       coalesce(i.name, 'N/A') AS parent_item
+ORDER BY t.processed_rows DESC
+LIMIT 20`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Orphan Tables (No Consumers)",
+                        description: "Tables provided but not consumed by any other item",
+                        query: `MATCH (provider:FabricItem)-[:PROVIDES_TABLE]->(t:Table)
+WHERE NOT EXISTS { MATCH (consumer:FabricItem)-[:USES_TABLE]->(t) WHERE consumer <> provider }
+RETURN t.name AS orphan_table,
+       t.schema AS schema,
+       coalesce(t.status, 'unknown') AS status,
+       provider.name AS provided_by,
+       provider.type AS provider_type
+ORDER BY t.name
+LIMIT 25`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "High-Dependency Tables",
+                        description: "Tables consumed by 3+ items — high blast radius",
+                        query: `MATCH (t:Table)<-[:USES_TABLE]-(consumer:FabricItem)
+WITH t, count(DISTINCT consumer) AS consumer_count, collect(DISTINCT consumer.name)[0..5] AS consumers
+WHERE consumer_count >= 3
+OPTIONAL MATCH (provider:FabricItem)-[:PROVIDES_TABLE]->(t)
+RETURN t.name AS table_name,
+       t.schema AS schema,
+       consumer_count,
+       coalesce(provider.name, 'N/A') AS provider,
+       consumers AS sample_consumers
+ORDER BY consumer_count DESC
+LIMIT 20`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Cross-Workspace Table Dependencies",
+                        description: "Tables used by items in different workspaces than the provider",
+                        query: `MATCH (provider:FabricItem)-[:PROVIDES_TABLE]->(t:Table)<-[:USES_TABLE]-(consumer:FabricItem)
+WHERE provider.workspace_id <> consumer.workspace_id
+RETURN t.name AS table_name,
+       provider.name AS provider_item,
+       provider.workspace_name AS provider_workspace,
+       consumer.name AS consumer_item,
+       consumer.workspace_name AS consumer_workspace
+ORDER BY t.name
+LIMIT 25`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Table Health Summary",
+                        description: "Aggregated health metrics: source type, status, patterns",
+                        query: `MATCH (t:Table)
+OPTIONAL MATCH (provider:FabricItem)-[:PROVIDES_TABLE|MIRRORS]->(t)
+WITH t, provider,
+     CASE WHEN t.database IS NOT NULL THEN 'Snowflake' ELSE 'Lakehouse' END AS source_type
+RETURN source_type,
+       count(*) AS total_tables,
+       count(CASE WHEN t.status = 'active' THEN 1 END) AS active,
+       count(CASE WHEN t.status IS NULL OR t.status = 'unknown' THEN 1 END) AS unknown_status,
+       count(CASE WHEN t.processed_rows > 0 THEN 1 END) AS has_data,
+       count(DISTINCT provider) AS provider_items
+ORDER BY total_tables DESC`,
                         chartType: "table"
                     }
                 ]
@@ -1168,6 +1253,23 @@ RETURN i.name AS unassigned_item,
        i.type AS item_type,
        i.id AS item_id
 LIMIT 20`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Tables Without Active Status",
+                        description: "Mirrored tables missing status or with non-active status — potential sync issues",
+                        query: `MATCH (t:Table)
+WHERE t.status IS NULL OR t.status <> 'active'
+OPTIONAL MATCH (i:FabricItem)-[:MIRRORS|PROVIDES_TABLE]->(t)
+OPTIONAL MATCH (consumer:FabricItem)-[:USES_TABLE]->(t)
+WITH t, i, count(DISTINCT consumer) AS consumer_count
+RETURN t.name AS table_name,
+       t.schema AS schema,
+       coalesce(t.status, 'NO STATUS') AS status,
+       coalesce(i.name, 'N/A') AS parent_item,
+       consumer_count AS at_risk_consumers
+ORDER BY consumer_count DESC
+LIMIT 25`,
                         chartType: "table"
                     }
                 ]
@@ -1329,6 +1431,28 @@ RETURN s.display_name AS snowflake_source,
        downstream_count AS downstream_dependents
 ORDER BY downstream_count DESC
 LIMIT 25`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Table-Level Impact Analysis",
+                        description: "Tables with the widest blast radius — providers and all downstream consumers",
+                        query: `MATCH (t:Table)<-[:USES_TABLE]-(consumer:FabricItem)
+WITH t, count(DISTINCT consumer) AS consumer_count,
+     collect(DISTINCT consumer.name)[0..4] AS consumers
+OPTIONAL MATCH (provider:FabricItem)-[:PROVIDES_TABLE]->(t)
+OPTIONAL MATCH (consumer2:FabricItem)-[:USES_TABLE]->(t)
+OPTIONAL MATCH (consumer2)<-[:DEPENDS_ON*1..3]-(downstream:FabricItem)
+WITH t, consumer_count, consumers, provider,
+     count(DISTINCT downstream) AS indirect_downstream
+RETURN t.name AS table_name,
+       coalesce(t.schema, 'N/A') AS schema,
+       coalesce(provider.name, 'N/A') AS provider_item,
+       consumer_count AS direct_consumers,
+       indirect_downstream,
+       consumer_count + indirect_downstream AS total_blast_radius,
+       consumers AS sample_consumers
+ORDER BY total_blast_radius DESC
+LIMIT 20`,
                         chartType: "table"
                     }
                 ]

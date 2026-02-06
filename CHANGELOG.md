@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## 0.3.35 (February 2026) - Lineage Explorer Detail Panels & Table Health Dashboard
+
+### Enhanced
+
+- **Dashboard: Table Health & Patterns section** (`lineage_explorer/static/dashboard.html`):
+  - Source breakdown bar (Lakehouse vs Snowflake vs Unknown) with percentage legend
+  - KPI cards: Total Tables, Lakehouse, Snowflake/Mirrored, Orphan Tables, High-Dep Tables, Cross-Workspace
+  - Pattern cards: Orphan Tables, High-Dependency Tables, Cross-Workspace Tables with clickable items
+  - Fetches data from `/api/tables/overview` endpoint
+- **Elements Graph: Detail Panel + enhanced tooltips** (`lineage_explorer/static/elements_graph.html`):
+  - Click-to-open detail panel with Properties (type, workspace, connections, ID), Connections list, Table Footprint (async fetch from `/api/items/{id}/table-footprint`)
+  - Tooltips now show workspace name, connection counts (in/out), and "Click for table details" hint for table-bearing items
+  - Workspace name lookup map and connection count tracking
+- **Main Graph: Enhanced tooltips + Table Footprint in detail panel** (`lineage_explorer/static/index.html`):
+  - Tooltips show workspace name, table hints for Lakehouse/MirroredDatabase/Warehouse items
+  - Detail panel now includes Table Footprint section with async loading from `/api/items/{id}/table-footprint`
+  - "Open Impact Analysis" link in detail panel for table-bearing items
+  - Table layer tooltips enriched with parent item name, schema, consumer count
+- **Tables Graph: Detail Panel + enhanced tooltips** (`lineage_explorer/static/tables_graph.html`):
+  - Full detail panel for tables: status badge, schema, database, processed rows, last sync, parent item, connected consumers
+  - Detail panel for items: type, workspace, connected tables list
+  - Enhanced tooltips: parent item context, status badges, consumer count, schema, processed rows
+  - Table parent map and consumer map tracking
+  - Status/processed_rows/last_sync now included in table node data
+- **Query Explorer: 8 new table analysis queries** (`lineage_explorer/static/query_explorer.html`):
+  - Table Status Distribution, Tables with Highest Row Counts, Orphan Tables, High-Dependency Tables
+  - Cross-Workspace Table Dependencies, Table Health Summary
+  - Tables Without Active Status (governance query)
+  - Table-Level Impact Analysis (blast radius query)
+
+---
+
+## 0.3.34 (February 2026) - Surface Table Status & Sync Metadata
+
+(No changes to [Unreleased] section — previous unreleased items moved to 0.3.35)
+
+---
+
+## [Pre-0.3.34 Unreleased]
+
 ### Fixed
 
 - **Version mismatch**: `__init__.py` `__version__` updated from `0.3.16` to `0.3.34`

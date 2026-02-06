@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions for USF Fabric Monitoring
 
-**Version**: 0.3.33 (February 2026) | **Library-first** Microsoft Fabric monitoring/governance toolkit.
+**Version**: 0.3.35 (February 2026) | **Library-first** Microsoft Fabric monitoring/governance toolkit.
 Core logic in `src/usf_fabric_monitoring/`; scripts/notebooks are thin wrappers.
 
 ## Project Structure (src-layout)

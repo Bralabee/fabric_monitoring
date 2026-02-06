@@ -920,6 +920,28 @@
             font-size: 11px;
         }
 
+        .tooltip-detail-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 3px;
+            font-size: 11px;
+        }
+
+        .tooltip-detail-row .t-label { color: rgba(255,255,255,0.5); }
+        .tooltip-detail-row .t-value { color: #e2e8f0; font-weight: 500; }
+
+        .tooltip-table-hint {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+            background: rgba(6, 182, 212, 0.3);
+            color: #67e8f9;
+        }
+
         /* Toast */
         .toast {
             position: fixed;
@@ -2147,11 +2169,20 @@
                 tableNodes
                     .on('mouseenter', function (event, d) {
                         d3.select(this).select('text').style('opacity', 1);
+                        // Find parent item for this table
+                        let parentLabel = '';
+                        if (state.tableLayerData?.table_edges) {
+                            const edge = state.tableLayerData.table_edges.find(e => e.target === d.id);
+                            if (edge && state.filteredGraph) {
+                                const parentNode = state.filteredGraph.nodes.find(n => n.id === edge.source);
+                                if (parentNode) parentLabel = parentNode.label;
+                            }
+                        }
                         Tooltip.show(event, {
                             label: d.label,
                             type: 'table',
                             itemType: d.database ? 'Snowflake' : 'Lakehouse',
-                            sourceType: `${d.consumer_count} consumers`
+                            sourceType: `${d.consumer_count} consumer${d.consumer_count !== 1 ? 's' : ''}${d.schema ? ' • ' + d.schema : ''}${parentLabel ? ' • ' + parentLabel : ''}`
                         });
                     })
                     .on('mouseleave', function () {
@@ -2783,10 +2814,26 @@
             show(event, node) {
                 if (!this.element) this.init();
                 const degree = state.nodeDegrees.get(node.id) || 0;
+
+                // Resolve workspace name for items
+                let extraRows = '';
+                if (node.type === 'item' && node.workspaceId && state.filteredGraph) {
+                    const ws = state.filteredGraph.nodes.find(n => n.id === node.workspaceId && n.type === 'workspace');
+                    if (ws) {
+                        extraRows += `<div class="tooltip-detail-row"><span class="t-label">Workspace</span><span class="t-value">${truncate(ws.label, 24)}</span></div>`;
+                    }
+                }
+
+                // Table-bearing item hint
+                if (node.type === 'item' && ['Lakehouse', 'MirroredDatabase', 'Warehouse'].includes(node.itemType)) {
+                    extraRows += `<div class="tooltip-table-hint">Has tables — click for details</div>`;
+                }
+
                 this.element.innerHTML = `
                 <div class="tooltip-header">${truncate(node.label, 30)}</div>
                 <div class="tooltip-type">${node.type}${node.itemType ? ` • ${node.itemType}` : ''}${node.sourceType ? ` • ${node.sourceType}` : ''}</div>
                 <div class="tooltip-type">${degree} connection${degree !== 1 ? 's' : ''}</div>
+                ${extraRows}
             `;
                 this.element.style.left = `${event.pageX + 16}px`;
                 this.element.style.top = `${event.pageY + 16}px`;
@@ -2814,16 +2861,38 @@
                 const degree = state.nodeDegrees.get(node.id) || 0;
                 const centrality = state.maxDegree > 0 ? ((degree / state.maxDegree) * 100).toFixed(0) : 0;
 
+                // Resolve workspace name
+                let workspaceName = '';
+                if (node.type === 'item' && node.workspaceId && state.filteredGraph) {
+                    const ws = state.filteredGraph.nodes.find(n => n.id === node.workspaceId && n.type === 'workspace');
+                    if (ws) workspaceName = ws.label;
+                }
+
+                // Check if this is a table-bearing item
+                const isTableItem = node.type === 'item' && ['Lakehouse', 'MirroredDatabase', 'Warehouse'].includes(node.itemType);
+
                 content.innerHTML = `
                 <div class="detail-section">
                     <div class="detail-section-title">Details</div>
                     <div class="detail-field"><span class="label">Type</span><span class="value">${node.type}</span></div>
                     ${node.itemType ? `<div class="detail-field"><span class="label">Item Type</span><span class="value">${node.itemType}</span></div>` : ''}
                     ${node.sourceType ? `<div class="detail-field"><span class="label">Source Type</span><span class="value">${node.sourceType}</span></div>` : ''}
+                    ${workspaceName ? `<div class="detail-field"><span class="label">Workspace</span><span class="value">${truncate(workspaceName, 20)}</span></div>` : ''}
                     <div class="detail-field"><span class="label">Connections</span><span class="value">${degree}</span></div>
                     <div class="detail-field"><span class="label">Centrality</span><span class="value">${centrality}%</span></div>
                     <div class="detail-field"><span class="label">ID</span><span class="value mono">${truncate(node.id, 20)}</span></div>
                 </div>
+                ${isTableItem ? `
+                <div class="detail-section" id="detail-table-footprint">
+                    <div class="detail-section-title">Table Footprint</div>
+                    <p style="color:var(--text-muted);font-size:12px;">Loading...</p>
+                </div>
+                <div class="detail-section">
+                    <a href="/table_impact.html?item=${encodeURIComponent(node.id)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--accent-blue);color:white;text-decoration:none;border-radius:var(--radius-sm);font-size:12px;font-weight:500;">
+                        Open Impact Analysis →
+                    </a>
+                </div>
+                ` : ''}
                 <div class="detail-section">
                     <div class="detail-section-title">Connections (${connections.length})</div>
                     <div class="connection-list">
@@ -2839,6 +2908,40 @@
                 </div>
             `;
                 panel.classList.add('open');
+
+                // Async fetch table footprint for table-bearing items
+                if (isTableItem) {
+                    this.loadTableFootprint(node.id);
+                }
+            },
+            async loadTableFootprint(itemId) {
+                const section = document.getElementById('detail-table-footprint');
+                if (!section) return;
+                try {
+                    const resp = await fetch(`/api/items/${encodeURIComponent(itemId)}/table-footprint`);
+                    if (!resp.ok) throw new Error('Not available');
+                    const fp = await resp.json();
+                    if (fp.tables_provided_count === 0 && fp.tables_used_count === 0) {
+                        section.innerHTML = `<div class="detail-section-title">Table Footprint</div><p style="color:var(--text-muted);font-size:12px;">No table data in Neo4j</p>`;
+                        return;
+                    }
+                    let html = '<div class="detail-section-title">Table Footprint</div>';
+                    if (fp.tables_provided_count > 0) {
+                        html += `<div class="detail-field"><span class="label">Tables Provided</span><span class="value" style="font-weight:700;color:var(--accent-cyan);">${fp.tables_provided_count}</span></div>`;
+                        (fp.tables_provided_sample || []).forEach(t => {
+                            html += `<div class="detail-field"><span class="label" style="padding-left:8px;">• ${truncate(t.name, 18)}</span><span class="value" style="font-size:11px;">${t.consumers || 0} consumers</span></div>`;
+                        });
+                    }
+                    if (fp.tables_used_count > 0) {
+                        html += `<div class="detail-field"><span class="label">Tables Used</span><span class="value" style="font-weight:700;color:var(--accent-amber);">${fp.tables_used_count}</span></div>`;
+                        (fp.tables_used_sample || []).forEach(t => {
+                            html += `<div class="detail-field"><span class="label" style="padding-left:8px;">• ${truncate(t.name, 18)}</span><span class="value" style="font-size:11px;"></span></div>`;
+                        });
+                    }
+                    section.innerHTML = html;
+                } catch (e) {
+                    section.innerHTML = `<div class="detail-section-title">Table Footprint</div><p style="color:var(--text-muted);font-size:12px;">Unavailable</p>`;
+                }
             },
             hide() { document.getElementById('detail-panel')?.classList.remove('open'); },
             getConnections(node) {

@@ -526,11 +526,205 @@
             color: var(--text-muted);
         }
 
+        /* Table Health Section */
+        .table-health-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .table-health-section h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-health-section h3 svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .table-health-kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .table-kpi {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .table-kpi-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .table-kpi-value.green { color: var(--accent-green); }
+        .table-kpi-value.amber { color: var(--accent-amber); }
+        .table-kpi-value.red { color: var(--accent-red); }
+        .table-kpi-value.purple { color: var(--accent-purple); }
+
+        .table-kpi-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        .table-patterns-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .pattern-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        .pattern-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .pattern-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pattern-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 999px;
+            color: white;
+        }
+
+        .pattern-badge.amber { background: var(--accent-amber); }
+        .pattern-badge.red { background: var(--accent-red); }
+        .pattern-badge.purple { background: var(--accent-purple); }
+
+        .pattern-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .pattern-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .pattern-list li:hover {
+            background: var(--bg-secondary);
+        }
+
+        .pattern-list .table-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 180px;
+        }
+
+        .pattern-list .table-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .status-badge.running { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+        .status-badge.stopped { background: rgba(245, 158, 11, 0.1); color: var(--accent-amber); }
+        .status-badge.error { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); }
+
+        /* Source Breakdown Chart */
+        .source-breakdown {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .source-bar {
+            flex: 1;
+            height: 16px;
+            border-radius: 8px;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .source-bar-segment {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .source-bar-segment.lakehouse { background: var(--accent-green); }
+        .source-bar-segment.snowflake { background: var(--accent-purple); }
+        .source-bar-segment.unknown { background: var(--text-muted); }
+
+        .source-legend {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .source-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .source-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .source-legend-dot.lakehouse { background: var(--accent-green); }
+        .source-legend-dot.snowflake { background: var(--accent-purple); }
+        .source-legend-dot.unknown { background: var(--text-muted); }
+
         /* Responsive */
         @media (max-width: 768px) {
 
             .charts-grid,
-            .details-grid {
+            .details-grid,
+            .table-patterns-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -766,6 +960,90 @@
             </div>
         </section>
 
+        <!-- Table Health & Patterns (from /api/tables/overview) -->
+        <section class="table-health-section" id="tableHealthSection">
+            <h3>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--accent-cyan)">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Table Health & Patterns
+            </h3>
+
+            <!-- Source Breakdown Bar -->
+            <div class="source-breakdown" id="sourceBreakdown" style="display: none;">
+                <div class="source-bar" id="sourceBar"></div>
+            </div>
+            <div class="source-legend" id="sourceLegend" style="display: none;"></div>
+
+            <!-- KPIs -->
+            <div class="table-health-kpis" id="tableHealthKpis">
+                <div class="table-kpi">
+                    <p class="table-kpi-value" id="thTotalTables">--</p>
+                    <p class="table-kpi-label">Total Tables</p>
+                </div>
+                <div class="table-kpi">
+                    <p class="table-kpi-value green" id="thLakehouse">--</p>
+                    <p class="table-kpi-label">Lakehouse</p>
+                </div>
+                <div class="table-kpi">
+                    <p class="table-kpi-value purple" id="thSnowflake">--</p>
+                    <p class="table-kpi-label">Snowflake / Mirrored</p>
+                </div>
+                <div class="table-kpi">
+                    <p class="table-kpi-value amber" id="thOrphanCount">--</p>
+                    <p class="table-kpi-label">Orphan Tables</p>
+                </div>
+                <div class="table-kpi">
+                    <p class="table-kpi-value red" id="thHighDep">--</p>
+                    <p class="table-kpi-label">High-Dep Tables</p>
+                </div>
+                <div class="table-kpi">
+                    <p class="table-kpi-value purple" id="thCrossWs">--</p>
+                    <p class="table-kpi-label">Cross-Workspace</p>
+                </div>
+            </div>
+
+            <!-- Pattern Cards -->
+            <div class="table-patterns-grid" id="tablePatternsGrid">
+                <!-- Orphan Tables -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">⚠️ Orphan Tables</span>
+                        <span class="pattern-badge amber" id="orphanBadge">0</span>
+                    </div>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Tables with no consumers — potential cleanup candidates</p>
+                    <ul class="pattern-list" id="orphanTablesList">
+                        <li style="color: var(--text-muted); justify-content: center;">Loading...</li>
+                    </ul>
+                </div>
+
+                <!-- High-Dependency Tables -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">🔥 High-Dependency Tables</span>
+                        <span class="pattern-badge red" id="highDepBadge">0</span>
+                    </div>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Tables with 5+ consumers — single points of failure</p>
+                    <ul class="pattern-list" id="highDepTablesList">
+                        <li style="color: var(--text-muted); justify-content: center;">Loading...</li>
+                    </ul>
+                </div>
+
+                <!-- Cross-Workspace Tables -->
+                <div class="pattern-card">
+                    <div class="pattern-card-header">
+                        <span class="pattern-card-title">🌐 Cross-Workspace Tables</span>
+                        <span class="pattern-badge purple" id="crossWsBadge">0</span>
+                    </div>
+                    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Tables shared across multiple workspaces</p>
+                    <ul class="pattern-list" id="crossWsTablesList">
+                        <li style="color: var(--text-muted); justify-content: center;">Loading...</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
         <!-- Workspace Table -->
         <section class="table-section">
             <div class="table-header">
@@ -909,6 +1187,17 @@
                 return await res.json();
             } catch (err) {
                 console.error('Error fetching stats:', err);
+                return null;
+            }
+        }
+
+        async function fetchTableOverview() {
+            try {
+                const res = await fetch('/api/tables/overview');
+                if (!res.ok) throw new Error('Failed to fetch table overview');
+                return await res.json();
+            } catch (err) {
+                console.error('Error fetching table overview:', err);
                 return null;
             }
         }
@@ -1245,18 +1534,23 @@
 
         async function refreshDashboard() {
             // Fetch all data in parallel (including Neo4j stats for extended metrics)
-            const [stats, workspaces, sources, tables, neo4jStats] = await Promise.all([
+            const [stats, workspaces, sources, tables, neo4jStats, tableOverview] = await Promise.all([
                 fetchStats(),
                 fetchWorkspaces(),
                 fetchExternalSources(),
                 fetchTables(),
-                fetchNeo4jStats()
+                fetchNeo4jStats(),
+                fetchTableOverview()
             ]);
 
             if (stats) {
                 updateSummaryCards(stats, neo4jStats);
                 createItemTypesChart(stats.distributions.items_by_type);
                 createSourceTypesChart(stats.distributions.sources_by_type);
+            }
+
+            if (tableOverview) {
+                updateTableHealth(tableOverview);
             }
 
             if (workspaces) {
@@ -1276,6 +1570,88 @@
 
             // Update timestamp
             document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        }
+
+        function updateTableHealth(overview) {
+            const total = overview.total_tables || 0;
+            const lakehouse = overview.by_source?.Lakehouse || 0;
+            const snowflake = overview.by_source?.Snowflake || 0;
+            const unknown = total - lakehouse - snowflake;
+            const orphanCount = overview.patterns?.orphan_tables?.count || 0;
+            const highDepCount = overview.patterns?.high_dependency_tables?.count || 0;
+            const crossWsCount = overview.patterns?.cross_workspace_tables?.count || 0;
+
+            // Update KPIs
+            document.getElementById('thTotalTables').textContent = total.toLocaleString();
+            document.getElementById('thLakehouse').textContent = lakehouse.toLocaleString();
+            document.getElementById('thSnowflake').textContent = snowflake.toLocaleString();
+            document.getElementById('thOrphanCount').textContent = orphanCount.toLocaleString();
+            document.getElementById('thHighDep').textContent = highDepCount.toLocaleString();
+            document.getElementById('thCrossWs').textContent = crossWsCount.toLocaleString();
+
+            // Source breakdown bar
+            if (total > 0) {
+                const lhPct = (lakehouse / total * 100).toFixed(1);
+                const sfPct = (snowflake / total * 100).toFixed(1);
+                const ukPct = (unknown / total * 100).toFixed(1);
+                document.getElementById('sourceBar').innerHTML = `
+                    <div class="source-bar-segment lakehouse" style="width: ${lhPct}%"></div>
+                    <div class="source-bar-segment snowflake" style="width: ${sfPct}%"></div>
+                    ${unknown > 0 ? `<div class="source-bar-segment unknown" style="width: ${ukPct}%"></div>` : ''}
+                `;
+                document.getElementById('sourceLegend').innerHTML = `
+                    <span class="source-legend-item"><span class="source-legend-dot lakehouse"></span>Lakehouse ${lhPct}%</span>
+                    <span class="source-legend-item"><span class="source-legend-dot snowflake"></span>Snowflake ${sfPct}%</span>
+                    ${unknown > 0 ? `<span class="source-legend-item"><span class="source-legend-dot unknown"></span>Unknown ${ukPct}%</span>` : ''}
+                `;
+                document.getElementById('sourceBreakdown').style.display = 'flex';
+                document.getElementById('sourceLegend').style.display = 'flex';
+            }
+
+            // Orphan tables list
+            const orphanTables = overview.patterns?.orphan_tables?.tables || [];
+            document.getElementById('orphanBadge').textContent = orphanCount;
+            const orphanList = document.getElementById('orphanTablesList');
+            if (orphanTables.length > 0) {
+                orphanList.innerHTML = orphanTables.slice(0, 10).map(t => `
+                    <li onclick="window.open('/table_impact.html?search=${encodeURIComponent(t.table_name)}', '_blank')">
+                        <span class="table-name" title="${t.table_name}">${t.table_name}</span>
+                        <span class="table-meta">${t.database || 'Lakehouse'}</span>
+                    </li>
+                `).join('') + (orphanTables.length > 10 ? `<li style="color: var(--text-muted); justify-content: center; font-size: 11px;">+${orphanTables.length - 10} more</li>` : '');
+            } else {
+                orphanList.innerHTML = '<li style="color: var(--accent-green); justify-content: center;">✓ No orphan tables</li>';
+            }
+
+            // High-dependency tables list
+            const highDepTables = overview.patterns?.high_dependency_tables?.tables || [];
+            document.getElementById('highDepBadge').textContent = highDepCount;
+            const highDepList = document.getElementById('highDepTablesList');
+            if (highDepTables.length > 0) {
+                highDepList.innerHTML = highDepTables.slice(0, 10).map(t => `
+                    <li onclick="window.open('/table_impact.html?search=${encodeURIComponent(t.table_name)}', '_blank')">
+                        <span class="table-name" title="${t.table_name}">${t.table_name}</span>
+                        <span class="table-meta">${t.consumer_count} consumers</span>
+                    </li>
+                `).join('');
+            } else {
+                highDepList.innerHTML = '<li style="color: var(--text-muted); justify-content: center;">No high-dependency tables</li>';
+            }
+
+            // Cross-workspace tables list
+            const crossWsTables = overview.patterns?.cross_workspace_tables?.tables || [];
+            document.getElementById('crossWsBadge').textContent = crossWsCount;
+            const crossWsList = document.getElementById('crossWsTablesList');
+            if (crossWsTables.length > 0) {
+                crossWsList.innerHTML = crossWsTables.slice(0, 10).map(t => `
+                    <li onclick="window.open('/table_impact.html?search=${encodeURIComponent(t.table_name)}', '_blank')">
+                        <span class="table-name" title="${t.table_name}">${t.table_name}</span>
+                        <span class="table-meta">${t.workspace_count} workspaces</span>
+                    </li>
+                `).join('');
+            } else {
+                crossWsList.innerHTML = '<li style="color: var(--text-muted); justify-content: center;">No cross-workspace tables</li>';
+            }
         }
 
         // Workspace search filter

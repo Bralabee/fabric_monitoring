@@ -436,6 +436,193 @@
             font-size: 11px;
         }
 
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 3px;
+            font-size: 11px;
+        }
+
+        .tooltip-row .label { color: var(--text-muted); }
+        .tooltip-row .value { color: #e2e8f0; font-weight: 500; }
+
+        .tooltip-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .tooltip-badge.active { background: rgba(16, 185, 129, 0.3); color: #6ee7b7; }
+        .tooltip-badge.warning { background: rgba(245, 158, 11, 0.3); color: #fcd34d; }
+        .tooltip-badge.error { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+
+        /* Detail Panel */
+        .detail-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 360px;
+            height: 100%;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
+            z-index: 150;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .detail-panel.open { display: flex; }
+
+        .detail-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-panel-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 280px;
+        }
+
+        .detail-panel-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: var(--radius-sm);
+        }
+
+        .detail-panel-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .detail-panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .detail-section { margin-bottom: 20px; }
+
+        .detail-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 13px;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: var(--text-secondary); }
+
+        .detail-value {
+            font-weight: 500;
+            color: var(--text-primary);
+            text-align: right;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .detail-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .detail-status-badge.active {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        .detail-status-badge.warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--accent-amber);
+        }
+
+        .detail-status-badge.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+        }
+
+        .detail-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .consumer-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .consumer-list li {
+            padding: 5px 0;
+            font-size: 12px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .consumer-list li:last-child { border-bottom: none; }
+
+        .consumer-type-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .detail-impact-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: var(--accent-blue);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+
+        .detail-impact-link:hover { background: #2563eb; }
+
         /* Legend */
         .legend {
             position: absolute;
@@ -647,6 +834,19 @@
 
                 <!-- Tooltip -->
                 <div class="tooltip" id="tooltip"></div>
+
+                <!-- Detail Panel -->
+                <div class="detail-panel" id="detailPanel">
+                    <div class="detail-panel-header">
+                        <h3 id="detailTitle">—</h3>
+                        <button class="detail-panel-close" id="detailClose" title="Close">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="detail-panel-body" id="detailBody"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -676,6 +876,8 @@
         let filteredData = { nodes: [], links: [] };
         let simulation = null;
         let showLabels = true;
+        let tableParentMap = {};     // table_id → parent item node
+        let tableConsumerMap = {};   // table_id → [connected item nodes]
         let activeFilters = {
             sourceTypes: new Set(['lakehouse', 'snowflake']),
             relationships: new Set(['USES_TABLE', 'PROVIDES_TABLE', 'MIRRORS'])
@@ -717,7 +919,10 @@
                     data: {
                         label: t.name || t.label,
                         schema: t.schema,
-                        database: t.database
+                        database: t.database,
+                        status: t.status,
+                        processed_rows: t.processed_rows,
+                        last_sync: t.last_sync
                     }
                 }));
 
@@ -757,6 +962,27 @@
                         target: e.target,
                         type: e.type || 'TABLE_LINK'
                     }));
+
+                // Build parent item and consumer maps for tables
+                const itemLookup = {};
+                itemNodes.forEach(n => { itemLookup[n.id] = n; });
+
+                tableParentMap = {};
+                tableConsumerMap = {};
+                graphData.links.forEach(l => {
+                    const itemId = typeof l.source === 'object' ? l.source.id : l.source;
+                    const tableId = typeof l.target === 'object' ? l.target.id : l.target;
+                    const item = itemLookup[itemId];
+                    if (!item) return;
+
+                    // First connected item is the "parent" (provider)
+                    if (!tableParentMap[tableId]) {
+                        tableParentMap[tableId] = item;
+                    }
+                    // All connected items are consumers
+                    if (!tableConsumerMap[tableId]) tableConsumerMap[tableId] = [];
+                    tableConsumerMap[tableId].push(item);
+                });
 
                 // Update stats
                 const lakehouseCount = tableNodes.filter(n => n.sourceType === 'lakehouse').length;
@@ -887,11 +1113,7 @@
             node
                 .on('mouseenter', (event, d) => showTooltip(event, d))
                 .on('mouseleave', hideTooltip)
-                .on('click', (event, d) => {
-                    if (d.isTable) {
-                        window.open(`/table_impact.html?id=${encodeURIComponent(d.id)}`, '_blank');
-                    }
-                });
+                .on('click', (event, d) => showDetailPanel(d));
 
             // Simulation tick
             simulation.on('tick', () => {
@@ -944,13 +1166,55 @@
         // ===================================================================
         function showTooltip(event, d) {
             const type = d.isTable ? (d.sourceType === 'snowflake' ? 'Snowflake Table' : 'Lakehouse Table') : d.data?.type;
+            let rows = '';
+
+            if (d.isTable) {
+                // Parent item context
+                const parent = tableParentMap[d.id];
+                if (parent) {
+                    rows += `<div class="tooltip-row"><span class="label">Parent</span><span class="value">${truncate(parent.data?.label, 22)}</span></div>`;
+                    if (parent.data?.workspace) {
+                        rows += `<div class="tooltip-row"><span class="label">Workspace</span><span class="value">${truncate(parent.data.workspace, 22)}</span></div>`;
+                    }
+                }
+
+                // Status badge
+                if (d.data?.status) {
+                    const sc = d.data.status === 'active' ? 'active' : d.data.status === 'warning' ? 'warning' : 'error';
+                    rows += `<div class="tooltip-row"><span class="label">Status</span><span class="tooltip-badge ${sc}">${d.data.status}</span></div>`;
+                }
+
+                // Consumer count
+                const consumers = tableConsumerMap[d.id] || [];
+                if (consumers.length > 0) {
+                    rows += `<div class="tooltip-row"><span class="label">Consumers</span><span class="value">${consumers.length}</span></div>`;
+                }
+
+                if (d.data?.schema) {
+                    rows += `<div class="tooltip-row"><span class="label">Schema</span><span class="value">${d.data.schema}</span></div>`;
+                }
+                if (d.data?.processed_rows) {
+                    rows += `<div class="tooltip-row"><span class="label">Rows</span><span class="value">${Number(d.data.processed_rows).toLocaleString()}</span></div>`;
+                }
+            } else {
+                // Item tooltip
+                if (d.data?.workspace) {
+                    rows += `<div class="tooltip-row"><span class="label">Workspace</span><span class="value">${truncate(d.data.workspace, 22)}</span></div>`;
+                }
+                // Count tables connected to this item
+                const tableCount = graphData.links.filter(l => {
+                    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+                    return sid === d.id;
+                }).length;
+                if (tableCount > 0) {
+                    rows += `<div class="tooltip-row"><span class="label">Tables</span><span class="value">${tableCount}</span></div>`;
+                }
+            }
+
             tooltip.innerHTML = `
                 <div class="tooltip-title">${d.data?.label || d.id}</div>
                 <div class="tooltip-meta">${type}</div>
-                ${d.data?.schema ? `<div class="tooltip-meta">Schema: ${d.data.schema}</div>` : ''}
-                ${d.data?.status ? `<div class="tooltip-meta">Status: ${d.data.status}</div>` : ''}
-                ${d.data?.processed_rows ? `<div class="tooltip-meta">Rows: ${Number(d.data.processed_rows).toLocaleString()}</div>` : ''}
-                ${d.data?.last_sync ? `<div class="tooltip-meta">Last Sync: ${new Date(d.data.last_sync).toLocaleString()}</div>` : ''}
+                ${rows}
             `;
             tooltip.style.left = `${event.pageX + 10}px`;
             tooltip.style.top = `${event.pageY + 10}px`;
@@ -959,6 +1223,192 @@
 
         function hideTooltip() {
             tooltip.classList.remove('visible');
+        }
+
+        // ===================================================================
+        // Detail Panel
+        // ===================================================================
+        const detailPanel = document.getElementById('detailPanel');
+        const detailTitle = document.getElementById('detailTitle');
+        const detailBody = document.getElementById('detailBody');
+
+        document.getElementById('detailClose').addEventListener('click', () => {
+            detailPanel.classList.remove('open');
+        });
+
+        function showDetailPanel(d) {
+            detailTitle.textContent = d.data?.label || d.id;
+            detailPanel.classList.add('open');
+
+            if (d.isTable) {
+                renderTableDetail(d);
+            } else {
+                renderItemDetail(d);
+            }
+        }
+
+        function renderTableDetail(d) {
+            const parent = tableParentMap[d.id];
+            const consumers = tableConsumerMap[d.id] || [];
+            const statusClass = d.data?.status === 'active' ? 'active' : d.data?.status === 'warning' ? 'warning' : 'error';
+
+            const ITEM_COLORS = {
+                'Lakehouse': 'var(--accent-cyan)',
+                'MirroredDatabase': 'var(--accent-amber)',
+                'Warehouse': 'var(--accent-blue)',
+            };
+
+            let html = `
+                <div class="detail-section">
+                    <div class="detail-section-title">Table Properties</div>
+                    <div class="detail-row">
+                        <span class="detail-label">Source</span>
+                        <span class="detail-value">${d.sourceType === 'snowflake' ? 'Snowflake' : 'Lakehouse'}</span>
+                    </div>
+                    ${d.data?.status ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-status-badge ${statusClass}">
+                            <span class="detail-status-dot"></span>
+                            ${d.data.status}
+                        </span>
+                    </div>` : ''}
+                    ${d.data?.schema ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Schema</span>
+                        <span class="detail-value">${d.data.schema}</span>
+                    </div>` : ''}
+                    ${d.data?.database ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Database</span>
+                        <span class="detail-value">${d.data.database}</span>
+                    </div>` : ''}
+                    ${d.data?.processed_rows ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Processed Rows</span>
+                        <span class="detail-value">${Number(d.data.processed_rows).toLocaleString()}</span>
+                    </div>` : ''}
+                    ${d.data?.last_sync ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Last Sync</span>
+                        <span class="detail-value">${new Date(d.data.last_sync).toLocaleString()}</span>
+                    </div>` : ''}
+                </div>
+            `;
+
+            // Parent item section
+            if (parent) {
+                html += `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Parent Item</div>
+                        <div class="detail-row">
+                            <span class="detail-label">Name</span>
+                            <span class="detail-value">${parent.data?.label || parent.id}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Type</span>
+                            <span class="detail-value">${parent.data?.type || '—'}</span>
+                        </div>
+                        ${parent.data?.workspace ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Workspace</span>
+                            <span class="detail-value">${parent.data.workspace}</span>
+                        </div>` : ''}
+                    </div>
+                `;
+            }
+
+            // Consumers section
+            if (consumers.length > 0) {
+                html += `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Connected Items (${consumers.length})</div>
+                        <ul class="consumer-list">
+                            ${consumers.map(c => `
+                                <li>
+                                    <span class="consumer-type-dot" style="background: ${ITEM_COLORS[c.data?.type] || 'var(--accent-blue)'};"></span>
+                                    <span>${truncate(c.data?.label || c.id, 28)}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Impact link
+            html += `
+                <div class="detail-section">
+                    <a href="/table_impact.html?q=${encodeURIComponent(d.data?.label || '')}" target="_blank" class="detail-impact-link">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
+                        Open Impact Analysis
+                    </a>
+                </div>
+            `;
+
+            detailBody.innerHTML = html;
+        }
+
+        function renderItemDetail(d) {
+            // Count tables this item connects to
+            const tables = [];
+            filteredData.links.forEach(l => {
+                const sid = typeof l.source === 'object' ? l.source.id : l.source;
+                if (sid === d.id) {
+                    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+                    const tNode = filteredData.nodes.find(n => n.id === tid && n.isTable);
+                    if (tNode) tables.push(tNode);
+                }
+            });
+
+            let html = `
+                <div class="detail-section">
+                    <div class="detail-section-title">Item Properties</div>
+                    <div class="detail-row">
+                        <span class="detail-label">Type</span>
+                        <span class="detail-value">${d.data?.type || '—'}</span>
+                    </div>
+                    ${d.data?.workspace ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Workspace</span>
+                        <span class="detail-value">${d.data.workspace}</span>
+                    </div>` : ''}
+                    <div class="detail-row">
+                        <span class="detail-label">Tables</span>
+                        <span class="detail-value">${tables.length}</span>
+                    </div>
+                </div>
+            `;
+
+            if (tables.length > 0) {
+                html += `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Tables (${tables.length})</div>
+                        <ul class="consumer-list">
+                            ${tables.map(t => `
+                                <li>
+                                    <span class="consumer-type-dot" style="background: ${t.sourceType === 'snowflake' ? 'var(--accent-purple)' : 'var(--accent-green)'};"></span>
+                                    <span>${truncate(t.data?.label || t.id, 28)}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="detail-section">
+                    <a href="/table_impact.html?item=${encodeURIComponent(d.id)}" target="_blank" class="detail-impact-link">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
+                        Open Impact Analysis
+                    </a>
+                </div>
+            `;
+
+            detailBody.innerHTML = html;
         }
 
         // ===================================================================
