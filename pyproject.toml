@@ -31,7 +31,7 @@ dependencies = [
     "pyarrow>=14.0,<18",
     "fastapi>=0.109,<1",
     "uvicorn>=0.27,<1",
-    "neo4j>=5.15,<6"
+    "neo4j>=5.15,<7"
 ]
 
 [project.scripts]
