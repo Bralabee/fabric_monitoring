@@ -447,6 +447,12 @@ class LineageDataLoader:
                 # NEW: Process Mirrored Tables from getTablesMirroringStatus API
                 mirrored_tables = record.get('Mirrored Tables', [])
                 if mirrored_tables and isinstance(mirrored_tables, list):
+                    # Resolve database name: prefer Source Database, fall back to item name
+                    source_db = record.get('Source Database', 'Unknown')
+                    item_name = record.get('Item Name', '')
+                    if not source_db or source_db == 'Unknown':
+                        source_db = item_name or 'Unknown'
+                    
                     for tbl in mirrored_tables:
                         if not isinstance(tbl, dict):
                             continue
@@ -463,7 +469,7 @@ class LineageDataLoader:
                                 'table_id': table_id,
                                 'table_name': table_name,
                                 'schema': schema_name,
-                                'database_name': record.get('Source Database', 'Unknown'),
+                                'database_name': source_db,
                                 'full_path': f"{schema_name}.{table_name}",
                                 'table_type': 'mirrored',
                                 'status': tbl.get('status'),

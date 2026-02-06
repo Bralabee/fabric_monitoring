@@ -425,6 +425,16 @@ class LineageExtractor:
                                     source_props = decoded.get("SourceProperties", {})
                                     source_type_props = decoded.get("SourceTypeProperties", {})
                                     
+                                    # Resolve database name from multiple possible API fields
+                                    # Prefer explicit database, then try SourceTypeProperties, 
+                                    # then fall back to MirroredDatabase item name
+                                    source_database = (
+                                        source_props.get("database")
+                                        or source_type_props.get("databaseName")
+                                        or source_type_props.get("database")
+                                        or db_name  # Use MirroredDatabase item name as fallback
+                                    )
+                                    
                                     lineage_data.append({
                                         "Workspace Name": ws_name,
                                         "Workspace ID": ws_id,
@@ -435,7 +445,7 @@ class LineageExtractor:
                                         "Shortcut Path": None,
                                         "Source Type": source_props.get("sourceType", "Unknown"),
                                         "Source Connection": source_props.get("connection", "Unknown"),
-                                        "Source Database": source_props.get("database", "Unknown"),
+                                        "Source Database": source_database,
                                         "Connection ID": source_type_props.get("connectionIdentifier", "Unknown"),
                                         "Mirrored Tables": mirrored_tables,  # NEW: List of tables being mirrored
                                         "Full Definition": json.dumps(decoded)

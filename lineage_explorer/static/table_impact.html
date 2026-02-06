@@ -989,14 +989,23 @@
         function renderTablesResults(tables) {
             tablesBody.innerHTML = tables.map(table => {
                 // Determine source type and location display
-                const isSnowflake = table.database && table.database !== 'null';
-                const sourceType = isSnowflake ? 'Snowflake' : 'Lakehouse';
-                const sourceBadgeClass = isSnowflake ? 'badge-purple' : 'badge-green';
+                const hasRealDatabase = table.database && table.database !== 'null' && table.database !== 'Unknown';
+                // Use parent_item_type to determine true source; fall back to database heuristic
+                const isMirrored = table.parent_item_type === 'MirroredDatabase';
+                const sourceType = isMirrored ? 'Mirrored' : (hasRealDatabase ? 'Snowflake' : 'Lakehouse');
+                const sourceBadgeClass = isMirrored ? 'badge-cyan'
+                    : (hasRealDatabase ? 'badge-purple' : 'badge-green');
 
-                // Build location string
+                // Build location string with better context
                 let location = '';
-                if (isSnowflake) {
+                if (hasRealDatabase) {
+                    // Known database source (e.g., Snowflake with actual DB name)
                     location = `${table.database}.${table.schema || 'dbo'}`;
+                } else if (table.parent_item_name) {
+                    // Use parent MirroredDB/Lakehouse item name as context
+                    location = table.schema 
+                        ? `${table.parent_item_name} / ${table.schema}`
+                        : table.parent_item_name;
                 } else if (table.full_path) {
                     // Parse Lakehouse path (e.g., "Tables/FOO" -> "Tables/")
                     const parts = table.full_path.split('/');
@@ -1005,13 +1014,19 @@
                     location = 'Tables/';
                 }
 
+                // Build workspace badge if available
+                const workspaceBadge = table.parent_workspace 
+                    ? `<span class="badge" style="font-size: 9px; margin-left: 4px; background: var(--navy-600, #475569); color: #fff;" title="Workspace: ${escapeHtml(table.parent_workspace)}">${escapeHtml(truncateText(table.parent_workspace, 25))}</span>` 
+                    : '';
+
                 return `
                 <tr class="clickable ${selectedTableId === table.table_id ? 'selected' : ''}" 
                     data-table-id="${table.table_id}"
                     data-table-name="${escapeHtml(table.table_name)}">
                     <td class="table-name">${escapeHtml(table.table_name)}</td>
-                    <td title="${escapeHtml(table.full_path || '')}">${escapeHtml(location)}</td>
+                    <td title="${escapeHtml(table.full_path || '')}${table.parent_item_name ? ' (in ' + escapeHtml(table.parent_item_name) + ')' : ''}">${escapeHtml(location)}</td>
                     <td><span class="badge ${sourceBadgeClass}" style="font-size: 10px;">${sourceType}</span>
+                        ${workspaceBadge}
                         ${table.status ? `<span class="badge" style="font-size: 9px; margin-left: 4px; background: ${table.status === 'Running' ? 'var(--accent-green, #10b981)' : 'var(--accent-amber, #f59e0b)'}; color: #fff;">${escapeHtml(table.status)}</span>` : ''}
                     </td>
                     <td class="text-right">${table.consumer_count}</td>
@@ -1308,19 +1323,31 @@
             let html = '<div class="impact-tree">';
 
             // Determine source type
-            const isSnowflake = table.database && table.database !== 'null';
-            const sourceType = isSnowflake ? 'Snowflake' : 'Lakehouse';
-            const sourceBadge = isSnowflake
-                ? '<span class="badge badge-purple" style="font-size: 10px; margin-left: 8px;">Snowflake</span>'
-                : '<span class="badge badge-green" style="font-size: 10px; margin-left: 8px;">Lakehouse</span>';
+            const hasRealDatabase = table.database && table.database !== 'null' && table.database !== 'Unknown';
+            const isMirrored = table.parent_item_type === 'MirroredDatabase';
+            const sourceType = isMirrored ? 'Mirrored DB' : (hasRealDatabase ? 'Snowflake' : 'Lakehouse');
+            const sourceBadge = isMirrored
+                ? '<span class="badge badge-cyan" style="font-size: 10px; margin-left: 8px;">Mirrored DB</span>'
+                : (hasRealDatabase
+                    ? '<span class="badge badge-purple" style="font-size: 10px; margin-left: 8px;">Snowflake</span>'
+                    : '<span class="badge badge-green" style="font-size: 10px; margin-left: 8px;">Lakehouse</span>');
 
-            // Build location display
+            // Build location display with rich context
             let locationDisplay = '';
-            if (isSnowflake) {
+            if (hasRealDatabase) {
                 locationDisplay = `${table.database}.${table.schema || 'dbo'}`;
+            } else if (table.parent_item_name) {
+                locationDisplay = table.schema 
+                    ? `${table.parent_item_name} / ${table.schema}`
+                    : table.parent_item_name;
             } else if (table.full_path) {
                 locationDisplay = table.full_path;
             }
+            
+            // Workspace context for the source table
+            const workspaceDisplay = table.parent_workspace 
+                ? `<span class="node-workspace" style="font-style: italic; opacity: 0.8;">${escapeHtml(table.parent_workspace)}</span>` 
+                : '';
 
             // Root: Table node with expand all button
             html += `
@@ -1341,6 +1368,7 @@
                         <span class="node-type">Source Table</span>
                         ${sourceBadge}
                         <span class="node-workspace">${escapeHtml(locationDisplay)}</span>
+                        ${workspaceDisplay}
                         ${table.status ? `<span class="badge" style="font-size: 9px; margin-left: 8px; background: ${table.status === 'Running' ? '#10b981' : '#f59e0b'}; color: #fff;">${escapeHtml(table.status)}</span>` : ''}
                         ${table.processed_rows ? `<span style="font-size: 10px; color: var(--text-muted, #94a3b8); margin-left: 8px;">${Number(table.processed_rows).toLocaleString()} rows</span>` : ''}
                     </div>
@@ -1605,6 +1633,11 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function truncateText(text, maxLen) {
+            if (!text || text.length <= maxLen) return text || '';
+            return text.substring(0, maxLen - 1) + '…';
         }
     </script>
 </body>

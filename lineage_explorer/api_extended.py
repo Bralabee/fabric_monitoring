@@ -910,7 +910,12 @@ async def search_tables(
         // Count direct consumers (MIRRORS + USES_TABLE)
         OPTIONAL MATCH (item:FabricItem)-[:MIRRORS|USES_TABLE]->(t)
         
-        WITH t, count(DISTINCT item) as consumer_count
+        // Get parent item that provides this table (MirroredDB or Lakehouse)
+        OPTIONAL MATCH (provider:FabricItem)-[:MIRRORS|PROVIDES_TABLE]->(t)
+        OPTIONAL MATCH (pw:Workspace)-[:CONTAINS]->(provider)
+        
+        WITH t, count(DISTINCT item) as consumer_count,
+             collect(DISTINCT {name: provider.name, type: provider.type, workspace: pw.name})[0] as parent_item
         
         RETURN 
             t.id as table_id,
@@ -921,7 +926,10 @@ async def search_tables(
             t.status as status,
             t.processed_rows as processed_rows,
             t.last_sync as last_sync,
-            consumer_count
+            consumer_count,
+            parent_item.name as parent_item_name,
+            parent_item.type as parent_item_type,
+            parent_item.workspace as parent_workspace
         ORDER BY consumer_count DESC, t.name
         LIMIT $limit
         """
@@ -1120,10 +1128,21 @@ async def _get_table_impact_impl(table_id: str, max_depth: int = 10):
         table_query = """
         MATCH (t:Table)
         WHERE t.id = $table_id OR toLower(t.name) = toLower($table_id)
+        
+        // Get parent item that provides/mirrors this table
+        OPTIONAL MATCH (provider:FabricItem)-[:MIRRORS|PROVIDES_TABLE]->(t)
+        OPTIONAL MATCH (pw:Workspace)-[:CONTAINS]->(provider)
+        
+        WITH t, 
+             collect(DISTINCT {name: provider.name, type: provider.type, workspace: pw.name})[0] as parent_item
+        
         RETURN t.id as id, t.name as name, t.schema as schema, 
                t.database as database, t.full_path as full_path,
                t.status as status, t.processed_rows as processed_rows,
-               t.last_sync as last_sync
+               t.last_sync as last_sync,
+               parent_item.name as parent_item_name,
+               parent_item.type as parent_item_type,
+               parent_item.workspace as parent_workspace
         LIMIT 1
         """
         table_results = _neo4j_client.run_query(table_query, {"table_id": table_id})
