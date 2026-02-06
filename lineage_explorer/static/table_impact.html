@@ -1011,7 +1011,9 @@
                     data-table-name="${escapeHtml(table.table_name)}">
                     <td class="table-name">${escapeHtml(table.table_name)}</td>
                     <td title="${escapeHtml(table.full_path || '')}">${escapeHtml(location)}</td>
-                    <td><span class="badge ${sourceBadgeClass}" style="font-size: 10px;">${sourceType}</span></td>
+                    <td><span class="badge ${sourceBadgeClass}" style="font-size: 10px;">${sourceType}</span>
+                        ${table.status ? `<span class="badge" style="font-size: 9px; margin-left: 4px; background: ${table.status === 'Running' ? 'var(--accent-green, #10b981)' : 'var(--accent-amber, #f59e0b)'}; color: #fff;">${escapeHtml(table.status)}</span>` : ''}
+                    </td>
                     <td class="text-right">${table.consumer_count}</td>
                 </tr>`;
             }).join('');
@@ -1339,6 +1341,8 @@
                         <span class="node-type">Source Table</span>
                         ${sourceBadge}
                         <span class="node-workspace">${escapeHtml(locationDisplay)}</span>
+                        ${table.status ? `<span class="badge" style="font-size: 9px; margin-left: 8px; background: ${table.status === 'Running' ? '#10b981' : '#f59e0b'}; color: #fff;">${escapeHtml(table.status)}</span>` : ''}
+                        ${table.processed_rows ? `<span style="font-size: 10px; color: var(--text-muted, #94a3b8); margin-left: 8px;">${Number(table.processed_rows).toLocaleString()} rows</span>` : ''}
                     </div>
                 </div>
             `;

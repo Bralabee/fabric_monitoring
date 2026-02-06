@@ -10,7 +10,7 @@ A comprehensive collection of reusable Cypher queries for insight extraction, st
 | `Workspace` | Fabric workspace | `id`, `name` |
 | `FabricItem` | Fabric item (Lakehouse, Notebook, etc.) | `id`, `name`, `type`, `workspace_id` |
 | `ExternalSource` | External data sources | `id`, `display_name`, `type`, `connection_details` |
-| `Table` | Database tables (mirrored) | `id`, `name`, `database`, `schema`, `full_path` |
+| `Table` | Database tables (mirrored/shortcut) | `id`, `name`, `database`, `schema`, `full_path`, `table_type`, `status`, `processed_rows`, `last_sync` |
 
 ### Relationship Types
 | Relationship | Description | Direction |

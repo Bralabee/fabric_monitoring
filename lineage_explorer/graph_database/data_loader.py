@@ -713,9 +713,13 @@ class LineageDataLoader:
                 tables[table_id] = {
                     'table_id': table_id,
                     'table_name': table_name,
-                    'schema_name': schema_name,
+                    'schema': schema_name,
                     'database_name': type_props.get('database', 'Unknown'),
-                    'full_path': f"{type_props.get('database', '')}.{schema_name}.{table_name}"
+                    'full_path': f"{type_props.get('database', '')}.{schema_name}.{table_name}",
+                    'table_type': 'mirrored',
+                    'status': None,
+                    'processed_rows': None,
+                    'last_sync': None
                 }
             
             mirror_edges.append({

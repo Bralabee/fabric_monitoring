@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "usf_fabric_monitoring"
-version = "0.3.33"
+version = "0.3.34"
 description = "Microsoft Fabric Monitoring & Governance System with Advanced Analytics, Smart Merge Technology, and Star Schema Builder"
 readme = "README.md"
 requires-python = ">=3.11"

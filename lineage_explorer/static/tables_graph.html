@@ -948,6 +948,9 @@
                 <div class="tooltip-title">${d.data?.label || d.id}</div>
                 <div class="tooltip-meta">${type}</div>
                 ${d.data?.schema ? `<div class="tooltip-meta">Schema: ${d.data.schema}</div>` : ''}
+                ${d.data?.status ? `<div class="tooltip-meta">Status: ${d.data.status}</div>` : ''}
+                ${d.data?.processed_rows ? `<div class="tooltip-meta">Rows: ${Number(d.data.processed_rows).toLocaleString()}</div>` : ''}
+                ${d.data?.last_sync ? `<div class="tooltip-meta">Last Sync: ${new Date(d.data.last_sync).toLocaleString()}</div>` : ''}
             `;
             tooltip.style.left = `${event.pageX + 10}px`;
             tooltip.style.top = `${event.pageY + 10}px`;

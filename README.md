@@ -2,7 +2,7 @@
 
 A comprehensive Python-based solution for monitoring, analyzing, and governing Microsoft Fabric workspaces. This project provides tools for historical activity analysis (Monitor Hub), automated security group enforcement, and star schema analytics for business intelligence.
 
-> **Current Version: 0.3.33** - Mirrored Table Search Fix & Neo4j Data Reload  
+> **Current Version: 0.3.34** - Surface table status/sync metadata across UI & API  
 > See [CHANGELOG.md](CHANGELOG.md) for release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
 ## 🚀 Key Features
 

@@ -577,6 +577,9 @@ class LineageQueries:
                 t.database as database,
                 t.schema as schema,
                 t.table_type as table_type,
+                t.status as status,
+                t.processed_rows as processed_rows,
+                t.last_sync as last_sync,
                 collect(DISTINCT provider.name) as provided_by,
                 collect(DISTINCT consumer.name) as used_by,
                 collect(DISTINCT mirror.name) as mirrored_by
@@ -644,6 +647,9 @@ class LineageQueries:
                 t.full_path as full_path,
                 t.database as database,
                 t.table_type as table_type,
+                t.status as status,
+                t.processed_rows as processed_rows,
+                t.last_sync as last_sync,
                 [p IN collect(DISTINCT {name: provider.name, workspace: pw.name, type: provider.type}) WHERE p.name IS NOT NULL] as providers,
                 [c IN collect(DISTINCT {name: consumer.name, workspace: cw.name, type: consumer.type}) WHERE c.name IS NOT NULL] as consumers,
                 [m IN collect(DISTINCT {name: mirror.name, workspace: mw.name, type: mirror.type}) WHERE m.name IS NOT NULL] as mirrors
@@ -688,7 +694,10 @@ class LineageQueries:
                 t.database as database,
                 t.schema as schema,
                 t.full_path as full_path,
-                t.table_type as table_type
+                t.table_type as table_type,
+                t.status as status,
+                t.processed_rows as processed_rows,
+                t.last_sync as last_sync
             ORDER BY t.name
             LIMIT 20
         """, {"table_name": table_name})

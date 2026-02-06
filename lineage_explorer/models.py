@@ -39,6 +39,9 @@ class Table(BaseModel):
     database: Optional[str] = Field(default=None, description="Database/item name")
     full_path: str  # e.g., "Tables/EDW_DATA/DIM_POSITION_HIERARCHY"
     table_type: str = Field(default="table", description="table, shortcut, mirrored")
+    status: Optional[str] = Field(default=None, description="Replication status, e.g., 'Running', 'Stopped'")
+    processed_rows: Optional[int] = Field(default=None, description="Number of rows processed/replicated")
+    last_sync: Optional[str] = Field(default=None, description="Last sync timestamp")
     source_item_id: Optional[str] = Field(default=None, description="ID of the FabricItem providing this table")
 
 

@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.34 (February 2026) - Surface Table Status & Sync Metadata
+
+### Fixed
+
+- **Legacy `_extract_mirrored_tables()` key mismatch** (`lineage_explorer/graph_database/data_loader.py`):
+  - Dict used `schema_name` key but `MERGE_TABLE` Cypher expects `schema` — caused `null` schema for legacy-parsed tables
+  - Added missing fields: `table_type`, `status`, `processed_rows`, `last_sync`
+
+### Enhanced
+
+- **Neo4j queries now return table health metadata** (`lineage_explorer/graph_database/queries.py`):
+  - `get_table_lineage()`, `get_table_dependencies()`, `get_table_impact_analysis()` now return `status`, `processed_rows`, `last_sync`
+- **API endpoints surface new fields** (`lineage_explorer/api_extended.py`):
+  - `/api/tables/search` — adds `status`, `processed_rows`, `last_sync` to results
+  - `/api/tables` — adds `status`, `processed_rows`, `last_sync` to paginated list
+  - `/api/tables/impact/{table_id}` — table info includes sync metadata
+  - Orphan tables query now includes `status` and `processed_rows`
+- **Frontend displays status badges** (`lineage_explorer/static/`):
+  - `table_impact.html`: Status badge (green=Running, amber=other) in search results and impact tree header, processed row count in tree header
+  - `tables_graph.html`: Tooltip shows status, processed rows, and last sync time
+- **Pydantic `Table` model** (`lineage_explorer/models.py`):
+  - Added `status`, `processed_rows`, `last_sync` fields
+- **Neo4j documentation** (`lineage_explorer/docs/neo4j_queries.md`):
+  - Table node schema updated to include `table_type`, `status`, `processed_rows`, `last_sync`
+
+---
+
 ## 0.3.33 (February 2026) - Mirrored Table Search Fix & Neo4j Data Reload
 
 ### Fixed

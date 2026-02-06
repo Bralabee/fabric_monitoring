@@ -918,6 +918,9 @@ async def search_tables(
             t.schema as schema,
             t.database as database,
             t.full_path as full_path,
+            t.status as status,
+            t.processed_rows as processed_rows,
+            t.last_sync as last_sync,
             consumer_count
         ORDER BY consumer_count DESC, t.name
         LIMIT $limit
@@ -1118,7 +1121,9 @@ async def _get_table_impact_impl(table_id: str, max_depth: int = 10):
         MATCH (t:Table)
         WHERE t.id = $table_id OR toLower(t.name) = toLower($table_id)
         RETURN t.id as id, t.name as name, t.schema as schema, 
-               t.database as database, t.full_path as full_path
+               t.database as database, t.full_path as full_path,
+               t.status as status, t.processed_rows as processed_rows,
+               t.last_sync as last_sync
         LIMIT 1
         """
         table_results = _neo4j_client.run_query(table_query, {"table_id": table_id})
@@ -1206,6 +1211,9 @@ async def list_tables(
             t.name as table_name,
             t.schema as schema,
             t.database as database,
+            t.status as status,
+            t.processed_rows as processed_rows,
+            t.last_sync as last_sync,
             consumer_count
         ORDER BY consumer_count DESC, t.name
         SKIP $offset
@@ -1273,7 +1281,8 @@ async def get_tables_overview():
         MATCH (t:Table)
         WHERE NOT EXISTS { MATCH (t)<-[:MIRRORS|USES_TABLE]-() }
         RETURN t.id as table_id, t.name as table_name, 
-               t.database as database, t.schema as schema
+               t.database as database, t.schema as schema,
+               t.status as status, t.processed_rows as processed_rows
         ORDER BY t.name
         LIMIT 50
         """
