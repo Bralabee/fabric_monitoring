@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
 
 import pandas as pd
 
@@ -52,7 +51,7 @@ REQUIRED_COLUMNS = [
 ]
 
 
-def load_activities_from_directory(export_dir: str) -> List[Dict[str, object]]:
+def load_activities_from_directory(export_dir: str) -> list[dict[str, object]]:
     """Read all daily CSV exports within a directory and normalize column names."""
     base_path = Path(export_dir)
     daily_dir = base_path / "daily"
@@ -103,7 +102,7 @@ def _ensure_required_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _coalesce_datetime(df: pd.DataFrame, columns: List[str]) -> pd.Series:
+def _coalesce_datetime(df: pd.DataFrame, columns: list[str]) -> pd.Series:
     """Return the first non-null datetime string across provided columns."""
     series = None
     for column in columns:

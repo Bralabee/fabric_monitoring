@@ -11,7 +11,7 @@ Usage:
         is_fabric_environment,
         get_default_output_path
     )
-    
+
     env = detect_environment()
     if is_fabric_environment():
         # Use Fabric-specific paths
@@ -20,9 +20,9 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
-import logging
 from enum import Enum
 from pathlib import Path
 
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 class Environment(str, Enum):
     """Deployment environment types."""
+
     LOCAL = "LOCAL"
     FABRIC_NOTEBOOK = "FABRIC_NOTEBOOK"
     FABRIC_PIPELINE = "FABRIC_PIPELINE"
@@ -41,16 +42,16 @@ class Environment(str, Enum):
 def detect_environment() -> Environment:
     """
     Detect the current execution environment.
-    
+
     Detection order:
     1. Azure DevOps - Check for TF_BUILD environment variable
     2. Fabric Notebook - Check for notebookutils module availability
     3. Fabric Pipeline - Check for Fabric-specific env vars
     4. Local - Default fallback
-    
+
     Returns:
         Environment enum value
-        
+
     Example:
         >>> env = detect_environment()
         >>> if env == Environment.FABRIC_NOTEBOOK:
@@ -77,7 +78,7 @@ def detect_environment() -> Environment:
 def _is_fabric_context() -> bool:
     """
     Check if running in a Microsoft Fabric context.
-    
+
     Uses multiple indicators to robustly detect Fabric environment.
     """
     # Check common Fabric environment indicators
@@ -101,6 +102,7 @@ def _has_notebookutils() -> bool:
     """Check if notebookutils module is available (Fabric notebook)."""
     try:
         import notebookutils  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -110,12 +112,13 @@ def _has_mssparkutils() -> bool:
     """Check if mssparkutils is available (Synapse/Fabric Spark)."""
     try:
         from pyspark.dbutils import DBUtils  # noqa: F401
+
         return True
     except ImportError:
         pass
 
     # Check for mssparkutils global (injected in Fabric notebooks)
-    if 'mssparkutils' in dir(__builtins__) if isinstance(__builtins__, dict) else hasattr(__builtins__, 'mssparkutils'):
+    if "mssparkutils" in dir(__builtins__) if isinstance(__builtins__, dict) else hasattr(__builtins__, "mssparkutils"):
         return True
 
     return False
@@ -124,7 +127,7 @@ def _has_mssparkutils() -> bool:
 def is_fabric_environment() -> bool:
     """
     Quick check if running in any Fabric environment.
-    
+
     Returns:
         True if running in Fabric (notebook or pipeline)
     """
@@ -135,7 +138,7 @@ def is_fabric_environment() -> bool:
 def is_local_environment() -> bool:
     """
     Quick check if running locally.
-    
+
     Returns:
         True if running in local development environment
     """
@@ -145,13 +148,13 @@ def is_local_environment() -> bool:
 def get_default_output_path(subdir: str = "exports") -> Path:
     """
     Get the default output path based on environment.
-    
+
     In Fabric: Uses /lakehouse/default/Files/<subdir>
     Locally: Uses project root / <subdir>
-    
+
     Args:
         subdir: Subdirectory name within the output location
-        
+
     Returns:
         Path object for output directory
     """
@@ -168,7 +171,7 @@ def get_default_output_path(subdir: str = "exports") -> Path:
 def get_config_path() -> Path:
     """
     Get the configuration directory path based on environment.
-    
+
     Returns:
         Path to config directory
     """
@@ -197,16 +200,16 @@ def _get_project_root() -> Path:
 def convert_to_spark_path(local_path: str) -> str:
     """
     Convert a local mount path to Spark-compatible relative path.
-    
+
     In Fabric, glob.glob returns /lakehouse/default/Files/... paths,
     but Spark needs relative paths like Files/...
-    
+
     Args:
         local_path: Local filesystem path
-        
+
     Returns:
         Spark-compatible path
-        
+
     Example:
         >>> convert_to_spark_path("/lakehouse/default/Files/data/file.csv")
         "Files/data/file.csv"
@@ -219,7 +222,7 @@ def convert_to_spark_path(local_path: str) -> str:
     result = local_path
     for pattern in patterns:
         if result.startswith(pattern):
-            result = result[len(pattern):]
+            result = result[len(pattern) :]
             break
 
     return result
@@ -228,7 +231,7 @@ def convert_to_spark_path(local_path: str) -> str:
 def get_environment_info() -> dict:
     """
     Get detailed information about the current environment.
-    
+
     Returns:
         Dictionary with environment details
     """

@@ -16,11 +16,12 @@ Usage:
     python monitor_hub_pipeline.py [--days 7] [--output-dir exports/]
 """
 
-import os
 import argparse
+import os
 
 # Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Import from parent package (now inside usf_fabric_monitoring.scripts)
@@ -29,8 +30,8 @@ from usf_fabric_monitoring.core.pipeline import MonitorHubPipeline
 
 def main():
     """Main function for command line execution"""
-    max_days = int(os.getenv('MAX_HISTORICAL_DAYS', '28'))
-    default_days = int(os.getenv('DEFAULT_ANALYSIS_DAYS', '7'))
+    max_days = int(os.getenv("MAX_HISTORICAL_DAYS", "28"))
+    default_days = int(os.getenv("DEFAULT_ANALYSIS_DAYS", "7"))
 
     parser = argparse.ArgumentParser(
         description="Microsoft Fabric Monitor Hub Analysis Pipeline",
@@ -41,27 +42,27 @@ Examples:
     python monitor_hub_pipeline.py --days 14          # Analyze last 14 days
     python monitor_hub_pipeline.py --member-only      # Member workspaces only
   python monitor_hub_pipeline.py --output exports/ # Custom output directory
-        """
+        """,
     )
 
     parser.add_argument(
         "--days",
         type=int,
         default=None,
-        help=f"Number of days of historical data to analyze (default: from env, max: {max_days} due to API limits)"
+        help=f"Number of days of historical data to analyze (default: from env, max: {max_days} due to API limits)",
     )
 
     parser.add_argument(
         "--output-dir",
         type=str,
         default="exports/monitor_hub_analysis",
-        help="Output directory for reports (default: exports/monitor_hub_analysis)"
+        help="Output directory for reports (default: exports/monitor_hub_analysis)",
     )
 
     parser.add_argument(
         "--member-only",
         action="store_true",
-        help="Monitor only member workspaces (~139) instead of all tenant workspaces (~2187)"
+        help="Monitor only member workspaces (~139) instead of all tenant workspaces (~2187)",
     )
 
     args = parser.parse_args()
@@ -72,8 +73,14 @@ Examples:
     print("🚀 Starting Microsoft Fabric Monitor Hub Analysis Pipeline", flush=True)
     print(f"   • Analysis Period: {effective_days} days (max {max_days})", flush=True)
     print(f"   • Output Directory: {args.output_dir}", flush=True)
-    print(f"   • Monitoring Scope: {'Member workspaces only' if args.member_only else 'All tenant workspaces'}", flush=True)
-    print(f"   • API Strategy: {'Per-workspace loop' if args.member_only else 'Tenant-wide Power BI Admin API'}", flush=True)
+    print(
+        f"   • Monitoring Scope: {'Member workspaces only' if args.member_only else 'All tenant workspaces'}",
+        flush=True,
+    )
+    print(
+        f"   • API Strategy: {'Per-workspace loop' if args.member_only else 'Tenant-wide Power BI Admin API'}",
+        flush=True,
+    )
 
     # Initialize and run pipeline
     pipeline = MonitorHubPipeline(args.output_dir)

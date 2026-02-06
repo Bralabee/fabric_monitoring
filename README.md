@@ -72,7 +72,7 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 - **Incremental Loading**: High-water mark pattern for efficient delta loads
 - **SCD Type 2 Support**: Tracks slowly changing dimensions (workspace names, item descriptions)
 - **Delta Lake DDL**: Generates deployment scripts for Fabric Lakehouses
-- **CLI & Notebook Options**: Run via `usf-star-schema` command or `notebooks/Fabric_Star_Schema_Builder.ipynb`
+- **CLI & Notebook Options**: Run via `usf-star-schema` command or `notebooks/2A_Fabric_Star_Schema_Builder.ipynb`
 
 ## 📋 Prerequisites
 
@@ -187,7 +187,7 @@ For advanced analysis and visualization, use the consolidated Jupyter Notebook:
     ```bash
     jupyter notebook
     ```
-2.  **Open**: `notebooks/Monitor_Hub_Analysis.ipynb`
+2.  **Open**: `notebooks/1_Monitor_Hub_Analysis.ipynb`
 3.  **Run**: This notebook handles the end-to-end workflow:
     -   Installs dependencies.
     -   Runs the extraction pipeline (`monitor_hub_pipeline.py`).
@@ -273,7 +273,7 @@ After `pip install -e .` or `make install`, these commands become available:
 | `usf-validate-config` | `scripts.validate_config` | Validate JSON configs |
 
 
-## ⚠️ Recent Updates (v0.3.0 - Star Schema Analytics Release)
+## ⚠️ Recent Updates (v0.3.34 - Current Release)
 
 This release introduces powerful star schema analytics capabilities:
 
@@ -299,7 +299,7 @@ This release introduces powerful star schema analytics capabilities:
 - **Failure Analysis**: Detailed error tracking with root cause identification
 
 ### 📚 **Documentation & Governance**
-- **Fabric Deployment Guide**: Complete deployment options ([docs/FABRIC_DEPLOYMENT.md](docs/FABRIC_DEPLOYMENT.md))
+- **Fabric Deployment Guide**: Complete deployment options ([docs/02_User_Guides/03_Fabric_Deployment.md](docs/02_User_Guides/03_Fabric_Deployment.md))
 - **Comprehensive Project Analysis**: Complete gap assessment and improvement roadmap ([PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md))
 - **Contribution Guidelines**: Standardized development workflow and coding standards ([CONTRIBUTING.md](CONTRIBUTING.md))
 - **Security Policy**: Best practices and vulnerability reporting procedures ([SECURITY.md](SECURITY.md))
@@ -320,7 +320,7 @@ To run this solution directly within a Microsoft Fabric Notebook:
     ```bash
     make build
     ```
-    This will generate a file like `dist/usf_fabric_monitoring-0.3.9-py3-none-any.whl`.
+    This will generate a file like `dist/usf_fabric_monitoring-0.3.34-py3-none-any.whl`.
 
 2.  **Upload to Fabric**:
     -   Navigate to your Fabric Workspace.
@@ -330,16 +330,16 @@ To run this solution directly within a Microsoft Fabric Notebook:
 
 3.  **Configure the Notebook**:
     -   Import one of the available notebooks:
-        - `notebooks/Monitor_Hub_Analysis.ipynb` - Historical activity analysis
-        - `notebooks/Workspace_Access_Enforcement.ipynb` - Security compliance
-        - `notebooks/Fabric_Star_Schema_Builder.ipynb` - Star schema analytics ⭐ NEW
+        - `notebooks/1_Monitor_Hub_Analysis.ipynb` - Historical activity analysis
+        - `notebooks/3_Workspace_Access_Enforcement.ipynb` - Security compliance
+        - `notebooks/2A_Fabric_Star_Schema_Builder.ipynb` - Star schema analytics ⭐ NEW
     -   In the notebook settings (Environment), select the Environment you created in step 2.
     -   This ensures the `usf_fabric_monitoring` library is installed and available to the notebook.
 
 4.  **Run**:
     -   Execute the notebook cells. The library will be automatically detected.
 
-For advanced deployment options (inline pip install, lakehouse file reference, etc.), see [docs/FABRIC_DEPLOYMENT.md](docs/FABRIC_DEPLOYMENT.md).
+For advanced deployment options (inline pip install, lakehouse file reference, etc.), see [docs/02_User_Guides/03_Fabric_Deployment.md](docs/02_User_Guides/03_Fabric_Deployment.md).
 
 ## 🔗 Related Projects
 

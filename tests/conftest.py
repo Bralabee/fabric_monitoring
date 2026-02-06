@@ -3,15 +3,15 @@ Pytest configuration and fixtures for test suite.
 
 This module provides shared fixtures used across multiple test files.
 """
-import sys
-import json
-import tempfile
-from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
 
-import pytest
+import json
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
+
 import pandas as pd
+import pytest
 
 # Add the project root and scripts directory to the Python path
 _project_root = Path(__file__).parent.parent
@@ -23,8 +23,9 @@ sys.path.insert(0, str(_project_root / "scripts"))
 # SAMPLE DATA FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
-def sample_activities() -> List[Dict[str, Any]]:
+def sample_activities() -> list[dict[str, Any]]:
     """Sample activity records for testing Smart Merge and pipelines."""
     base_time = datetime(2024, 1, 15, 10, 0, 0)
     return [
@@ -69,7 +70,7 @@ def sample_activities() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_jobs() -> List[Dict[str, Any]]:
+def sample_jobs() -> list[dict[str, Any]]:
     """Sample job history records for testing Smart Merge."""
     base_time = datetime(2024, 1, 15, 10, 0, 30)  # 30 seconds after activities
     return [
@@ -101,7 +102,7 @@ def sample_activities_df(sample_activities) -> pd.DataFrame:
 
 
 @pytest.fixture
-def sample_workspaces() -> Dict[str, str]:
+def sample_workspaces() -> dict[str, str]:
     """Sample workspace ID to name mapping."""
     return {
         "ws_001": "Dev Workspace",
@@ -115,46 +116,37 @@ def sample_workspaces() -> Dict[str, str]:
 # TEMPORARY CONFIG FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
 def temp_config_dir(tmp_path) -> Path:
     """Create a temporary config directory with valid config files."""
     config_dir = tmp_path / "config"
     config_dir.mkdir()
-    
+
     # Create valid inference_rules.json
     inference_rules = {
-        "domains": {
-            "HR": ["hr", "human"],
-            "Finance": ["finance", "budget"]
-        },
-        "locations": {
-            "EMEA": ["emea"],
-            "Americas": ["us", "usa"]
-        }
+        "domains": {"HR": ["hr", "human"], "Finance": ["finance", "budget"]},
+        "locations": {"EMEA": ["emea"], "Americas": ["us", "usa"]},
     }
     (config_dir / "inference_rules.json").write_text(json.dumps(inference_rules))
-    
+
     # Create valid workspace_access_targets.json
     targets = {
         "description": "Test targets",
         "groups": [
-            {
-                "displayName": "Test Admin Group",
-                "objectId": "12345678-1234-1234-1234-123456789012",
-                "role": "Admin"
-            }
-        ]
+            {"displayName": "Test Admin Group", "objectId": "12345678-1234-1234-1234-123456789012", "role": "Admin"}
+        ],
     }
     (config_dir / "workspace_access_targets.json").write_text(json.dumps(targets))
-    
+
     # Create valid workspace_access_suppressions.json
     suppressions = {
         "description": "Test suppressions",
         "workspaceIds": ["00000000-0000-0000-0000-000000000000"],
-        "workspaceNames": ["Test Sandbox"]
+        "workspaceNames": ["Test Sandbox"],
     }
     (config_dir / "workspace_access_suppressions.json").write_text(json.dumps(suppressions))
-    
+
     return config_dir
 
 
@@ -170,8 +162,9 @@ def invalid_config_file(tmp_path) -> Path:
 # MOCK API RESPONSE FIXTURES
 # =============================================================================
 
+
 @pytest.fixture
-def mock_workspace_response() -> Dict[str, Any]:
+def mock_workspace_response() -> dict[str, Any]:
     """Mock response from Power BI Admin /groups endpoint."""
     return {
         "value": [
@@ -190,13 +183,13 @@ def mock_workspace_response() -> Dict[str, Any]:
                 "state": "Active",
                 "isOnDedicatedCapacity": True,
                 "capacityId": "cap_001",
-            }
+            },
         ]
     }
 
 
 @pytest.fixture
-def mock_activity_response() -> Dict[str, Any]:
+def mock_activity_response() -> dict[str, Any]:
     """Mock response from Power BI Admin /activityevents endpoint."""
     return {
         "activityEventEntities": [
@@ -212,4 +205,3 @@ def mock_activity_response() -> Dict[str, Any]:
         "continuationUri": None,
         "lastResultSet": True,
     }
-

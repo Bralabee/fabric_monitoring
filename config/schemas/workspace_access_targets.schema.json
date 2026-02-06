@@ -67,5 +67,5 @@
     "required": [
         "groups"
     ],
-    "additionalProperties": true
+    "additionalProperties": false
 }

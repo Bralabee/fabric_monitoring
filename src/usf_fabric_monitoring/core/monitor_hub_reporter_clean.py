@@ -4,22 +4,23 @@ Microsoft Fabric Monitor Hub CSV Reporter
 This module generates comprehensive CSV reports for historical analysis of Microsoft Fabric
 Monitor Hub data. It produces the reports specified in the statement of work to identify:
 - Constant failures
-- Excess activity per User/Location/Domain  
+- Excess activity per User/Location/Domain
 - Historical performance trends
 
 Export formats:
 - Historical Activities Report
 - User Performance Analysis
-- Domain Performance Analysis  
+- Domain Performance Analysis
 - Failure Analysis Report
 - Daily/Weekly Trend Reports
 """
 
 import logging
-from typing import Dict, Any, List
 from datetime import datetime
-import pandas as pd
 from pathlib import Path
+from typing import Any
+
+import pandas as pd
 
 from .historical_analyzer import HistoricalAnalysisEngine
 
@@ -30,7 +31,7 @@ class MonitorHubCSVReporter:
     def __init__(self, export_directory: str = "exports/monitor_hub_reports"):
         """
         Initialize the CSV reporter
-        
+
         Args:
             export_directory: Directory to save CSV reports
         """
@@ -44,13 +45,13 @@ class MonitorHubCSVReporter:
         # Report timestamp for consistent naming
         self.report_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    def generate_comprehensive_reports(self, historical_data: Dict[str, Any]) -> Dict[str, str]:
+    def generate_comprehensive_reports(self, historical_data: dict[str, Any]) -> dict[str, str]:
         """
         Generate all comprehensive CSV reports
-        
+
         Args:
             historical_data: Raw historical data from MonitorHubExtractor
-            
+
         Returns:
             Dictionary mapping report names to file paths
         """
@@ -93,7 +94,7 @@ class MonitorHubCSVReporter:
         self.logger.info(f"Generated {len(report_files)} comprehensive reports")
         return report_files
 
-    def _generate_activities_report(self, activities: List[Dict[str, Any]]) -> str:
+    def _generate_activities_report(self, activities: list[dict[str, Any]]) -> str:
         """Generate master activities report with all activity details"""
         if not activities:
             return self._create_empty_report("activities_master")
@@ -101,19 +102,38 @@ class MonitorHubCSVReporter:
         df = pd.DataFrame(activities)
 
         # Add derived columns for analysis
-        df["date"] = pd.to_datetime(df["start_time"], format='mixed', errors='coerce', utc=True).dt.date
-        df["hour"] = pd.to_datetime(df["start_time"], format='mixed', errors='coerce', utc=True).dt.hour
+        df["date"] = pd.to_datetime(df["start_time"], format="mixed", errors="coerce", utc=True).dt.date
+        df["hour"] = pd.to_datetime(df["start_time"], format="mixed", errors="coerce", utc=True).dt.hour
         df["duration_minutes"] = df["duration_seconds"] / 60
         df["is_failed"] = df["status"] == "Failed"
         df["is_success"] = df["status"] != "Failed"
 
         # Reorder columns for better readability
         column_order = [
-            "activity_id", "workspace_id", "workspace_name", "item_id", "item_name", "item_type",
-            "activity_type", "status", "start_time", "end_time", "date", "hour",
-            "duration_seconds", "duration_minutes", "submitted_by", "created_by",
-            "last_updated_by", "domain", "location", "object_url", "is_simulated",
-            "failure_reason", "error_message", "error_code"
+            "activity_id",
+            "workspace_id",
+            "workspace_name",
+            "item_id",
+            "item_name",
+            "item_type",
+            "activity_type",
+            "status",
+            "start_time",
+            "end_time",
+            "date",
+            "hour",
+            "duration_seconds",
+            "duration_minutes",
+            "submitted_by",
+            "created_by",
+            "last_updated_by",
+            "domain",
+            "location",
+            "object_url",
+            "is_simulated",
+            "failure_reason",
+            "error_message",
+            "error_code",
         ]
 
         # Keep only columns that exist
@@ -130,7 +150,7 @@ class MonitorHubCSVReporter:
         self.logger.info(f"Generated activities master report: {filename}")
         return str(filepath)
 
-    def _generate_summary_report(self, analysis_results: Dict[str, Any]) -> str:
+    def _generate_summary_report(self, analysis_results: dict[str, Any]) -> str:
         """Generate key measurables summary report"""
         key_measurables = analysis_results["key_measurables"]
         metadata = analysis_results["analysis_metadata"]
@@ -140,26 +160,26 @@ class MonitorHubCSVReporter:
                 "metric": "Total Activities",
                 "value": key_measurables["total_activities"],
                 "unit": "count",
-                "period": f"{metadata['period']['days']} days"
+                "period": f"{metadata['period']['days']} days",
             },
             {
                 "metric": "Failed Activities",
                 "value": key_measurables["failed_activities"],
                 "unit": "count",
-                "period": f"{metadata['period']['days']} days"
+                "period": f"{metadata['period']['days']} days",
             },
             {
                 "metric": "Success Rate",
                 "value": key_measurables["success_rate_percent"],
                 "unit": "percentage",
-                "period": f"{metadata['period']['days']} days"
+                "period": f"{metadata['period']['days']} days",
             },
             {
                 "metric": "Total Duration",
                 "value": key_measurables["total_duration_hours"],
                 "unit": "hours",
-                "period": f"{metadata['period']['days']} days"
-            }
+                "period": f"{metadata['period']['days']} days",
+            },
         ]
 
         df = pd.DataFrame(summary_data)
@@ -171,7 +191,7 @@ class MonitorHubCSVReporter:
         self.logger.info(f"Generated summary report: {filename}")
         return str(filepath)
 
-    def _generate_user_performance_report(self, analysis_results: Dict[str, Any]) -> str:
+    def _generate_user_performance_report(self, analysis_results: dict[str, Any]) -> str:
         """Generate user performance analysis report"""
         user_analysis = analysis_results.get("user_activity_analysis", {})
         top_users = user_analysis.get("top_users_by_activity", {})
@@ -181,16 +201,18 @@ class MonitorHubCSVReporter:
 
         user_data = []
         for user, stats in top_users.items():
-            user_data.append({
-                "user": user,
-                "total_activities": stats["total_activities"],
-                "failed_activities": stats["failed_activities"],
-                "success_rate_percent": stats["success_rate"],
-                "total_duration_seconds": stats["total_duration"],
-                "average_duration_seconds": stats["avg_duration"],
-                "daily_average_activities": round(stats["total_activities"] / 90, 2),
-                "risk_level": self._assess_user_risk_level(stats)
-            })
+            user_data.append(
+                {
+                    "user": user,
+                    "total_activities": stats["total_activities"],
+                    "failed_activities": stats["failed_activities"],
+                    "success_rate_percent": stats["success_rate"],
+                    "total_duration_seconds": stats["total_duration"],
+                    "average_duration_seconds": stats["avg_duration"],
+                    "daily_average_activities": round(stats["total_activities"] / 90, 2),
+                    "risk_level": self._assess_user_risk_level(stats),
+                }
+            )
 
         df = pd.DataFrame(user_data)
         df = df.sort_values("total_activities", ascending=False)
@@ -202,7 +224,7 @@ class MonitorHubCSVReporter:
         self.logger.info(f"Generated user performance report: {filename}")
         return str(filepath)
 
-    def _generate_domain_performance_report(self, analysis_results: Dict[str, Any]) -> str:
+    def _generate_domain_performance_report(self, analysis_results: dict[str, Any]) -> str:
         """Generate domain performance analysis report"""
         domain_analysis = analysis_results.get("domain_analysis", {})
         domain_summary = domain_analysis.get("domain_summary", {})
@@ -212,15 +234,17 @@ class MonitorHubCSVReporter:
 
         domain_data = []
         for domain, stats in domain_summary.items():
-            domain_data.append({
-                "domain": domain,
-                "total_activities": stats["total_activities"],
-                "failed_activities": stats["failed_activities"],
-                "success_rate_percent": stats["success_rate"],
-                "total_duration_seconds": stats["total_duration"],
-                "average_duration_seconds": stats["avg_duration"],
-                "percentage_of_total_activities": stats["percentage_of_total"]
-            })
+            domain_data.append(
+                {
+                    "domain": domain,
+                    "total_activities": stats["total_activities"],
+                    "failed_activities": stats["failed_activities"],
+                    "success_rate_percent": stats["success_rate"],
+                    "total_duration_seconds": stats["total_duration"],
+                    "average_duration_seconds": stats["avg_duration"],
+                    "percentage_of_total_activities": stats["percentage_of_total"],
+                }
+            )
 
         df = pd.DataFrame(domain_data)
         df = df.sort_values("total_activities", ascending=False)
@@ -232,7 +256,7 @@ class MonitorHubCSVReporter:
         self.logger.info(f"Generated domain performance report: {filename}")
         return str(filepath)
 
-    def _generate_failure_analysis_report(self, analysis_results: Dict[str, Any]) -> str:
+    def _generate_failure_analysis_report(self, analysis_results: dict[str, Any]) -> str:
         """Generate detailed failure analysis report"""
         failure_analysis = analysis_results.get("failure_analysis", {})
 
@@ -244,13 +268,19 @@ class MonitorHubCSVReporter:
         failure_data = []
 
         for item in top_failing:
-            failure_data.append({
-                "item_id": item["item_id"],
-                "item_name": item["item_name"],
-                "item_type": item["item_type"],
-                "failure_count": item["failure_count"],
-                "severity": "High" if item["failure_count"] > 10 else "Medium" if item["failure_count"] > 5 else "Low"
-            })
+            failure_data.append(
+                {
+                    "item_id": item["item_id"],
+                    "item_name": item["item_name"],
+                    "item_type": item["item_type"],
+                    "failure_count": item["failure_count"],
+                    "severity": "High"
+                    if item["failure_count"] > 10
+                    else "Medium"
+                    if item["failure_count"] > 5
+                    else "Low",
+                }
+            )
 
         if failure_data:
             df = pd.DataFrame(failure_data)
@@ -265,7 +295,7 @@ class MonitorHubCSVReporter:
         else:
             return self._create_empty_report("failure_analysis")
 
-    def _generate_daily_trends_report(self, analysis_results: Dict[str, Any]) -> str:
+    def _generate_daily_trends_report(self, analysis_results: dict[str, Any]) -> str:
         """Generate daily trends analysis report"""
         trend_analysis = analysis_results.get("trend_analysis", {})
         daily_trends = trend_analysis.get("daily_trends", {})
@@ -275,14 +305,16 @@ class MonitorHubCSVReporter:
 
         trend_data = []
         for date_str, stats in daily_trends.items():
-            trend_data.append({
-                "date": date_str,
-                "total_activities": stats["total_activities"],
-                "failed_activities": stats["failed_activities"],
-                "success_rate_percent": stats["success_rate"],
-                "total_duration_seconds": stats["total_duration"],
-                "average_duration_seconds": stats["avg_duration"]
-            })
+            trend_data.append(
+                {
+                    "date": date_str,
+                    "total_activities": stats["total_activities"],
+                    "failed_activities": stats["failed_activities"],
+                    "success_rate_percent": stats["success_rate"],
+                    "total_duration_seconds": stats["total_duration"],
+                    "average_duration_seconds": stats["avg_duration"],
+                }
+            )
 
         df = pd.DataFrame(trend_data)
         df["date"] = pd.to_datetime(df["date"])
@@ -307,7 +339,7 @@ class MonitorHubCSVReporter:
         self.logger.warning(f"Generated empty report: {filename}")
         return str(filepath)
 
-    def _assess_user_risk_level(self, stats: Dict[str, Any]) -> str:
+    def _assess_user_risk_level(self, stats: dict[str, Any]) -> str:
         """Assess user risk level based on activity patterns"""
         success_rate = stats["success_rate"]
         total_activities = stats["total_activities"]
@@ -319,7 +351,7 @@ class MonitorHubCSVReporter:
         else:
             return "Low"
 
-    def _generate_compute_analysis_report(self, activities: List[Dict[str, Any]]) -> str:
+    def _generate_compute_analysis_report(self, activities: list[dict[str, Any]]) -> str:
         """
         Generate detailed compute analysis report for Spark, Notebooks, and Pipelines.
         Focuses on who ran what, success/failure rates, and duration.
@@ -328,7 +360,7 @@ class MonitorHubCSVReporter:
             return self._create_empty_report("compute_analysis")
 
         # Filter for compute-intensive items
-        compute_types = {'SparkJob', 'Notebook', 'DataPipeline', 'SparkJobDefinition', 'Lakehouse'}
+        compute_types = {"SparkJob", "Notebook", "DataPipeline", "SparkJobDefinition", "Lakehouse"}
         compute_activities = [a for a in activities if a.get("item_type") in compute_types]
 
         if not compute_activities:
@@ -352,12 +384,16 @@ class MonitorHubCSVReporter:
         # Do NOT fill duration with 0, as it skews averages. Keep as NaN.
 
         # Aggregate
-        summary = df.groupby(["submitted_by", "item_name", "item_type", "status"]).agg(
-            count=("activity_id", "count"),
-            avg_duration=("duration_seconds", "mean"),
-            total_duration=("duration_seconds", "sum"),
-            last_run=("start_time", "max")
-        ).reset_index()
+        summary = (
+            df.groupby(["submitted_by", "item_name", "item_type", "status"])
+            .agg(
+                count=("activity_id", "count"),
+                avg_duration=("duration_seconds", "mean"),
+                total_duration=("duration_seconds", "sum"),
+                last_run=("start_time", "max"),
+            )
+            .reset_index()
+        )
 
         # Pivot to have Success/Failed counts in columns if possible, or just keep as list
         # For a cleaner report, let's re-aggregate to have one row per User+Item
@@ -389,19 +425,21 @@ class MonitorHubCSVReporter:
                 # For now, we just note it failed.
                 pass
 
-            final_data.append({
-                "User": user,
-                "Item Name": item,
-                "Item Type": type_,
-                "Total Runs": total_runs,
-                "Successful Runs": success_runs,
-                "Failed Runs": failed_runs,
-                "Unknown/In Progress Runs": unknown_duration_runs,
-                "Failure Rate %": round((failed_runs / total_runs) * 100, 1),
-                "Avg Duration (s)": round(avg_duration, 1),
-                "Total Duration (s)": round(total_duration, 1),
-                "Last Run Time": last_run
-            })
+            final_data.append(
+                {
+                    "User": user,
+                    "Item Name": item,
+                    "Item Type": type_,
+                    "Total Runs": total_runs,
+                    "Successful Runs": success_runs,
+                    "Failed Runs": failed_runs,
+                    "Unknown/In Progress Runs": unknown_duration_runs,
+                    "Failure Rate %": round((failed_runs / total_runs) * 100, 1),
+                    "Avg Duration (s)": round(avg_duration, 1),
+                    "Total Duration (s)": round(total_duration, 1),
+                    "Last Run Time": last_run,
+                }
+            )
 
         results_df = pd.DataFrame(final_data)
 

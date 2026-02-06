@@ -1,11 +1,10 @@
 """
 Data Definition and Semantic Model for USF Fabric Monitoring
 
-This module defines the schema (DDL) for the monitoring datasets and 
+This module defines the schema (DDL) for the monitoring datasets and
 represents the semantic model structure (tables, relationships, measures).
 """
 
-from typing import Dict, List
 from dataclasses import dataclass, field
 
 # ==========================================
@@ -121,18 +120,20 @@ ALL_DDLS = {
     "domain_performance": DDL_DOMAIN_PERFORMANCE,
     "failure_analysis": DDL_FAILURE_ANALYSIS,
     "daily_trends": DDL_DAILY_TRENDS,
-    "compute_analysis": DDL_COMPUTE_ANALYSIS
+    "compute_analysis": DDL_COMPUTE_ANALYSIS,
 }
 
 # ==========================================
 # 2. Semantic Model Representation
 # ==========================================
 
+
 @dataclass
 class Measure:
     name: str
     expression: str
     format_string: str = "#,##0"
+
 
 @dataclass
 class Relationship:
@@ -142,12 +143,14 @@ class Relationship:
     to_column: str
     cardinality: str = "Many-to-One"  # Many-to-One, One-to-One, etc.
 
+
 @dataclass
 class Table:
     name: str
-    columns: List[str]
-    measures: List[Measure] = field(default_factory=list)
+    columns: list[str]
+    measures: list[Measure] = field(default_factory=list)
     source_expression: str = ""
+
 
 class FabricSemanticModel:
     """
@@ -156,8 +159,8 @@ class FabricSemanticModel:
     """
 
     def __init__(self):
-        self.tables: Dict[str, Table] = {}
-        self.relationships: List[Relationship] = []
+        self.tables: dict[str, Table] = {}
+        self.relationships: list[Relationship] = []
         self._build_model()
 
     def _build_model(self):
@@ -165,42 +168,51 @@ class FabricSemanticModel:
         self.tables["Fact_Activities"] = Table(
             name="Fact_Activities",
             columns=[
-                "activity_id", "workspace_id", "item_id", "date", "submitted_by",
-                "status", "duration_seconds", "is_failed", "is_success"
+                "activity_id",
+                "workspace_id",
+                "item_id",
+                "date",
+                "submitted_by",
+                "status",
+                "duration_seconds",
+                "is_failed",
+                "is_success",
             ],
             source_expression="SELECT * FROM activities_master",
             measures=[
                 Measure("Total Activities", "COUNTROWS(Fact_Activities)"),
-                Measure("Failed Activities", "CALCULATE(COUNTROWS(Fact_Activities), Fact_Activities[status] = 'Failed')"),
+                Measure(
+                    "Failed Activities", "CALCULATE(COUNTROWS(Fact_Activities), Fact_Activities[status] = 'Failed')"
+                ),
                 Measure("Success Rate", "DIVIDE([Total Activities] - [Failed Activities], [Total Activities])", "0.0%"),
                 Measure("Avg Duration (s)", "AVERAGE(Fact_Activities[duration_seconds])", "#,##0.00"),
-                Measure("Total Duration (h)", "SUM(Fact_Activities[duration_seconds]) / 3600", "#,##0.00")
-            ]
+                Measure("Total Duration (h)", "SUM(Fact_Activities[duration_seconds]) / 3600", "#,##0.00"),
+            ],
         )
 
         # --- Dimensions ---
         self.tables["Dim_Date"] = Table(
             name="Dim_Date",
             columns=["Date", "Year", "Month", "Day", "DayOfWeek"],
-            source_expression="Calendar table generated from min/max of Fact_Activities[date]"
+            source_expression="Calendar table generated from min/max of Fact_Activities[date]",
         )
 
         self.tables["Dim_User"] = Table(
             name="Dim_User",
             columns=["User", "Risk_Level"],
-            source_expression="SELECT DISTINCT submitted_by as User FROM activities_master"
+            source_expression="SELECT DISTINCT submitted_by as User FROM activities_master",
         )
 
         self.tables["Dim_Item"] = Table(
             name="Dim_Item",
             columns=["Item_Id", "Item_Name", "Item_Type", "Workspace_Name"],
-            source_expression="SELECT DISTINCT item_id, item_name, item_type, workspace_name FROM activities_master"
+            source_expression="SELECT DISTINCT item_id, item_name, item_type, workspace_name FROM activities_master",
         )
 
         self.tables["Dim_Workspace"] = Table(
             name="Dim_Workspace",
             columns=["Workspace_Id", "Workspace_Name", "Domain", "Location"],
-            source_expression="SELECT DISTINCT workspace_id, workspace_name, domain, location FROM activities_master"
+            source_expression="SELECT DISTINCT workspace_id, workspace_name, domain, location FROM activities_master",
         )
 
         # --- Relationships ---
@@ -231,6 +243,7 @@ class FabricSemanticModel:
             desc += f"- {r.from_table}[{r.from_column}] -> {r.to_table}[{r.to_column}] ({r.cardinality})\n"
 
         return desc
+
 
 if __name__ == "__main__":
     model = FabricSemanticModel()

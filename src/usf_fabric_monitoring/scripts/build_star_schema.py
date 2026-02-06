@@ -8,13 +8,13 @@ suitable for SQL queries and semantic model construction.
 Usage:
     # Build from latest pipeline output (incremental)
     python build_star_schema.py
-    
+
     # Full refresh
     python build_star_schema.py --full-refresh
-    
+
     # Custom directories
     python build_star_schema.py --input-dir exports/monitor_hub_analysis --output-dir exports/star_schema
-    
+
     # Print DDL only
     python build_star_schema.py --ddl-only
 
@@ -29,18 +29,19 @@ import argparse
 import json
 import os
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 from dotenv import load_dotenv
 
+from usf_fabric_monitoring.core.logger import setup_logging
+
 # Import from parent package (now inside usf_fabric_monitoring.scripts)
 from usf_fabric_monitoring.core.star_schema_builder import (
+    ALL_STAR_SCHEMA_DDLS,
     StarSchemaBuilder,
     build_star_schema_from_pipeline_output,
-    ALL_STAR_SCHEMA_DDLS
 )
-from usf_fabric_monitoring.core.logger import setup_logging
 
 
 def main():
@@ -66,52 +67,32 @@ Examples:
 
   Print schema description:
     python build_star_schema.py --describe
-        """
+        """,
     )
 
     parser.add_argument(
         "--input-dir",
         default=os.getenv("EXPORT_DIRECTORY", "exports/monitor_hub_analysis"),
-        help="Path to Monitor Hub pipeline output directory (default: exports/monitor_hub_analysis)"
+        help="Path to Monitor Hub pipeline output directory (default: exports/monitor_hub_analysis)",
     )
 
     parser.add_argument(
         "--output-dir",
         default=os.getenv("STAR_SCHEMA_OUTPUT_DIR", "exports/star_schema"),
-        help="Output directory for star schema tables (default: exports/star_schema)"
+        help="Output directory for star schema tables (default: exports/star_schema)",
     )
 
-    parser.add_argument(
-        "--full-refresh",
-        action="store_true",
-        help="Perform full refresh instead of incremental load"
-    )
+    parser.add_argument("--full-refresh", action="store_true", help="Perform full refresh instead of incremental load")
+
+    parser.add_argument("--ddl-only", action="store_true", help="Print DDL statements and exit")
+
+    parser.add_argument("--describe", action="store_true", help="Print schema description and exit")
 
     parser.add_argument(
-        "--ddl-only",
-        action="store_true",
-        help="Print DDL statements and exit"
+        "--date-range-days", type=int, default=365, help="Number of days for date dimension (default: 365)"
     )
 
-    parser.add_argument(
-        "--describe",
-        action="store_true",
-        help="Print schema description and exit"
-    )
-
-    parser.add_argument(
-        "--date-range-days",
-        type=int,
-        default=365,
-        help="Number of days for date dimension (default: 365)"
-    )
-
-    parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
 
@@ -149,9 +130,7 @@ Examples:
 
     try:
         results = build_star_schema_from_pipeline_output(
-            pipeline_output_dir=args.input_dir,
-            output_directory=args.output_dir,
-            incremental=not args.full_refresh
+            pipeline_output_dir=args.input_dir, output_directory=args.output_dir, incremental=not args.full_refresh
         )
 
         print("\n" + "=" * 80)
@@ -159,7 +138,7 @@ Examples:
         print("=" * 80)
 
         if results["status"] == "success":
-            print(f"\n✅ Star Schema build completed successfully!")
+            print("\n✅ Star Schema build completed successfully!")
             print(f"   Duration: {results.get('duration_seconds', 0):.2f} seconds")
 
             print("\n📊 Dimensions Built:")
@@ -181,7 +160,7 @@ Examples:
             print(f"\n📁 Output Directory: {results['output_directory']}")
 
             # List output files
-            output_path = Path(results['output_directory'])
+            output_path = Path(results["output_directory"])
             if output_path.exists():
                 parquet_files = list(output_path.glob("*.parquet"))
                 if parquet_files:
@@ -191,7 +170,7 @@ Examples:
                         print(f"   • {f.name} ({size_mb:.2f} MB)")
 
         else:
-            print(f"\n❌ Star Schema build failed!")
+            print("\n❌ Star Schema build failed!")
             for error in results.get("errors", []):
                 print(f"   Error: {error}")
             return 1

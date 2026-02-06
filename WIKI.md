@@ -38,7 +38,7 @@ We transformed the local scripts into a distributable format.
     pip install build
     python -m build
     ```
-3.  This generates a `.whl` file in the `dist/` folder (e.g., `usf_fabric_monitoring-0.3.9-py3-none-any.whl`).
+3.  This generates a `.whl` file in the `dist/` folder (e.g., `usf_fabric_monitoring-0.3.34-py3-none-any.whl`).
 
 ### Phase 2: Configure Fabric Environment
 1.  In your Fabric Workspace, create a new **Environment** (e.g., `Monitoring_Env`).
@@ -48,9 +48,9 @@ We transformed the local scripts into a distributable format.
 
 ### Phase 3: Deploy Notebooks
 1.  Import the notebooks from the `notebooks/` folder into your Fabric Workspace:
-    *   `Monitor_Hub_Analysis.ipynb`
-    *   `Workspace_Access_Enforcement.ipynb`
-    *   `Fabric_Star_Schema_Builder.ipynb` ⭐ NEW in v0.3.0
+    *   `1_Monitor_Hub_Analysis.ipynb`
+    *   `3_Workspace_Access_Enforcement.ipynb`
+    *   `2A_Fabric_Star_Schema_Builder.ipynb` ⭐ NEW in v0.3.0
 2.  Open each notebook and **Attach the Environment** created in Phase 2.
 
 ---
@@ -83,7 +83,7 @@ Legacy aliases (supported): `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID`.
 
 ## 📘 Notebook Usage Guide
 
-### 1. Monitor Hub Analysis (`Monitor_Hub_Analysis.ipynb`)
+### 1. Monitor Hub Analysis (`1_Monitor_Hub_Analysis.ipynb`)
 **Goal**: Extract recent history (default 7 days; capped at 28 days by API limits), analyze trends, and find failures.
 *   **Input**: None (uses API).
 *   **Output**: CSV Reports saved to `/lakehouse/default/Files/exports/monitor_hub_analysis/`.
@@ -97,14 +97,14 @@ Legacy aliases (supported): `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID`.
 - `MAX_HISTORICAL_DAYS` (default `28`)
 - `EXPORT_DIRECTORY` (default `exports/monitor_hub_analysis`)
 
-### 2. Workspace Access Enforcement (`Workspace_Access_Enforcement.ipynb`)
+### 2. Workspace Access Enforcement (`3_Workspace_Access_Enforcement.ipynb`)
 **Goal**: Ensure specific security groups (e.g., "Fabric Admins") are Admins on *every* workspace.
 *   **Modes**:
     *   `assess`: Dry-run. Lists who is non-compliant.
     *   `enforce`: Actively adds the Service Principal/Group to workspaces.
 *   **Why run this?**: If you see **401 Unauthorized** errors in the Analysis pipeline, run this in `enforce` mode to grant your Service Principal the necessary permissions to scan those workspaces.
 
-### 3. Star Schema Builder (`Fabric_Star_Schema_Builder.ipynb`) ⭐ NEW
+### 3. Star Schema Builder (`2A_Fabric_Star_Schema_Builder.ipynb`) ⭐ NEW
 **Goal**: Transform Monitor Hub raw data into a Kimball-style star schema for analytics.
 *   **Input**: Parquet from Monitor Hub Analysis pipeline (preferred - has complete data with failures)
 *   **Output**: 
@@ -145,7 +145,7 @@ Legacy aliases (supported): `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID`.
 *   **Cause**: The Service Principal can see *that* a workspace exists (Tenant Admin rights) but cannot see *inside* it (Workspace Member rights).
 *   **Fix**:
     1.  Ignore it if you only need high-level stats.
-    2.  Run `Workspace_Access_Enforcement.ipynb` in `enforce` mode to add the Service Principal as an Admin to those workspaces.
+    2.  Run `3_Workspace_Access_Enforcement.ipynb` in `enforce` mode to add the Service Principal as an Admin to those workspaces.
 
 ### "Bad Request" for Workspace ID `000000...`
 *   **Cause**: This represents "My Workspace" (Personal Workspace). Service Principals cannot access personal workspaces of other users.

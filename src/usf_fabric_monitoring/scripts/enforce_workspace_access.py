@@ -16,24 +16,23 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional
 
 from dotenv import load_dotenv
 
+from usf_fabric_monitoring.core.logger import setup_logging
+
 # Import from parent package (now inside usf_fabric_monitoring.scripts)
 from usf_fabric_monitoring.core.workspace_access_enforcer import WorkspaceAccessEnforcer, WorkspaceAccessError
-from usf_fabric_monitoring.core.logger import setup_logging
 
 # repo_root/src/usf_fabric_monitoring/scripts/enforce_workspace_access.py -> repo_root
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Enforce security group assignment across Microsoft Fabric workspaces"
-    )
+def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Enforce security group assignment across Microsoft Fabric workspaces")
     default_targets = REPO_ROOT / "config" / "workspace_access_targets.json"
     default_suppress = REPO_ROOT / "config" / "workspace_access_suppressions.json"
     default_output = Path(os.getenv("EXPORT_DIRECTORY", "exports/monitor_hub_analysis"))
@@ -145,24 +144,22 @@ def write_csv_summary(summary: dict, destination: Path) -> Path:
         status = item.get("status", "unknown")
         actions = item.get("actions", [])
 
-        needs_action = any(
-            a.get("action") not in ["already_compliant"] for a in actions
-        )
+        needs_action = any(a.get("action") not in ["already_compliant"] for a in actions)
 
-        action_summary = "; ".join(
-            f"{a.get('group')}: {a.get('action')}"
-            for a in actions
-        )
+        action_summary = "; ".join(f"{a.get('group')}: {a.get('action')}" for a in actions)
 
-        rows.append({
-            "workspace_id": workspace.get("id", ""),
-            "workspace_name": workspace.get("name", ""),
-            "status": status,
-            "needs_action": str(needs_action).lower(),
-            "actions": action_summary,
-        })
+        rows.append(
+            {
+                "workspace_id": workspace.get("id", ""),
+                "workspace_name": workspace.get("name", ""),
+                "status": status,
+                "needs_action": str(needs_action).lower(),
+                "actions": action_summary,
+            }
+        )
 
     import csv
+
     with open(output_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
@@ -200,14 +197,11 @@ def derive_report_metrics(summary: dict) -> dict:
     }
 
 
-def main(argv: Optional[Iterable[str]] = None) -> int:
+def main(argv: Iterable[str] | None = None) -> int:
     load_dotenv()
     args = parse_args(argv)
 
-    logger = setup_logging(
-        name="workspace_enforcer",
-        level=getattr(logging, args.log_level.upper(), logging.INFO)
-    )
+    logger = setup_logging(name="workspace_enforcer", level=getattr(logging, args.log_level.upper(), logging.INFO))
 
     try:
         effective_dry_run = args.dry_run

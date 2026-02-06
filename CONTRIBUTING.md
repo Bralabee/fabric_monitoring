@@ -719,9 +719,8 @@ We follow **Semantic Versioning** (SemVer): `MAJOR.MINOR.PATCH`
    git checkout -b release/0.3.0
    ```
 
-2. **Update version numbers**:
-   - `pyproject.toml`: `version = "0.3.0"`
-   - `src/usf_fabric_monitoring/__init__.py`: `__version__ = "0.3.0"`
+2. **Update version number**:
+   - `pyproject.toml`: `version = "0.3.0"` (single source of truth for version)
 
 3. **Update CHANGELOG.md**:
    - Move items from `[Unreleased]` to `[0.3.0] - YYYY-MM-DD`

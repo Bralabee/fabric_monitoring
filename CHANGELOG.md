@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **Version mismatch**: `__init__.py` `__version__` updated from `0.3.16` to `0.3.34`
+- **Bare `except:` clauses** replaced with `except Exception:` in `pipeline.py` and `csv_exporter.py`
+- **FutureWarning**: Added `pd.set_option('future.no_silent_downcasting', True)` and explicit `.infer_objects(copy=False)` after `.fillna()` calls in `pipeline.py`
+- **Broken README links**: Fixed `docs/FABRIC_DEPLOYMENT.md` → `docs/02_User_Guides/03_Fabric_Deployment.md`
+- **Wrong notebook filenames** in README.md, WIKI.md — corrected to actual numbered names (`1_Monitor_Hub_Analysis.ipynb`, `2A_Fabric_Star_Schema_Builder.ipynb`, `3_Workspace_Access_Enforcement.ipynb`)
+- **SECURITY.md**: Updated supported versions to include `0.3.x`, fixed placeholder org/email references
+- **CONTRIBUTING.md**: Release process now reflects `pyproject.toml` as single version source (removed stale `__init__.py` reference)
+
+### Added
+
+- **Unit tests for `auth.py`** (`tests/test_auth.py`): 33 tests covering authenticator init, token acquisition/caching/refresh, env-based creation, notebookutils fallback, error handling
+- **Unit tests for `workspace_access_enforcer.py`** (`tests/test_workspace_access_enforcer.py`): 51 tests covering access requirements, suppression filtering, dry-run/enforce modes, HTTP error handling, Fabric-only filtering
+- **Dependabot configuration** (`.github/dependabot.yml`): Weekly pip + GitHub Actions scanning
+- **`[Unreleased]` section** in CHANGELOG.md per CONTRIBUTING.md convention
+- **`Lineage_Explorer_API.md`** entry added to `docs/README.md` navigation index
+
+### Changed
+
+- **Dependency version pinning** in `pyproject.toml`: All dependencies now have minimum + upper bounds (e.g., `pandas>=2.0,<3`)
+- **Removed redundant dependencies**: `click` (covered by `typer`) and `fastparquet` (pyarrow sufficient)
+- **`.gitignore`**: Uses `**/.env` pattern for recursive matching; added `*.bak` exclusion
+- **CI pipeline** (`.github/workflows/ci.yml`): Added `mypy` type-checking step
+- **JSON schemas**: Set `additionalProperties: false` in `workspace_access_suppressions` and `workspace_access_targets` schemas
+- **Logging**: Replaced `print()` with `logger` calls in `pipeline.py` and `extractor.py` core modules
+- **`sys.path` hacks removed** from `pipeline.py` and `extract_lineage.py`
+- **`is_fabric_environment()`** consolidated: `utils.py` now delegates to `env_detection.py`
+
+### Removed
+
+- **Dead files**: `monitor_hub_reporter.py` (duplicate of `_clean` variant), `monitor_hub_reporter_corrupted.py.bak`, `tests/simple_test.py` (no test functions)
+- **docker-compose `version: '3.8'`** key removed (deprecated in Compose V2)
+
+### Documentation
+
+- Updated version references in `PROJECT_ANALYSIS.md`, `GAP_REPORT.md`, `docs/GLOSSARY.md` to `0.3.34`
+- Updated README "Recent Updates" section from `v0.3.0` to `v0.3.34`
+- Updated WIKI.md `.whl` filename version reference
+
 ## 0.3.34 (February 2026) - Surface Table Status & Sync Metadata
 
 ### Fixed

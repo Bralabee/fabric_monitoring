@@ -4,7 +4,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
-from usf_fabric_monitoring.core.enrichment import compute_duration_seconds, _parse_datetime
+from usf_fabric_monitoring.core.enrichment import _parse_datetime, compute_duration_seconds
 
 
 def test_parse_datetime_supports_z_suffix():

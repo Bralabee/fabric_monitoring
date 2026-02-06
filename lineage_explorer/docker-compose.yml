@@ -15,8 +15,6 @@
 #   - 7687: Neo4j Bolt protocol (client connections)
 #   - 8000: Lineage Explorer API
 
-version: '3.8'
-
 services:
   neo4j:
     image: neo4j:5.15.0-community

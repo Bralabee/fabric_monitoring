@@ -35,6 +35,7 @@ docs/
 | [01_Workspace_Access_Enforcement](02_User_Guides/01_Workspace_Access_Enforcement.md) | Security group enforcement playbook |
 | [02_Tenant_Wide_Monitoring](02_User_Guides/02_Tenant_Wide_Monitoring.md) | Tenant-wide activity monitoring implementation |
 | [03_Fabric_Deployment](02_User_Guides/03_Fabric_Deployment.md) | Deploying star schema builder in Microsoft Fabric |
+| [Lineage_Explorer_API](02_User_Guides/Lineage_Explorer_API.md) | Lineage Explorer REST API reference |
 
 ### Technical Reference
 | Document | Description |

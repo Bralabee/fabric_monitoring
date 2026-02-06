@@ -1,25 +1,19 @@
 import os
 from pathlib import Path
 
-def is_fabric_environment() -> bool:
-    """
-    Check if the code is running in a Microsoft Fabric environment.
-    
-    Returns:
-        bool: True if running in Fabric, False otherwise.
-    """
-    # Check for common Fabric/Spark environment variables or paths
-    # /lakehouse/default is a standard path in Fabric Notebooks attached to a Lakehouse
-    return Path("/lakehouse/default").exists() or os.getenv("IS_FABRIC") == "true"
+from usf_fabric_monitoring.core.env_detection import is_fabric_environment  # noqa: F401
+
+# is_fabric_environment is imported from env_detection (canonical implementation)
+# and re-exported here for backwards compatibility.
 
 
 def _find_project_root() -> Path:
     """
     Find the project root directory by looking for marker files.
-    
+
     Searches upward from current directory for pyproject.toml or Makefile.
     This handles cases where code runs from subdirectories (e.g., notebooks/).
-    
+
     Returns:
         Path: Project root directory, or current directory if not found.
     """
@@ -37,7 +31,7 @@ def _find_project_root() -> Path:
 def get_base_output_path() -> Path:
     """
     Get the base output path for data persistence.
-    
+
     Returns:
         Path: '/lakehouse/default/Files' (or FABRIC_BASE_PATH) if in Fabric,
               else project root directory for local development.
@@ -46,13 +40,14 @@ def get_base_output_path() -> Path:
         return Path(os.getenv("FABRIC_BASE_PATH", "/lakehouse/default/Files"))
     return _find_project_root()
 
+
 def resolve_path(relative_path: str) -> Path:
     """
     Resolve a relative path to the correct absolute path based on the environment.
-    
+
     Args:
         relative_path: The relative path (e.g., 'exports/data')
-        
+
     Returns:
         Path: Absolute path rooted in Lakehouse if in Fabric, else project root.
     """

@@ -14,26 +14,24 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "requests",
-    "pandas",
-    "numpy",
-    "plotly",
-    "openpyxl",
-    "aiohttp",
-    "pyyaml",
-    "jsonschema",
-    "click",
-    "rich",
-    "typer",
-    "python-dotenv",
-    "azure-identity",
-    "azure-storage-blob",
-    "asyncio-throttle",
-    "pyarrow",
-    "fastparquet",
-    "fastapi",
-    "uvicorn",
-    "neo4j"
+    "requests>=2.28,<3",
+    "pandas>=2.0,<3",
+    "numpy>=1.24,<3",
+    "plotly>=5.0,<6",
+    "openpyxl>=3.1,<4",
+    "aiohttp>=3.9,<4",
+    "pyyaml>=6.0,<7",
+    "jsonschema>=4.17,<5",
+    "rich>=13.0,<14",
+    "typer>=0.9,<1",
+    "python-dotenv>=1.0,<2",
+    "azure-identity>=1.15,<2",
+    "azure-storage-blob>=12.19,<13",
+    "asyncio-throttle>=1.0,<2",
+    "pyarrow>=14.0,<18",
+    "fastapi>=0.109,<1",
+    "uvicorn>=0.27,<1",
+    "neo4j>=5.15,<6"
 ]
 
 [project.scripts]
@@ -45,18 +43,17 @@ usf-extract-lineage = "usf_fabric_monitoring.scripts.extract_lineage:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "pytest-cov",
-    "pytest-asyncio",
-    "black",
-    "flake8",
-    "mypy",
-    "jupyter",
-    "notebook",
-    "pyspark",
-    "delta-spark",
-    "matplotlib",
-    "seaborn"
+    "pytest>=7.0,<9",
+    "pytest-cov>=4.0,<6",
+    "pytest-asyncio>=0.21,<1",
+    "ruff>=0.4,<1",
+    "mypy>=1.8,<2",
+    "jupyter>=1.0,<2",
+    "notebook>=7.0,<8",
+    "pyspark>=3.5,<4",
+    "delta-spark>=3.0,<4",
+    "matplotlib>=3.8,<4",
+    "seaborn>=0.13,<1"
 ]
 
 [tool.setuptools.packages.find]

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
-import importlib.util
-
 
 # Add src and scripts to path for testing
 repo_root = Path(__file__).parents[1]

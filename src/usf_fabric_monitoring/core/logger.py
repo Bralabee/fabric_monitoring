@@ -6,13 +6,10 @@ import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
-from typing import Optional
+
 
 def setup_logging(
-    name: str,
-    log_file: Optional[str] = None,
-    level: int = logging.INFO,
-    log_to_stdout: bool = True
+    name: str, log_file: str | None = None, level: int = logging.INFO, log_to_stdout: bool = True
 ) -> logging.Logger:
     """
     Configure and return a logger with standard formatting.
@@ -28,7 +25,7 @@ def setup_logging(
         Configured logger instance.
     """
     # Ensure stdout is line-buffered for immediate output if we are logging to it
-    if log_to_stdout and hasattr(sys.stdout, 'reconfigure'):
+    if log_to_stdout and hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(line_buffering=True)
 
     logger = logging.getLogger(name)
@@ -38,10 +35,7 @@ def setup_logging(
     if logger.handlers:
         logger.handlers.clear()
 
-    formatter = logging.Formatter(
-        '%(asctime)s | %(levelname)s | %(name)s | %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
     if log_to_stdout:
         console_handler = logging.StreamHandler(sys.stdout)
@@ -53,13 +47,7 @@ def setup_logging(
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        file_handler = TimedRotatingFileHandler(
-            log_file,
-            when='midnight',
-            interval=1,
-            backupCount=30,
-            encoding='utf-8'
-        )
+        file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=30, encoding="utf-8")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 

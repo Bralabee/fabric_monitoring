@@ -8,12 +8,14 @@ This module handles extraction of detailed item information from Microsoft Fabri
 
 import logging
 import os
-from typing import List, Dict, Any
+from typing import Any
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .auth import FabricAuthenticator
+
 
 class FabricItemDetailExtractor:
     """Extracts detailed item information from Microsoft Fabric APIs"""
@@ -46,7 +48,7 @@ class FabricItemDetailExtractor:
         # Request timeout
         self.timeout = int(os.getenv("API_REQUEST_TIMEOUT", "30"))
 
-    def get_item_job_instances(self, workspace_id: str, item_id: str) -> List[Dict[str, Any]]:
+    def get_item_job_instances(self, workspace_id: str, item_id: str) -> list[dict[str, Any]]:
         """
         Get job instances for a specific item (Pipeline, Notebook, etc.).
 
@@ -78,7 +80,7 @@ class FabricItemDetailExtractor:
             self.logger.error(f"Failed to fetch job instances for item {item_id}: {str(e)}")
             return []
 
-    def get_lakehouse_tables(self, workspace_id: str, lakehouse_id: str) -> List[Dict[str, Any]]:
+    def get_lakehouse_tables(self, workspace_id: str, lakehouse_id: str) -> list[dict[str, Any]]:
         """
         Get tables for a specific Lakehouse.
 
@@ -90,7 +92,9 @@ class FabricItemDetailExtractor:
             List of tables
         """
         try:
-            url = f"{self.fabric_base_url}/{self.api_version}/workspaces/{workspace_id}/lakehouses/{lakehouse_id}/tables"
+            url = (
+                f"{self.fabric_base_url}/{self.api_version}/workspaces/{workspace_id}/lakehouses/{lakehouse_id}/tables"
+            )
             headers = self.auth.get_fabric_headers()
 
             self.logger.debug(f"Fetching tables for lakehouse {lakehouse_id} in workspace {workspace_id}")

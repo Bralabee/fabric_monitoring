@@ -6,8 +6,9 @@ We provide security updates for the following versions:
 
 | Version | Supported          | End of Support |
 | ------- | ------------------ | -------------- |
-| 0.2.x   | :white_check_mark: | Current        |
-| 0.1.x   | :white_check_mark: | June 2026      |
+| 0.3.x   | :white_check_mark: | Current        |
+| 0.2.x   | :white_check_mark: | June 2026      |
+| 0.1.x   | :x:                | Ended          |
 | < 0.1   | :x:                | Ended          |
 
 ## Reporting a Vulnerability
@@ -376,8 +377,8 @@ bandit -r src/
 ## Contact Information
 
 ### Security Team
-- **GitHub Security**: [Create Private Advisory](https://github.com/YOUR_ORG/usf_fabric_monitoring/security/advisories/new)
-- **Email**: security@your-organization.com (if applicable)
+- **GitHub Security**: [Create Private Advisory](https://github.com/BralaBee-LEIT/fabric_monitoring/security/advisories/new)
+- **Email**: Contact project maintainers via GitHub Issues (private security advisories preferred)
 
 ### Responsible Disclosure
 We appreciate responsible disclosure and will:

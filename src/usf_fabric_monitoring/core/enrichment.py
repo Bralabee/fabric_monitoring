@@ -7,12 +7,12 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 _INFERENCE_RULES = None
 
 
-def _load_inference_rules() -> Dict[str, Any]:
+def _load_inference_rules() -> dict[str, Any]:
     """Load inference rules from JSON configuration."""
     global _INFERENCE_RULES
     if _INFERENCE_RULES is not None:
@@ -37,12 +37,12 @@ def _load_inference_rules() -> Dict[str, Any]:
         if not config_path:
             _INFERENCE_RULES = {}
         else:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 _INFERENCE_RULES = json.load(f)
 
             # Validate (warn-only) to avoid silent misconfiguration.
             try:
-                from usf_fabric_monitoring.core.config_validation import validate_data, SCHEMAS_BY_FILENAME
+                from usf_fabric_monitoring.core.config_validation import SCHEMAS_BY_FILENAME, validate_data
 
                 errors = validate_data(SCHEMAS_BY_FILENAME["inference_rules.json"], _INFERENCE_RULES)
                 if errors:
@@ -56,7 +56,7 @@ def _load_inference_rules() -> Dict[str, Any]:
     return _INFERENCE_RULES
 
 
-def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+def _parse_datetime(value: str | None) -> datetime | None:
     """Parse an ISO8601 timestamp into a datetime instance."""
     if not value:
         return None
@@ -69,7 +69,7 @@ def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
-def compute_duration_seconds(activity: Dict[str, Any]) -> Optional[float]:
+def compute_duration_seconds(activity: dict[str, Any]) -> float | None:
     """Best-effort duration calculation using duration fields or timestamps."""
     duration_ms = activity.get("DurationMs") or activity.get("Duration")
     if duration_ms is not None:
@@ -78,10 +78,7 @@ def compute_duration_seconds(activity: Dict[str, Any]) -> Optional[float]:
         except (TypeError, ValueError):
             pass
 
-    start = (
-        _parse_datetime(activity.get("StartTime"))
-        or _parse_datetime(activity.get("CreationTime"))
-    )
+    start = _parse_datetime(activity.get("StartTime")) or _parse_datetime(activity.get("CreationTime"))
     end = (
         _parse_datetime(activity.get("EndTime"))
         or _parse_datetime(activity.get("CompletionTime"))
@@ -99,7 +96,7 @@ def compute_duration_seconds(activity: Dict[str, Any]) -> Optional[float]:
     return None
 
 
-def normalize_status(status: Optional[str]) -> str:
+def normalize_status(status: str | None) -> str:
     """Normalize activity status, defaulting to 'Succeeded' if missing."""
     if not status:
         return "Succeeded"
@@ -110,7 +107,7 @@ def normalize_status(status: Optional[str]) -> str:
     return s
 
 
-def normalize_user(user_value: Optional[str]) -> Optional[str]:
+def normalize_user(user_value: str | None) -> str | None:
     """Return the friendly portion of a UPN/email value."""
     if not user_value:
         return None
@@ -122,7 +119,7 @@ def normalize_user(user_value: Optional[str]) -> Optional[str]:
     return value or None
 
 
-def extract_user_from_metadata(user_obj: Optional[Dict[str, Any]]) -> Optional[str]:
+def extract_user_from_metadata(user_obj: dict[str, Any] | None) -> str | None:
     """Pull the best available name from an item metadata user object."""
     if not user_obj:
         return None
@@ -133,7 +130,7 @@ def extract_user_from_metadata(user_obj: Optional[Dict[str, Any]]) -> Optional[s
     return None
 
 
-def infer_domain(name: Optional[str]) -> str:
+def infer_domain(name: str | None) -> str:
     """Map an item/workspace name to a business domain bucket."""
     if not name:
         return "General"
@@ -160,7 +157,7 @@ def infer_domain(name: Optional[str]) -> str:
     return "General"
 
 
-def infer_location(workspace: Optional[Dict[str, Any]]) -> str:
+def infer_location(workspace: dict[str, Any] | None) -> str:
     """Determine workspace location using metadata when possible."""
     if not workspace:
         return "Global"
@@ -191,7 +188,7 @@ def infer_location(workspace: Optional[Dict[str, Any]]) -> str:
     return "Global"
 
 
-def build_object_url(workspace_id: str, item_id: Optional[str], item_type: Optional[str]) -> Optional[str]:
+def build_object_url(workspace_id: str, item_id: str | None, item_type: str | None) -> str | None:
     """Construct a Power BI / Fabric object URL when possible."""
     if not (workspace_id and item_id):
         return None

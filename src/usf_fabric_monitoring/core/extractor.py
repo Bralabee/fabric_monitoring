@@ -3,16 +3,17 @@ Microsoft Fabric Data Extraction Module
 
 This module handles data extraction from Microsoft Fabric APIs including:
 - Fabric Monitor Hub activities
-- Power BI activity events  
+- Power BI activity events
 - Workspace items and metadata
 - Activity logs and metrics
 """
 
-import os
 import logging
+import os
 import time
-from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+from typing import Any
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -24,8 +25,8 @@ from .enrichment import (
     extract_user_from_metadata,
     infer_domain,
     infer_location,
-    normalize_user,
     normalize_status,
+    normalize_user,
 )
 
 
@@ -35,7 +36,7 @@ class FabricDataExtractor:
     def __init__(self, authenticator: FabricAuthenticator):
         """
         Initialize the data extractor.
-        
+
         Args:
             authenticator: Configured FabricAuthenticator instance
         """
@@ -62,9 +63,9 @@ class FabricDataExtractor:
         self.timeout = int(os.getenv("API_REQUEST_TIMEOUT", "30"))
 
         # Simple in-memory caches for workspace metadata
-        self._workspace_items_cache: Dict[str, Dict[str, Dict[str, Any]]] = {}
-        self._workspace_lookup: Dict[str, Dict[str, Any]] = {}
-        self._cached_tenant_workspaces: Optional[List[Dict[str, Any]]] = None
+        self._workspace_items_cache: dict[str, dict[str, dict[str, Any]]] = {}
+        self._workspace_lookup: dict[str, dict[str, Any]] = {}
+        self._cached_tenant_workspaces: list[dict[str, Any]] | None = None
 
     def _emit_progress(self, message: str, *, end: str = "\n") -> None:
         if os.getenv("USF_FABRIC_MONITORING_SHOW_PROGRESS", "1") != "1":
@@ -74,16 +75,16 @@ class FabricDataExtractor:
         except Exception:
             return
 
-    def get_workspaces(self, tenant_wide: bool = False, exclude_personal: bool = True) -> List[Dict[str, Any]]:
+    def get_workspaces(self, tenant_wide: bool = False, exclude_personal: bool = True) -> list[dict[str, Any]]:
         """
         Get list of workspaces.
-        
+
         Args:
             tenant_wide: If True, uses Power BI Admin API to fetch ALL tenant workspaces.
                         If False, uses member-only /v1/workspaces endpoint (legacy behavior).
             exclude_personal: If True, filters out personal workspaces (type=PersonalGroup).
                              Only applies when tenant_wide=True.
-        
+
         Returns:
             List of workspace dictionaries with id, name, and metadata.
             - tenant_wide=False: ~139 workspaces (member-only)
@@ -94,10 +95,10 @@ class FabricDataExtractor:
         else:
             return self._get_workspaces_member_only()
 
-    def _get_workspaces_tenant_wide(self, exclude_personal: bool = True) -> List[Dict[str, Any]]:
+    def _get_workspaces_tenant_wide(self, exclude_personal: bool = True) -> list[dict[str, Any]]:
         """
         Fetch ALL tenant workspaces using Power BI Admin API.
-        
+
         This returns the complete workspace inventory across the entire tenant,
         not just workspaces where the service principal is a member.
         """
@@ -130,11 +131,15 @@ class FabricDataExtractor:
                 if response.status_code == 429:
                     retries += 1
                     if retries > max_retries:
-                        raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                        raise requests.exceptions.RequestException(
+                            f"Rate limit exceeded. Max retries ({max_retries}) reached."
+                        )
 
-                    retry_after = int(response.headers.get('Retry-After', 60))
-                    self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
-                    self._emit_progress(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r')
+                    retry_after = int(response.headers.get("Retry-After", 60))
+                    self.logger.warning(
+                        f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds..."
+                    )
+                    self._emit_progress(f"   ⏳ Rate limited. Waiting {retry_after}s...", end="\r")
                     time.sleep(retry_after + 1)
                     continue
 
@@ -149,7 +154,7 @@ class FabricDataExtractor:
 
             workspaces.extend(items)
             self.logger.info(f"Retrieved {len(items)} workspaces (total: {len(workspaces)})")
-            self._emit_progress(f"   ⏳ Retrieved {len(workspaces)} workspaces...", end='\r')
+            self._emit_progress(f"   ⏳ Retrieved {len(workspaces)} workspaces...", end="\r")
 
             if len(items) < page_size:
                 break
@@ -163,10 +168,10 @@ class FabricDataExtractor:
         self._cached_tenant_workspaces = workspaces
         return workspaces
 
-    def _get_workspaces_member_only(self) -> List[Dict[str, Any]]:
+    def _get_workspaces_member_only(self) -> list[dict[str, Any]]:
         """
         Fetch only workspaces where the service principal is a member.
-        
+
         This is the legacy behavior using /v1/workspaces endpoint.
         Returns ~139 workspaces (member-only, not tenant-wide).
         """
@@ -199,32 +204,30 @@ class FabricDataExtractor:
             self.logger.error(f"Failed to fetch workspaces: {str(e)}")
             raise
 
-    def get_workspace_activities(self, workspace_id: str, start_date: datetime,
-                               end_date: datetime, activity_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    def get_workspace_activities(
+        self, workspace_id: str, start_date: datetime, end_date: datetime, activity_types: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Get activities for a specific workspace within date range.
-        
+
         Args:
             workspace_id: Fabric workspace ID
             start_date: Start date for activity query
-            end_date: End date for activity query  
+            end_date: End date for activity query
             activity_types: Optional list of activity types to filter
-            
+
         Returns:
             List of activity dictionaries
         """
         try:
             # Format dates for API (ISO 8601 format)
-            start_str = start_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-            end_str = end_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            start_str = start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            end_str = end_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
             url = f"{self.fabric_base_url}/{self.api_version}/workspaces/{workspace_id}/activities"
             headers = self.auth.get_fabric_headers()
 
-            params = {
-                "startDateTime": start_str,
-                "endDateTime": end_str
-            }
+            params = {"startDateTime": start_str, "endDateTime": end_str}
 
             if activity_types:
                 params["activityTypes"] = ",".join(activity_types)
@@ -240,17 +243,23 @@ class FabricDataExtractor:
                 if response.status_code == 429:
                     retries += 1
                     if retries > max_retries:
-                        raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                        raise requests.exceptions.RequestException(
+                            f"Rate limit exceeded. Max retries ({max_retries}) reached."
+                        )
 
-                    retry_after = int(response.headers.get('Retry-After', 60))
-                    self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
+                    retry_after = int(response.headers.get("Retry-After", 60))
+                    self.logger.warning(
+                        f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds..."
+                    )
                     time.sleep(retry_after + 1)
                     continue
 
                 break
 
             if response.status_code == 404:
-                self.logger.warning(f"Activities endpoint not found for workspace {workspace_id} - using Power BI API fallback")
+                self.logger.warning(
+                    f"Activities endpoint not found for workspace {workspace_id} - using Power BI API fallback"
+                )
                 return self._get_powerbi_activities_fallback(workspace_id, start_date, end_date, activity_types)
 
             response.raise_for_status()
@@ -265,15 +274,16 @@ class FabricDataExtractor:
             # Try Power BI API as fallback
             return self._get_powerbi_activities_fallback(workspace_id, start_date, end_date, activity_types)
 
-    def _get_powerbi_activities_fallback(self, workspace_id: str, start_date: datetime,
-                                       end_date: datetime, activity_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    def _get_powerbi_activities_fallback(
+        self, workspace_id: str, start_date: datetime, end_date: datetime, activity_types: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Fallback method to get activities using Power BI Admin API.
         """
         try:
             # Power BI Admin API for activity events requires literal single quotes
-            start_str = start_date.strftime('%Y-%m-%dT%H:%M:%S')
-            end_str = end_date.strftime('%Y-%m-%dT%H:%M:%S')
+            start_str = start_date.strftime("%Y-%m-%dT%H:%M:%S")
+            end_str = end_date.strftime("%Y-%m-%dT%H:%M:%S")
 
             base_url = f"{self.powerbi_base_url}/v1.0/myorg/admin/activityevents"
             query = f"startDateTime='{start_str}'&endDateTime='{end_str}'"
@@ -284,9 +294,9 @@ class FabricDataExtractor:
             self.logger.info(f"Using Power BI Admin API fallback for workspace {workspace_id}")
 
             # Use PreparedRequest to prevent requests from encoding the URL
-            req = requests.Request('GET', url, headers=headers)
+            req = requests.Request("GET", url, headers=headers)
             prepped = self.session.prepare_request(req)
-            prepped.url = url # Force the URL to be exactly as we constructed it
+            prepped.url = url  # Force the URL to be exactly as we constructed it
 
             # Retry loop for 429s
             retries = 0
@@ -297,10 +307,14 @@ class FabricDataExtractor:
                 if response.status_code == 429:
                     retries += 1
                     if retries > max_retries:
-                        raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                        raise requests.exceptions.RequestException(
+                            f"Rate limit exceeded. Max retries ({max_retries}) reached."
+                        )
 
-                    retry_after = int(response.headers.get('Retry-After', 60))
-                    self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
+                    retry_after = int(response.headers.get("Retry-After", 60))
+                    self.logger.warning(
+                        f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds..."
+                    )
                     time.sleep(retry_after + 1)
                     continue
 
@@ -314,8 +328,7 @@ class FabricDataExtractor:
             # Filter by workspace if specified
             if workspace_id:
                 workspace_activities = [
-                    activity for activity in all_activities
-                    if activity.get("WorkspaceId") == workspace_id
+                    activity for activity in all_activities if activity.get("WorkspaceId") == workspace_id
                 ]
             else:
                 workspace_activities = all_activities
@@ -323,8 +336,7 @@ class FabricDataExtractor:
             # Filter by activity types if specified
             if activity_types:
                 workspace_activities = [
-                    activity for activity in workspace_activities
-                    if activity.get("Activity") in activity_types
+                    activity for activity in workspace_activities if activity.get("Activity") in activity_types
                 ]
 
             self.logger.info(f"Retrieved {len(workspace_activities)} activities via Power BI API")
@@ -334,26 +346,30 @@ class FabricDataExtractor:
             self.logger.error(f"Power BI API fallback also failed: {str(e)}")
             return []
 
-    def get_tenant_wide_activities(self, start_date: datetime, end_date: datetime,
-                                  workspace_ids: Optional[List[str]] = None,
-                                  activity_types: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    def get_tenant_wide_activities(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        workspace_ids: list[str] | None = None,
+        activity_types: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Get ALL tenant activities using Power BI Admin Activity API (single call, no per-workspace loop).
-        
+
         Args:
             start_date: Start datetime for activity query
             end_date: End datetime for activity query
             workspace_ids: Optional list of workspace IDs to filter (applied post-fetch)
             activity_types: Optional list of activity types to filter (applied post-fetch)
-            
+
         Returns:
             List of all tenant activities for the date range
         """
         try:
             # Power BI Admin API requires literal single quotes in the URL
             # We must manually construct the URL and bypass requests' automatic encoding
-            start_str = start_date.strftime('%Y-%m-%dT%H:%M:%S')
-            end_str = end_date.strftime('%Y-%m-%dT%H:%M:%S')
+            start_str = start_date.strftime("%Y-%m-%dT%H:%M:%S")
+            end_str = end_date.strftime("%Y-%m-%dT%H:%M:%S")
 
             # Base URL without query params
             base_url = f"{self.powerbi_base_url}/v1.0/myorg/admin/activityevents"
@@ -364,15 +380,17 @@ class FabricDataExtractor:
 
             headers = self.auth.get_powerbi_headers()
 
-            self.logger.info(f"Fetching tenant-wide activities from {start_date.strftime('%Y-%m-%d %H:%M:%S')} to {end_date.strftime('%Y-%m-%d %H:%M:%S')}")
+            self.logger.info(
+                f"Fetching tenant-wide activities from {start_date.strftime('%Y-%m-%d %H:%M:%S')} to {end_date.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
 
             all_activities = []
 
             while url:
                 # Use PreparedRequest to prevent requests from encoding the URL
-                req = requests.Request('GET', url, headers=headers)
+                req = requests.Request("GET", url, headers=headers)
                 prepped = self.session.prepare_request(req)
-                prepped.url = url # Force the URL to be exactly as we constructed it
+                prepped.url = url  # Force the URL to be exactly as we constructed it
 
                 # Retry loop for 429s
                 retries = 0
@@ -383,11 +401,15 @@ class FabricDataExtractor:
                     if response.status_code == 429:
                         retries += 1
                         if retries > max_retries:
-                            raise requests.exceptions.RequestException(f"Rate limit exceeded. Max retries ({max_retries}) reached.")
+                            raise requests.exceptions.RequestException(
+                                f"Rate limit exceeded. Max retries ({max_retries}) reached."
+                            )
 
-                        retry_after = int(response.headers.get('Retry-After', 60))
-                        self.logger.warning(f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds...")
-                        print(f"   ⏳ Rate limited. Waiting {retry_after}s...", end='\r', flush=True)
+                        retry_after = int(response.headers.get("Retry-After", 60))
+                        self.logger.warning(
+                            f"Rate limited (Attempt {retries}/{max_retries}). Waiting {retry_after} seconds..."
+                        )
+                        self._emit_progress(f"   ⏳ Rate limited. Waiting {retry_after}s...", end="\r")
                         time.sleep(retry_after + 1)
                         continue
 
@@ -399,30 +421,26 @@ class FabricDataExtractor:
                 all_activities.extend(items)
 
                 self.logger.info(f"Retrieved {len(items)} activities (Total: {len(all_activities)})")
-                print(f"   ⏳ Fetched {len(all_activities)} activities...", end='\r', flush=True)
+                self._emit_progress(f"   ⏳ Fetched {len(all_activities)} activities...", end="\r")
 
                 # Check for continuation URI
                 url = data.get("continuationUri")
                 # continuationUri is already a full URL, we'll use it as is in the next loop
                 # and the same prepped.url override will ensure it's not re-encoded
 
-            print(f"   ✅ Fetched {len(all_activities)} activities total.          ")
+            self._emit_progress(f"   ✅ Fetched {len(all_activities)} activities total.          ")
             self.logger.info(f"Retrieved {len(all_activities)} tenant-wide activities")
 
             # Filter by workspace IDs if specified
             if workspace_ids:
                 all_activities = [
-                    activity for activity in all_activities
-                    if activity.get("WorkspaceId") in workspace_ids
+                    activity for activity in all_activities if activity.get("WorkspaceId") in workspace_ids
                 ]
                 self.logger.info(f"Filtered to {len(all_activities)} activities for specified workspaces")
 
             # Filter by activity types if specified
             if activity_types:
-                all_activities = [
-                    activity for activity in all_activities
-                    if activity.get("Activity") in activity_types
-                ]
+                all_activities = [activity for activity in all_activities if activity.get("Activity") in activity_types]
                 self.logger.info(f"Filtered to {len(all_activities)} activities for specified types")
 
             return all_activities
@@ -431,19 +449,23 @@ class FabricDataExtractor:
             self.logger.error(f"Failed to fetch tenant-wide activities: {str(e)}")
             raise
 
-
-    def get_daily_activities(self, date: datetime, workspace_ids: Optional[List[str]] = None,
-                           activity_types: Optional[List[str]] = None, tenant_wide: bool = True) -> List[Dict[str, Any]]:
+    def get_daily_activities(
+        self,
+        date: datetime,
+        workspace_ids: list[str] | None = None,
+        activity_types: list[str] | None = None,
+        tenant_wide: bool = True,
+    ) -> list[dict[str, Any]]:
         """
         Get all activities for a specific date.
-        
+
         Args:
             date: Date to fetch activities for
             workspace_ids: Optional list of workspace IDs to filter
             activity_types: Optional list of activity types to filter
             tenant_wide: If True, uses Power BI Admin API (all tenant activities in one call).
                         If False, uses per-workspace API (only member workspaces).
-            
+
         Returns:
             List of all activities for the specified date
         """
@@ -458,10 +480,7 @@ class FabricDataExtractor:
             try:
                 # Fetch all tenant activities at once
                 all_activities = self.get_tenant_wide_activities(
-                    start_date=start_date,
-                    end_date=end_date,
-                    workspace_ids=workspace_ids,
-                    activity_types=activity_types
+                    start_date=start_date, end_date=end_date, workspace_ids=workspace_ids, activity_types=activity_types
                 )
 
                 # Get workspace metadata for enrichment
@@ -500,8 +519,13 @@ class FabricDataExtractor:
                     status_code = e.response.status_code
 
                 if status_code in [401, 403]:
-                    self.logger.warning(f"⚠️ Tenant-wide access denied ({status_code}). Falling back to member-only scope.")
-                    print(f"   ⚠️ Access denied to tenant-wide API ({status_code}). Falling back to member workspaces...", end='\r', flush=True)
+                    self.logger.warning(
+                        f"⚠️ Tenant-wide access denied ({status_code}). Falling back to member-only scope."
+                    )
+                    self._emit_progress(
+                        f"   ⚠️ Access denied to tenant-wide API ({status_code}). Falling back to member workspaces...",
+                        end="\r",
+                    )
                     # Fallback to member-only logic (recursive call with tenant_wide=False)
                     return self.get_daily_activities(date, workspace_ids, activity_types, tenant_wide=False)
                 else:
@@ -528,7 +552,7 @@ class FabricDataExtractor:
                         workspace_id=workspace_id,
                         start_date=start_date,
                         end_date=end_date,
-                        activity_types=activity_types
+                        activity_types=activity_types,
                     )
 
                     item_lookup = self._get_workspace_items_lookup(workspace_id)
@@ -546,13 +570,13 @@ class FabricDataExtractor:
             self.logger.info(f"Total activities retrieved for {date.strftime('%Y-%m-%d')}: {len(all_activities)}")
             return all_activities
 
-    def get_workspace_items(self, workspace_id: str) -> List[Dict[str, Any]]:
+    def get_workspace_items(self, workspace_id: str) -> list[dict[str, Any]]:
         """
         Get all items (reports, datasets, etc.) in a workspace.
-        
+
         Args:
             workspace_id: Fabric workspace ID
-            
+
         Returns:
             List of workspace items
         """
@@ -578,7 +602,7 @@ class FabricDataExtractor:
     # Enrichment helpers
     # ------------------------------------------------------------------
 
-    def _get_workspace_items_lookup(self, workspace_id: str) -> Dict[str, Dict[str, Any]]:
+    def _get_workspace_items_lookup(self, workspace_id: str) -> dict[str, dict[str, Any]]:
         """Return (and cache) workspace items keyed by item id."""
         if workspace_id in self._workspace_items_cache:
             return self._workspace_items_cache[workspace_id]
@@ -593,7 +617,9 @@ class FabricDataExtractor:
             self._workspace_items_cache[workspace_id] = {}
             return {}
 
-    def _enrich_activity(self, activity: Dict[str, Any], workspace_id: str, workspace: Dict[str, Any]) -> Dict[str, Any]:
+    def _enrich_activity(
+        self, activity: dict[str, Any], workspace_id: str, workspace: dict[str, Any]
+    ) -> dict[str, Any]:
         """Attach workspace context, derived fields, and normalized values."""
         workspace_name = workspace.get("displayName") or workspace.get("name") or "Unknown"
         activity["_workspace_id"] = workspace_id
@@ -643,7 +669,9 @@ class FabricDataExtractor:
 
         return activity
 
-    def _attach_item_metadata(self, activity: Dict[str, Any], workspace_id: str, item_lookup: Dict[str, Dict[str, Any]]) -> None:
+    def _attach_item_metadata(
+        self, activity: dict[str, Any], workspace_id: str, item_lookup: dict[str, dict[str, Any]]
+    ) -> None:
         """Merge workspace item metadata into the activity record."""
         item_id = activity.get("ItemId")
         metadata = item_lookup.get(item_id) if item_id else None
@@ -652,7 +680,9 @@ class FabricDataExtractor:
 
         activity["ItemName"] = metadata.get("displayName") or activity.get("ItemName")
         activity["ItemType"] = metadata.get("type") or activity.get("ItemType")
-        activity["ObjectUrl"] = activity.get("ObjectUrl") or build_object_url(workspace_id, item_id, activity.get("ItemType"))
+        activity["ObjectUrl"] = activity.get("ObjectUrl") or build_object_url(
+            workspace_id, item_id, activity.get("ItemType")
+        )
 
         created_by = extract_user_from_metadata(metadata.get("createdByUser"))
         if created_by:
@@ -664,7 +694,7 @@ class FabricDataExtractor:
 
         activity["Domain"] = activity.get("Domain") or infer_domain(metadata.get("displayName"))
 
-    def _extract_item_id(self, activity: Dict[str, Any]) -> Optional[str]:
+    def _extract_item_id(self, activity: dict[str, Any]) -> str | None:
         """Look across multiple potential keys to find an item identifier."""
         candidate_keys = [
             "ItemId",
@@ -680,18 +710,14 @@ class FabricDataExtractor:
                 return str(value)
         return None
 
-    def test_api_connectivity(self) -> Dict[str, bool]:
+    def test_api_connectivity(self) -> dict[str, bool]:
         """
         Test connectivity to Fabric and Power BI APIs.
-        
+
         Returns:
             Dictionary with connectivity test results
         """
-        results = {
-            "fabric_api": False,
-            "powerbi_api": False,
-            "authentication": False
-        }
+        results = {"fabric_api": False, "powerbi_api": False, "authentication": False}
 
         # Test authentication
         try:

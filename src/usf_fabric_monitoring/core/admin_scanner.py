@@ -4,34 +4,34 @@ Admin Scanner API Client for Microsoft Fabric
 Provides bulk workspace metadata retrieval including lineage information
 using the Admin Scanner API (POST /admin/workspaces/getInfo).
 
-This is an additive feature that complements the existing iterative extraction 
+This is an additive feature that complements the existing iterative extraction
 approach, offering O(1) batch operations vs O(N) iterative calls.
 
 Reference: https://learn.microsoft.com/en-us/rest/api/fabric/admin/workspaces
 """
 
-import time
 import logging
-from typing import List, Dict, Any, Optional
+import time
+from typing import Any
 
 import requests
-
 
 logger = logging.getLogger(__name__)
 
 
 class AdminScannerError(Exception):
     """Exception raised for Admin Scanner API errors."""
+
     pass
 
 
 class AdminScannerClient:
     """
     Client for Microsoft Fabric Admin Scanner API.
-    
+
     Provides bulk metadata retrieval with lineage and datasource details.
     Reduces API calls from O(N) to O(1) per batch (max 100 workspaces).
-    
+
     Prerequisites:
         - Fabric Administrator role, OR
         - Service Principal with Tenant.Read.All permission
@@ -41,7 +41,7 @@ class AdminScannerClient:
     def __init__(self, token: str, api_base: str = "https://api.powerbi.com/v1.0/myorg"):
         """
         Initialize the Admin Scanner client.
-        
+
         Args:
             token: OAuth2 bearer token with admin permissions
             api_base: Power BI Admin API base URL (Admin Scanner uses Power BI API, not Fabric API)
@@ -55,15 +55,17 @@ class AdminScannerClient:
         self.base_delay = 2
         self.batch_size = 100  # Max workspaces per getInfo call
 
-    def _make_request(self, method: str, url: str, **kwargs) -> Optional[requests.Response]:
+    def _make_request(self, method: str, url: str, **kwargs) -> requests.Response | None:
         """Make HTTP request with retry logic for 429 rate limiting."""
         for attempt in range(self.max_retries):
             try:
                 response = requests.request(method, url, headers=self.headers, **kwargs)
 
                 if response.status_code == 429:
-                    retry_after = int(response.headers.get("Retry-After", self.base_delay * (2 ** attempt)))
-                    logger.warning(f"Rate limited. Waiting {retry_after}s before retry {attempt + 1}/{self.max_retries}...")
+                    retry_after = int(response.headers.get("Retry-After", self.base_delay * (2**attempt)))
+                    logger.warning(
+                        f"Rate limited. Waiting {retry_after}s before retry {attempt + 1}/{self.max_retries}..."
+                    )
                     time.sleep(retry_after)
                     continue
 
@@ -73,29 +75,29 @@ class AdminScannerClient:
                 logger.error(f"Request failed: {str(e)}")
                 if attempt == self.max_retries - 1:
                     raise AdminScannerError(f"Request failed after {self.max_retries} retries: {e}")
-                time.sleep(self.base_delay * (2 ** attempt))
+                time.sleep(self.base_delay * (2**attempt))
 
         return None
 
     def scan_workspaces(
         self,
-        workspace_ids: List[str],
+        workspace_ids: list[str],
         lineage: bool = True,
         datasource_details: bool = True,
         dataset_schema: bool = True,
         dataset_expressions: bool = True,
         get_artifact_users: bool = False,
         poll_interval: int = 5,
-        max_poll_time: int = 300
-    ) -> Dict[str, Any]:
+        max_poll_time: int = 300,
+    ) -> dict[str, Any]:
         """
         Scan workspaces using Admin Scanner API.
-        
+
         This is a 3-step process:
         1. POST /admin/workspaces/getInfo - Initiate scan
         2. GET /admin/workspaces/scanStatus/{scanId} - Poll until complete
         3. GET /admin/workspaces/scanResult/{scanId} - Retrieve results
-        
+
         Args:
             workspace_ids: List of workspace GUIDs to scan
             lineage: Include lineage information (default True)
@@ -105,10 +107,10 @@ class AdminScannerClient:
             get_artifact_users: Include user permissions (default False)
             poll_interval: Seconds between status polls (default 5)
             max_poll_time: Maximum seconds to wait for scan (default 300)
-            
+
         Returns:
             Dictionary containing scan results with workspaces and lineage data
-            
+
         Raises:
             AdminScannerError: If scan fails or times out
         """
@@ -119,12 +121,11 @@ class AdminScannerClient:
         all_results = {"workspaces": [], "lineage": []}
 
         for i in range(0, len(workspace_ids), self.batch_size):
-            batch = workspace_ids[i:i + self.batch_size]
+            batch = workspace_ids[i : i + self.batch_size]
             logger.info(f"Scanning batch {i // self.batch_size + 1}: {len(batch)} workspaces")
 
             batch_result = self._scan_batch(
-                batch, lineage, datasource_details, dataset_schema,
-                dataset_expressions, poll_interval, max_poll_time
+                batch, lineage, datasource_details, dataset_schema, dataset_expressions, poll_interval, max_poll_time
             )
 
             all_results["workspaces"].extend(batch_result.get("workspaces", []))
@@ -135,20 +136,18 @@ class AdminScannerClient:
 
     def _scan_batch(
         self,
-        workspace_ids: List[str],
+        workspace_ids: list[str],
         lineage: bool,
         datasource_details: bool,
         dataset_schema: bool,
         dataset_expressions: bool,
         poll_interval: int,
-        max_poll_time: int
-    ) -> Dict[str, Any]:
+        max_poll_time: int,
+    ) -> dict[str, Any]:
         """Scan a single batch of workspaces (max 100)."""
 
         # Step 1: Initiate scan
-        scan_id = self._initiate_scan(
-            workspace_ids, lineage, datasource_details, dataset_schema, dataset_expressions
-        )
+        scan_id = self._initiate_scan(workspace_ids, lineage, datasource_details, dataset_schema, dataset_expressions)
 
         if not scan_id:
             raise AdminScannerError("Failed to initiate scan - no scan ID returned")
@@ -178,24 +177,24 @@ class AdminScannerClient:
 
         # Step 3: Get results
         result = self._get_scan_result(scan_id)
-        
+
         # Add tables and expressions to result for normalization
         result["_include_schema"] = dataset_schema
         result["_include_expressions"] = dataset_expressions
-        
+
         return result
 
     def _initiate_scan(
         self,
-        workspace_ids: List[str],
+        workspace_ids: list[str],
         lineage: bool,
         datasource_details: bool,
         dataset_schema: bool,
-        dataset_expressions: bool
-    ) -> Optional[str]:
+        dataset_expressions: bool,
+    ) -> str | None:
         """
         POST /admin/workspaces/getInfo to initiate a scan.
-        
+
         Returns:
             Scan ID if successful, None otherwise
         """
@@ -206,7 +205,7 @@ class AdminScannerClient:
             "lineage": str(lineage).lower(),
             "datasourceDetails": str(datasource_details).lower(),
             "datasetSchema": str(dataset_schema).lower(),
-            "datasetExpressions": str(dataset_expressions).lower()
+            "datasetExpressions": str(dataset_expressions).lower(),
         }
 
         # Body contains workspace IDs
@@ -232,7 +231,7 @@ class AdminScannerClient:
     def _get_scan_status(self, scan_id: str) -> str:
         """
         GET /admin/workspaces/scanStatus/{scanId}
-        
+
         Returns:
             Status string: "NotStarted", "Running", "Succeeded", "Failed"
         """
@@ -246,10 +245,10 @@ class AdminScannerClient:
         data = response.json()
         return data.get("status", "Unknown")
 
-    def _get_scan_result(self, scan_id: str) -> Dict[str, Any]:
+    def _get_scan_result(self, scan_id: str) -> dict[str, Any]:
         """
         GET /admin/workspaces/scanResult/{scanId}
-        
+
         Returns:
             Complete scan result including workspaces and lineage
         """
@@ -258,19 +257,21 @@ class AdminScannerClient:
         response = self._make_request("GET", url)
 
         if response is None or response.status_code != 200:
-            raise AdminScannerError(f"Failed to get scan results: {response.status_code if response else 'No response'}")
+            raise AdminScannerError(
+                f"Failed to get scan results: {response.status_code if response else 'No response'}"
+            )
 
         return response.json()
 
-    def normalize_lineage_results(self, scan_result: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def normalize_lineage_results(self, scan_result: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Normalize Scanner API results to match iterative extraction format.
-        
+
         This ensures compatibility with existing downstream processing.
-        
+
         Args:
             scan_result: Raw scan result from Admin Scanner API
-            
+
         Returns:
             List of lineage records in standard format
         """
@@ -291,129 +292,141 @@ class AdminScannerClient:
                     downstream = artifact.get("downstreamDataflows", [])
                     datasources = artifact.get("datasourceUsages", [])
 
-                    lineage_data.append({
-                        "Workspace Name": ws_name,
-                        "Workspace ID": ws_id,
-                        "Item Name": artifact.get("name", "Unknown"),
-                        "Item ID": artifact.get("id"),
-                        "Item Type": artifact_type.rstrip("s").title(),  # lakehouses -> Lakehouse
-                        "Shortcut Name": None,
-                        "Shortcut Path": None,
-                        "Source Type": "Scanner API",
-                        "Source Connection": None,
-                        "Source Database": None,
-                        "Connection ID": None,
-                        "Upstream Count": len(upstream),
-                        "Downstream Count": len(downstream),
-                        "Datasource Count": len(datasources),
-                        "Full Definition": str({
-                            "upstream": upstream,
-                            "downstream": downstream,
-                            "datasources": datasources
-                        })
-                    })
+                    lineage_data.append(
+                        {
+                            "Workspace Name": ws_name,
+                            "Workspace ID": ws_id,
+                            "Item Name": artifact.get("name", "Unknown"),
+                            "Item ID": artifact.get("id"),
+                            "Item Type": artifact_type.rstrip("s").title(),  # lakehouses -> Lakehouse
+                            "Shortcut Name": None,
+                            "Shortcut Path": None,
+                            "Source Type": "Scanner API",
+                            "Source Connection": None,
+                            "Source Database": None,
+                            "Connection ID": None,
+                            "Upstream Count": len(upstream),
+                            "Downstream Count": len(downstream),
+                            "Datasource Count": len(datasources),
+                            "Full Definition": str(
+                                {"upstream": upstream, "downstream": downstream, "datasources": datasources}
+                            ),
+                        }
+                    )
 
             # Process shortcuts separately if available
             shortcuts = ws.get("shortcuts", [])
             for shortcut in shortcuts:
                 target = shortcut.get("target", {})
-                lineage_data.append({
-                    "Workspace Name": ws_name,
-                    "Workspace ID": ws_id,
-                    "Item Name": shortcut.get("itemName", "Unknown"),
-                    "Item ID": shortcut.get("itemId"),
-                    "Item Type": "Lakehouse Shortcut",
-                    "Shortcut Name": shortcut.get("name"),
-                    "Shortcut Path": shortcut.get("path"),
-                    "Source Type": target.get("type", "Unknown"),
-                    "Source Connection": target.get("location") or target.get("path"),
-                    "Source Database": None,
-                    "Connection ID": target.get("connectionId"),
-                    "Full Definition": str(shortcut)
-                })
+                lineage_data.append(
+                    {
+                        "Workspace Name": ws_name,
+                        "Workspace ID": ws_id,
+                        "Item Name": shortcut.get("itemName", "Unknown"),
+                        "Item ID": shortcut.get("itemId"),
+                        "Item Type": "Lakehouse Shortcut",
+                        "Shortcut Name": shortcut.get("name"),
+                        "Shortcut Path": shortcut.get("path"),
+                        "Source Type": target.get("type", "Unknown"),
+                        "Source Connection": target.get("location") or target.get("path"),
+                        "Source Database": None,
+                        "Connection ID": target.get("connectionId"),
+                        "Full Definition": str(shortcut),
+                    }
+                )
 
         # Process Datasets/Semantic Models for tables and expressions
         for ws in workspaces:
             ws_id = ws.get("id")
             ws_name = ws.get("name", "Unknown")
-            
+
             for dataset in ws.get("datasets", []):
                 ds_id = dataset.get("id")
                 ds_name = dataset.get("name", "Unknown")
-                
+
                 # Basic dataset info
-                lineage_data.append({
-                    "Workspace Name": ws_name,
-                    "Workspace ID": ws_id,
-                    "Item Name": ds_name,
-                    "Item ID": ds_id,
-                    "Item Type": "SemanticModel",
-                    "Shortcut Name": None,
-                    "Shortcut Path": None,
-                    "Source Type": "Dataset",
-                    "Source Connection": None,
-                    "Source Database": None,
-                    "Connection ID": None,
-                    "Table Count": len(dataset.get("tables", [])),
-                    "Expression Count": len(dataset.get("expressions", [])),
-                    "Upstream Datasets": [u.get("targetDatasetId") for u in dataset.get("upstreamDatasets", [])],
-                    "Full Definition": None  # Skip full payload for datasets
-                })
-                
-                # Extract table-level lineage
-                for table in dataset.get("tables", []):
-                    lineage_data.append({
+                lineage_data.append(
+                    {
                         "Workspace Name": ws_name,
                         "Workspace ID": ws_id,
                         "Item Name": ds_name,
                         "Item ID": ds_id,
-                        "Item Type": "DatasetTable",
+                        "Item Type": "SemanticModel",
                         "Shortcut Name": None,
                         "Shortcut Path": None,
-                        "Source Type": "Table",
-                        "Source Connection": table.get("source", [{}])[0].get("expression") if table.get("source") else None,
+                        "Source Type": "Dataset",
+                        "Source Connection": None,
                         "Source Database": None,
                         "Connection ID": None,
-                        "Table Name": table.get("name"),
-                        "Column Count": len(table.get("columns", [])),
-                        "Measure Count": len(table.get("measures", [])),
-                        "Full Definition": None
-                    })
-            
+                        "Table Count": len(dataset.get("tables", [])),
+                        "Expression Count": len(dataset.get("expressions", [])),
+                        "Upstream Datasets": [u.get("targetDatasetId") for u in dataset.get("upstreamDatasets", [])],
+                        "Full Definition": None,  # Skip full payload for datasets
+                    }
+                )
+
+                # Extract table-level lineage
+                for table in dataset.get("tables", []):
+                    lineage_data.append(
+                        {
+                            "Workspace Name": ws_name,
+                            "Workspace ID": ws_id,
+                            "Item Name": ds_name,
+                            "Item ID": ds_id,
+                            "Item Type": "DatasetTable",
+                            "Shortcut Name": None,
+                            "Shortcut Path": None,
+                            "Source Type": "Table",
+                            "Source Connection": table.get("source", [{}])[0].get("expression")
+                            if table.get("source")
+                            else None,
+                            "Source Database": None,
+                            "Connection ID": None,
+                            "Table Name": table.get("name"),
+                            "Column Count": len(table.get("columns", [])),
+                            "Measure Count": len(table.get("measures", [])),
+                            "Full Definition": None,
+                        }
+                    )
+
             # Reports with their dataset bindings
             for report in ws.get("reports", []):
-                lineage_data.append({
-                    "Workspace Name": ws_name,
-                    "Workspace ID": ws_id,
-                    "Item Name": report.get("name", "Unknown"),
-                    "Item ID": report.get("id"),
-                    "Item Type": "Report",
-                    "Shortcut Name": None,
-                    "Shortcut Path": None,
-                    "Source Type": "PowerBI",
-                    "Source Connection": report.get("datasetId"),  # Upstream dataset
-                    "Source Database": None,
-                    "Connection ID": None,
-                    "Bound Dataset ID": report.get("datasetId"),
-                    "Full Definition": None
-                })
-            
+                lineage_data.append(
+                    {
+                        "Workspace Name": ws_name,
+                        "Workspace ID": ws_id,
+                        "Item Name": report.get("name", "Unknown"),
+                        "Item ID": report.get("id"),
+                        "Item Type": "Report",
+                        "Shortcut Name": None,
+                        "Shortcut Path": None,
+                        "Source Type": "PowerBI",
+                        "Source Connection": report.get("datasetId"),  # Upstream dataset
+                        "Source Database": None,
+                        "Connection ID": None,
+                        "Bound Dataset ID": report.get("datasetId"),
+                        "Full Definition": None,
+                    }
+                )
+
             # Dataflows
             for dataflow in ws.get("dataflows", []):
-                lineage_data.append({
-                    "Workspace Name": ws_name,
-                    "Workspace ID": ws_id,
-                    "Item Name": dataflow.get("name", "Unknown"),
-                    "Item ID": dataflow.get("objectId"),
-                    "Item Type": "Dataflow",
-                    "Shortcut Name": None,
-                    "Shortcut Path": None,
-                    "Source Type": "Dataflow",
-                    "Source Connection": None,
-                    "Source Database": None,
-                    "Connection ID": None,
-                    "Datasource Count": len(dataflow.get("datasourceUsages", [])),
-                    "Full Definition": None
-                })
+                lineage_data.append(
+                    {
+                        "Workspace Name": ws_name,
+                        "Workspace ID": ws_id,
+                        "Item Name": dataflow.get("name", "Unknown"),
+                        "Item ID": dataflow.get("objectId"),
+                        "Item Type": "Dataflow",
+                        "Shortcut Name": None,
+                        "Shortcut Path": None,
+                        "Source Type": "Dataflow",
+                        "Source Connection": None,
+                        "Source Database": None,
+                        "Connection ID": None,
+                        "Datasource Count": len(dataflow.get("datasourceUsages", [])),
+                        "Full Definition": None,
+                    }
+                )
 
         return lineage_data

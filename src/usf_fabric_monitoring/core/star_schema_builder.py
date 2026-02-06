@@ -26,13 +26,14 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
 import pandas as pd
 
-from .utils import resolve_path
 from .logger import setup_logging
+from .utils import resolve_path
 
 # Module logger
 logger = logging.getLogger(__name__)
@@ -297,39 +298,36 @@ ALL_STAR_SCHEMA_DDLS = {
 # INCREMENTAL LOAD TRACKING
 # =============================================================================
 
+
 class IncrementalLoadTracker:
     """
     Tracks high-water marks for incremental data loading.
-    
+
     Uses a simple JSON file to store last processed timestamps per entity.
     In production, this would be a Delta table or database table.
     """
 
-    def __init__(self, tracker_path: Optional[Path] = None):
+    def __init__(self, tracker_path: Path | None = None):
         self.tracker_path = tracker_path or resolve_path("exports/star_schema/.incremental_state.json")
         self.tracker_path.parent.mkdir(parents=True, exist_ok=True)
         self._state = self._load_state()
 
-    def _load_state(self) -> Dict[str, Any]:
+    def _load_state(self) -> dict[str, Any]:
         """Load existing state or create new."""
         if self.tracker_path.exists():
             try:
-                with open(self.tracker_path, 'r') as f:
+                with open(self.tracker_path) as f:
                     return json.load(f)
             except Exception:
                 pass
-        return {
-            "high_water_marks": {},
-            "last_full_load": None,
-            "load_history": []
-        }
+        return {"high_water_marks": {}, "last_full_load": None, "load_history": []}
 
     def _save_state(self) -> None:
         """Persist state to disk."""
-        with open(self.tracker_path, 'w') as f:
+        with open(self.tracker_path, "w") as f:
             json.dump(self._state, f, indent=2, default=str)
 
-    def get_high_water_mark(self, entity: str, default: Optional[datetime] = None) -> Optional[datetime]:
+    def get_high_water_mark(self, entity: str, default: datetime | None = None) -> datetime | None:
         """Get the last processed timestamp for an entity."""
         hwm = self._state["high_water_marks"].get(entity)
         if hwm:
@@ -343,12 +341,14 @@ class IncrementalLoadTracker:
 
     def record_load(self, entity: str, records_processed: int, duration_seconds: float) -> None:
         """Record a load operation for audit purposes."""
-        self._state["load_history"].append({
-            "entity": entity,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "records_processed": records_processed,
-            "duration_seconds": round(duration_seconds, 2)
-        })
+        self._state["load_history"].append(
+            {
+                "entity": entity,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "records_processed": records_processed,
+                "duration_seconds": round(duration_seconds, 2),
+            }
+        )
         # Keep last 100 entries
         self._state["load_history"] = self._state["load_history"][-100:]
         self._save_state()
@@ -358,10 +358,11 @@ class IncrementalLoadTracker:
 # DIMENSION BUILDERS
 # =============================================================================
 
+
 class DimensionBuilder:
     """Base class for building dimension tables."""
 
-    def __init__(self, logger: Optional[logging.Logger] = None):
+    def __init__(self, logger: logging.Logger | None = None):
         self.logger = logger or logging.getLogger(__name__)
 
     def generate_surrogate_key(self, *values) -> int:
@@ -369,7 +370,7 @@ class DimensionBuilder:
         key_string = "|".join(str(v) for v in values)
         hash_bytes = hashlib.md5(key_string.encode()).digest()
         # Use first 4 bytes as int (deterministic across runs)
-        return int.from_bytes(hash_bytes[:4], 'big') % (2**31 - 1)
+        return int.from_bytes(hash_bytes[:4], "big") % (2**31 - 1)
 
 
 class DateDimensionBuilder(DimensionBuilder):
@@ -379,17 +380,17 @@ class DateDimensionBuilder(DimensionBuilder):
         self,
         start_date: datetime,
         end_date: datetime,
-        fiscal_year_start_month: int = 7  # July (common for fiscal years)
+        fiscal_year_start_month: int = 7,  # July (common for fiscal years)
     ) -> pd.DataFrame:
         """
         Generate date dimension for a date range.
-        
+
         Args:
             start_date: Start of date range
             end_date: End of date range
             fiscal_year_start_month: Month when fiscal year starts (1-12)
         """
-        dates = pd.date_range(start=start_date, end=end_date, freq='D')
+        dates = pd.date_range(start=start_date, end=end_date, freq="D")
 
         records = []
         for d in dates:
@@ -402,23 +403,25 @@ class DateDimensionBuilder(DimensionBuilder):
                 fiscal_month = d.month + (12 - fiscal_year_start_month + 1)
             fiscal_quarter = (fiscal_month - 1) // 3 + 1
 
-            records.append({
-                "date_sk": int(d.strftime("%Y%m%d")),
-                "full_date": d.date(),
-                "day_of_week": d.weekday() + 1,  # 1=Monday
-                "day_of_week_name": d.strftime("%A"),
-                "day_of_month": d.day,
-                "day_of_year": d.timetuple().tm_yday,
-                "week_of_year": d.isocalendar()[1],
-                "month_number": d.month,
-                "month_name": d.strftime("%B"),
-                "quarter": (d.month - 1) // 3 + 1,
-                "year": d.year,
-                "is_weekend": d.weekday() >= 5,
-                "is_weekday": d.weekday() < 5,
-                "fiscal_year": fiscal_year,
-                "fiscal_quarter": fiscal_quarter
-            })
+            records.append(
+                {
+                    "date_sk": int(d.strftime("%Y%m%d")),
+                    "full_date": d.date(),
+                    "day_of_week": d.weekday() + 1,  # 1=Monday
+                    "day_of_week_name": d.strftime("%A"),
+                    "day_of_month": d.day,
+                    "day_of_year": d.timetuple().tm_yday,
+                    "week_of_year": d.isocalendar()[1],
+                    "month_number": d.month,
+                    "month_name": d.strftime("%B"),
+                    "quarter": (d.month - 1) // 3 + 1,
+                    "year": d.year,
+                    "is_weekend": d.weekday() >= 5,
+                    "is_weekday": d.weekday() < 5,
+                    "fiscal_year": fiscal_year,
+                    "fiscal_quarter": fiscal_quarter,
+                }
+            )
 
         return pd.DataFrame(records)
 
@@ -447,15 +450,17 @@ class TimeDimensionBuilder(DimensionBuilder):
 
                 is_business = 9 <= hour < 17
 
-                records.append({
-                    "time_sk": time_sk,
-                    "hour_24": hour,
-                    "hour_12": hour_12,
-                    "minute": minute,
-                    "am_pm": am_pm,
-                    "time_period": time_period,
-                    "is_business_hours": is_business
-                })
+                records.append(
+                    {
+                        "time_sk": time_sk,
+                        "hour_24": hour,
+                        "hour_12": hour_12,
+                        "minute": minute,
+                        "am_pm": am_pm,
+                        "time_period": time_period,
+                        "is_business_hours": is_business,
+                    }
+                )
 
         return pd.DataFrame(records)
 
@@ -467,7 +472,7 @@ class WorkspaceDimensionBuilder(DimensionBuilder):
         "DEV": ["dev", "[dev]", "-dev", "_dev", "development"],
         "TEST": ["test", "[test]", "-test", "_test", "testing", "qa"],
         "UAT": ["uat", "[uat]", "-uat", "_uat", "staging", "prj_uat", "prj uat"],
-        "PRD": ["prd", "prod", "[prd]", "-prd", "_prd", "production", "live"]
+        "PRD": ["prd", "prod", "[prd]", "-prd", "_prd", "production", "live"],
     }
 
     def infer_environment(self, workspace_name: str) -> str:
@@ -482,13 +487,11 @@ class WorkspaceDimensionBuilder(DimensionBuilder):
         return "Unknown"
 
     def build_from_activities(
-        self,
-        activities: List[Dict[str, Any]],
-        existing_dim: Optional[pd.DataFrame] = None
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        self, activities: list[dict[str, Any]], existing_dim: pd.DataFrame | None = None
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Build workspace dimension from activity records.
-        
+
         Returns:
             Tuple of (full dimension DataFrame, new/changed records DataFrame)
         """
@@ -509,9 +512,9 @@ class WorkspaceDimensionBuilder(DimensionBuilder):
                 "location": activity.get("location", "Global"),
                 "environment": self.infer_environment(ws_name),
                 "is_current": True,
-                "effective_from": datetime.now(timezone.utc).date(),
+                "effective_from": datetime.now(UTC).date(),
                 "effective_to": None,
-                "version": 1
+                "version": 1,
             }
 
         new_df = pd.DataFrame(list(workspace_data.values()))
@@ -520,9 +523,7 @@ class WorkspaceDimensionBuilder(DimensionBuilder):
             return pd.DataFrame(), pd.DataFrame()
 
         # Generate surrogate keys
-        new_df["workspace_sk"] = new_df["workspace_id"].apply(
-            lambda x: self.generate_surrogate_key("workspace", x)
-        )
+        new_df["workspace_sk"] = new_df["workspace_id"].apply(lambda x: self.generate_surrogate_key("workspace", x))
 
         # If we have existing data, identify changes (SCD Type 2)
         if existing_dim is not None and not existing_dim.empty:
@@ -544,23 +545,29 @@ class ItemDimensionBuilder(DimensionBuilder):
     # Coverage: 20+ item types from actual tenant data
     ITEM_CATEGORIES = {
         "Compute": [
-            "DataPipeline", "Pipeline",  # Data orchestration
-            "Notebook", "SynapseNotebook",  # Interactive compute
+            "DataPipeline",
+            "Pipeline",  # Data orchestration
+            "Notebook",
+            "SynapseNotebook",  # Interactive compute
             "SparkJobDefinition",  # Batch Spark
-            "Dataflow", "DataFlow",  # ETL (case variations in API)
+            "Dataflow",
+            "DataFlow",  # ETL (case variations in API)
             "CopyJob",  # Data movement
         ],
         "Storage": [
             "Lakehouse",  # Delta Lake storage
             "Warehouse",  # SQL analytics
-            "KQLDatabase", "KustoDatabase",  # Real-time analytics (alias)
+            "KQLDatabase",
+            "KustoDatabase",  # Real-time analytics (alias)
             "MirroredDatabase",  # Database mirroring
             "SnowflakeDatabase",  # External Snowflake connection
         ],
         "Analytics": [
             "KQLQueryset",  # KQL queries
-            "SemanticModel", "Dataset",  # Power BI models
-            "Report", "Dashboard",  # Power BI visuals
+            "SemanticModel",
+            "Dataset",  # Power BI models
+            "Report",
+            "Dashboard",  # Power BI visuals
             "Datamart",  # Self-service analytics
         ],
         "Realtime": [
@@ -579,23 +586,41 @@ class ItemDimensionBuilder(DimensionBuilder):
     # These are items that only exist in Microsoft Fabric, not in classic Power BI
     FABRIC_NATIVE_TYPES = {
         # Compute
-        "DataPipeline", "Pipeline", "Notebook", "SynapseNotebook",
-        "SparkJobDefinition", "CopyJob",
+        "DataPipeline",
+        "Pipeline",
+        "Notebook",
+        "SynapseNotebook",
+        "SparkJobDefinition",
+        "CopyJob",
         # Storage
-        "Lakehouse", "Warehouse", "KQLDatabase", "KustoDatabase",
-        "MirroredDatabase", "SnowflakeDatabase",
+        "Lakehouse",
+        "Warehouse",
+        "KQLDatabase",
+        "KustoDatabase",
+        "MirroredDatabase",
+        "SnowflakeDatabase",
         # Realtime
-        "Eventstream", "Reflex",
+        "Eventstream",
+        "Reflex",
         # Infrastructure
-        "Environment", "MLModel", "MLExperiment", "GraphQLApi",
+        "Environment",
+        "MLModel",
+        "MLExperiment",
+        "GraphQLApi",
         # Data Engineering
         "KQLQueryset",
     }
 
     # Power BI item types (can exist in both Power BI and Fabric)
     POWERBI_TYPES = {
-        "Report", "Dashboard", "Dataset", "SemanticModel",
-        "Dataflow", "DataFlow", "Datamart", "PaginatedReport",
+        "Report",
+        "Dashboard",
+        "Dataset",
+        "SemanticModel",
+        "Dataflow",
+        "DataFlow",
+        "Datamart",
+        "PaginatedReport",
     }
 
     def categorize_item(self, item_type: str) -> str:
@@ -611,7 +636,7 @@ class ItemDimensionBuilder(DimensionBuilder):
     def get_platform(self, item_type: str) -> str:
         """
         Determine the platform for an item type.
-        
+
         Returns:
             'Fabric' - Fabric-native items (Lakehouse, Notebook, etc.)
             'Power BI' - Power BI items (Report, Dashboard, Dataset)
@@ -631,10 +656,10 @@ class ItemDimensionBuilder(DimensionBuilder):
 
     def build_from_activities(
         self,
-        activities: List[Dict[str, Any]],
-        lineage_data: Optional[List[Dict[str, Any]]] = None,
-        existing_dim: Optional[pd.DataFrame] = None
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        activities: list[dict[str, Any]],
+        lineage_data: list[dict[str, Any]] | None = None,
+        existing_dim: pd.DataFrame | None = None,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Build item dimension from activity and optionally lineage data.
         """
@@ -660,9 +685,9 @@ class ItemDimensionBuilder(DimensionBuilder):
                 "source_database": None,
                 "source_connection_id": None,
                 "is_current": True,
-                "effective_from": datetime.now(timezone.utc).date(),
+                "effective_from": datetime.now(UTC).date(),
                 "effective_to": None,
-                "version": 1
+                "version": 1,
             }
 
         # Enrich with lineage data if available
@@ -681,9 +706,7 @@ class ItemDimensionBuilder(DimensionBuilder):
             return pd.DataFrame(), pd.DataFrame()
 
         # Generate surrogate keys
-        new_df["item_sk"] = new_df["item_id"].apply(
-            lambda x: self.generate_surrogate_key("item", x)
-        )
+        new_df["item_sk"] = new_df["item_id"].apply(lambda x: self.generate_surrogate_key("item", x))
 
         # Handle existing data (SCD Type 2)
         if existing_dim is not None and not existing_dim.empty:
@@ -705,7 +728,8 @@ class UserDimensionBuilder(DimensionBuilder):
 
         # GUIDs are typically service principals
         import re
-        guid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+
+        guid_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         if re.match(guid_pattern, user_value.lower()):
             return "ServicePrincipal"
 
@@ -715,17 +739,15 @@ class UserDimensionBuilder(DimensionBuilder):
 
         return "User"
 
-    def extract_domain_from_upn(self, upn: str) -> Optional[str]:
+    def extract_domain_from_upn(self, upn: str) -> str | None:
         """Extract email domain from UPN."""
         if not upn or not isinstance(upn, str) or "@" not in upn:
             return None
         return upn.split("@")[-1]
 
     def build_from_activities(
-        self,
-        activities: List[Dict[str, Any]],
-        existing_dim: Optional[pd.DataFrame] = None
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        self, activities: list[dict[str, Any]], existing_dim: pd.DataFrame | None = None
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Build user dimension from activity records."""
         user_data = {}
 
@@ -743,9 +765,9 @@ class UserDimensionBuilder(DimensionBuilder):
                 "risk_level": "Low",
                 "activity_tier": "Regular",
                 "is_current": True,
-                "effective_from": datetime.now(timezone.utc).date(),
+                "effective_from": datetime.now(UTC).date(),
                 "effective_to": None,
-                "version": 1
+                "version": 1,
             }
 
         new_df = pd.DataFrame(list(user_data.values()))
@@ -754,9 +776,7 @@ class UserDimensionBuilder(DimensionBuilder):
             return pd.DataFrame(), pd.DataFrame()
 
         # Generate surrogate keys
-        new_df["user_sk"] = new_df["user_principal_name"].apply(
-            lambda x: self.generate_surrogate_key("user", x)
-        )
+        new_df["user_sk"] = new_df["user_principal_name"].apply(lambda x: self.generate_surrogate_key("user", x))
 
         # Handle existing data
         if existing_dim is not None and not existing_dim.empty:
@@ -782,14 +802,12 @@ class ActivityTypeDimensionBuilder(DimensionBuilder):
         "MoveFile": ("File Operations", False, True),
         "CreateDirectory": ("File Operations", False, True),
         "SetFileProperties": ("File Operations", False, True),
-
         # Artifact Operations (CRUD on Fabric items)
         "ReadArtifact": ("Artifact Operations", False, True),
         "CreateArtifact": ("Artifact Operations", False, True),
         "UpdateArtifact": ("Artifact Operations", False, True),
         "DeleteArtifact": ("Artifact Operations", False, True),
         "ShareArtifact": ("Artifact Operations", False, True),
-
         # Compute Operations
         "ExecutePipeline": ("Compute", True, True),
         "ExecuteNotebook": ("Compute", True, True),
@@ -800,7 +818,6 @@ class ActivityTypeDimensionBuilder(DimensionBuilder):
         "StartRunNotebook": ("Compute", True, True),
         "StopNotebookSession": ("Compute", False, True),
         "ConfigureNotebook": ("Compute", False, True),
-
         # Job History Activity Types (from Fabric Job History API)
         "Pipeline": ("Compute", True, True),
         "PipelineRunNotebook": ("Compute", True, True),
@@ -811,7 +828,6 @@ class ActivityTypeDimensionBuilder(DimensionBuilder):
         "SparkJob": ("Compute", True, True),
         "ScheduledNotebook": ("Compute", True, True),
         "OneLakeShortcut": ("Compute", True, True),
-
         # Spark/Livy Operations
         "ViewSparkAppLog": ("Spark", False, True),
         "ViewSparkApplication": ("Spark", False, True),
@@ -821,7 +837,6 @@ class ActivityTypeDimensionBuilder(DimensionBuilder):
         "LivySparkSessionCancelled": ("Spark", False, True),
         "CreateCheckpoint": ("Spark", False, True),
         "MountStorageByMssparkutils": ("Spark", False, True),
-
         # Lakehouse Operations
         "ReadLakehouse": ("Lakehouse", False, True),
         "WriteLakehouse": ("Lakehouse", False, True),
@@ -831,11 +846,9 @@ class ActivityTypeDimensionBuilder(DimensionBuilder):
         "LoadLakehouseTable": ("Lakehouse", False, True),
         "DeleteLakehouseTable": ("Lakehouse", False, True),
         "GetDataArtifactTableDetails": ("Lakehouse", False, True),
-
         # Shortcut Operations
         "CreateShortcut": ("Shortcut", False, True),
         "DeleteShortcut": ("Shortcut", False, True),
-
         # Query Operations
         "ExecuteKQLQuery": ("Query", True, True),
         "ExecuteSQLQuery": ("Query", True, True),
@@ -844,27 +857,22 @@ class ActivityTypeDimensionBuilder(DimensionBuilder):
         "CreateVisualQueryFromWarehouse": ("Query", False, True),
         "DeleteSavedQueryFromWarehouse": ("Query", False, True),
         "GetArtifactSqlAuditConfiguration": ("Query", False, True),
-
         # Admin/Workspace Operations
         "CreateWorkspace": ("Admin", False, True),
         "UpdateWorkspace": ("Admin", False, True),
         "DeleteWorkspace": ("Admin", False, True),
         "AddWorkspaceUser": ("Admin", False, True),
-
         # Environment Operations
         "StartPublishEnvironment": ("Environment", False, True),
         "FinishPublishEnvironment": ("Environment", False, True),
         "ReadEnvironmentResource": ("Environment", False, True),
         "UpdateEnvironmentSparkSettings": ("Environment", False, True),
-
         # ML/AI Operations
         "DeleteModelEndpoint": ("ML", False, True),
         "RequestCopilot": ("ML", False, True),
-
         # Security/Compliance
         "SensitivityLabelApplied": ("Security", False, True),
         "SensitivityLabelChanged": ("Security", False, True),
-
         # Report/Analytics Operations
         "ViewReport": ("Analytics", False, False),
         "RefreshDataset": ("Compute", True, False),
@@ -877,24 +885,28 @@ class ActivityTypeDimensionBuilder(DimensionBuilder):
 
         for activity_type, (category, is_compute, is_fabric) in self.ACTIVITY_TYPES.items():
             sk += 1
-            records.append({
-                "activity_type_sk": sk,
-                "activity_type": activity_type,
-                "activity_category": category,
-                "is_compute_activity": is_compute,
-                "is_fabric_native": is_fabric,
-                "description": f"{category} activity: {activity_type}"
-            })
+            records.append(
+                {
+                    "activity_type_sk": sk,
+                    "activity_type": activity_type,
+                    "activity_category": category,
+                    "is_compute_activity": is_compute,
+                    "is_fabric_native": is_fabric,
+                    "description": f"{category} activity: {activity_type}",
+                }
+            )
 
         # Add catch-all for unknown types
-        records.append({
-            "activity_type_sk": 999,
-            "activity_type": "Unknown",
-            "activity_category": "Unknown",
-            "is_compute_activity": False,
-            "is_fabric_native": False,
-            "description": "Unknown or unmapped activity type"
-        })
+        records.append(
+            {
+                "activity_type_sk": 999,
+                "activity_type": "Unknown",
+                "activity_category": "Unknown",
+                "is_compute_activity": False,
+                "is_fabric_native": False,
+                "description": "Unknown or unmapped activity type",
+            }
+        )
 
         return pd.DataFrame(records)
 
@@ -920,13 +932,15 @@ class StatusDimensionBuilder(DimensionBuilder):
 
         for status, (category, is_terminal, severity) in self.STATUSES.items():
             sk += 1
-            records.append({
-                "status_sk": sk,
-                "status_code": status,
-                "status_category": category,
-                "is_terminal": is_terminal,
-                "severity": severity
-            })
+            records.append(
+                {
+                    "status_sk": sk,
+                    "status_code": status,
+                    "status_category": category,
+                    "is_terminal": is_terminal,
+                    "severity": severity,
+                }
+            )
 
         return pd.DataFrame(records)
 
@@ -934,6 +948,7 @@ class StatusDimensionBuilder(DimensionBuilder):
 # =============================================================================
 # FACT TABLE BUILDER
 # =============================================================================
+
 
 class FactActivityBuilder(DimensionBuilder):
     """Builds the Fact Activity table from raw activity data."""
@@ -947,7 +962,7 @@ class FactActivityBuilder(DimensionBuilder):
         dim_user: pd.DataFrame,
         dim_activity_type: pd.DataFrame,
         dim_status: pd.DataFrame,
-        logger: Optional[logging.Logger] = None
+        logger: logging.Logger | None = None,
     ):
         super().__init__(logger)
 
@@ -960,7 +975,7 @@ class FactActivityBuilder(DimensionBuilder):
         self.activity_type_lookup = self._build_lookup(dim_activity_type, "activity_type", "activity_type_sk")
         self.status_lookup = self._build_lookup(dim_status, "status_code", "status_sk")
 
-    def _build_lookup(self, df: pd.DataFrame, key_col: str, value_col: str) -> Dict[str, int]:
+    def _build_lookup(self, df: pd.DataFrame, key_col: str, value_col: str) -> dict[str, int]:
         """Build a lookup dictionary from a dimension DataFrame."""
         if df.empty:
             return {}
@@ -972,19 +987,17 @@ class FactActivityBuilder(DimensionBuilder):
         return dict(zip(df[key_col].astype(str), df[value_col]))
 
     def build_from_activities(
-        self,
-        activities: List[Dict[str, Any]],
-        high_water_mark: Optional[datetime] = None
+        self, activities: list[dict[str, Any]], high_water_mark: datetime | None = None
     ) -> pd.DataFrame:
         """
         Build fact activity records from raw activities.
-        
+
         Args:
             activities: List of activity dictionaries
             high_water_mark: Only process activities after this timestamp (incremental)
         """
         records = []
-        extracted_at = datetime.now(timezone.utc)
+        extracted_at = datetime.now(UTC)
 
         for activity in activities:
             # Parse timestamp for incremental filtering
@@ -1047,34 +1060,35 @@ class FactActivityBuilder(DimensionBuilder):
             item_sk = self.item_lookup.get(str(activity.get("item_id")))
             user_sk = self.user_lookup.get(str(activity.get("submitted_by")))
             activity_type_sk = self.activity_type_lookup.get(
-                activity.get("activity_type"),
-                self.activity_type_lookup.get("Unknown", 999)
+                activity.get("activity_type"), self.activity_type_lookup.get("Unknown", 999)
             )
             status_sk = self.status_lookup.get(status, self.status_lookup.get("Unknown", 8))
 
-            records.append({
-                "activity_id": activity.get("activity_id"),
-                "date_sk": date_sk,
-                "time_sk": time_sk,
-                "workspace_sk": workspace_sk,
-                "item_sk": item_sk,
-                "user_sk": user_sk,
-                "activity_type_sk": activity_type_sk,
-                "status_sk": status_sk,
-                "job_instance_id": activity.get("job_instance_id"),
-                "root_activity_id": activity.get("root_activity_id"),
-                "invoke_type": activity.get("invoke_type"),
-                "duration_seconds": duration_seconds,
-                "duration_minutes": duration_minutes,
-                "duration_hours": duration_hours,
-                "is_failed": is_failed,
-                "is_success": is_success,
-                "is_long_running": is_long_running,
-                "record_count": 1,
-                "source_system": "fabric_monitor_hub",
-                "extracted_at": extracted_at,
-                "activity_date": activity_date
-            })
+            records.append(
+                {
+                    "activity_id": activity.get("activity_id"),
+                    "date_sk": date_sk,
+                    "time_sk": time_sk,
+                    "workspace_sk": workspace_sk,
+                    "item_sk": item_sk,
+                    "user_sk": user_sk,
+                    "activity_type_sk": activity_type_sk,
+                    "status_sk": status_sk,
+                    "job_instance_id": activity.get("job_instance_id"),
+                    "root_activity_id": activity.get("root_activity_id"),
+                    "invoke_type": activity.get("invoke_type"),
+                    "duration_seconds": duration_seconds,
+                    "duration_minutes": duration_minutes,
+                    "duration_hours": duration_hours,
+                    "is_failed": is_failed,
+                    "is_success": is_success,
+                    "is_long_running": is_long_running,
+                    "record_count": 1,
+                    "source_system": "fabric_monitor_hub",
+                    "extracted_at": extracted_at,
+                    "activity_date": activity_date,
+                }
+            )
 
         return pd.DataFrame(records)
 
@@ -1082,6 +1096,7 @@ class FactActivityBuilder(DimensionBuilder):
 # =============================================================================
 # AGGREGATE BUILDERS
 # =============================================================================
+
 
 class DailyMetricsBuilder:
     """Builds pre-aggregated daily metrics for dashboards."""
@@ -1093,22 +1108,36 @@ class DailyMetricsBuilder:
 
         # Group by date, workspace, domain, item_type
         # (This would need joins to dimensions in a real implementation)
-        grouped = fact_activity.groupby(["date_sk", "workspace_sk"]).agg({
-            "record_count": "sum",
-            "is_success": "sum",
-            "is_failed": "sum",
-            "duration_seconds": ["sum", "mean", "max", "min"],
-            "is_long_running": "sum",
-            "user_sk": pd.Series.nunique,
-            "item_sk": pd.Series.nunique
-        }).reset_index()
+        grouped = (
+            fact_activity.groupby(["date_sk", "workspace_sk"])
+            .agg(
+                {
+                    "record_count": "sum",
+                    "is_success": "sum",
+                    "is_failed": "sum",
+                    "duration_seconds": ["sum", "mean", "max", "min"],
+                    "is_long_running": "sum",
+                    "user_sk": pd.Series.nunique,
+                    "item_sk": pd.Series.nunique,
+                }
+            )
+            .reset_index()
+        )
 
         # Flatten column names
         grouped.columns = [
-            "date_sk", "workspace_sk",
-            "total_activities", "successful_activities", "failed_activities",
-            "total_duration_seconds", "avg_duration_seconds", "max_duration_seconds", "min_duration_seconds",
-            "long_running_count", "unique_users", "unique_items"
+            "date_sk",
+            "workspace_sk",
+            "total_activities",
+            "successful_activities",
+            "failed_activities",
+            "total_duration_seconds",
+            "avg_duration_seconds",
+            "max_duration_seconds",
+            "min_duration_seconds",
+            "long_running_count",
+            "unique_users",
+            "unique_items",
         ]
 
         # Calculate rates
@@ -1116,7 +1145,7 @@ class DailyMetricsBuilder:
         grouped["failure_rate"] = (grouped["failed_activities"] / grouped["total_activities"] * 100).round(2)
 
         # Add aggregation timestamp
-        grouped["aggregated_at"] = datetime.now(timezone.utc)
+        grouped["aggregated_at"] = datetime.now(UTC)
 
         return grouped
 
@@ -1125,22 +1154,23 @@ class DailyMetricsBuilder:
 # MAIN STAR SCHEMA BUILDER
 # =============================================================================
 
+
 class StarSchemaBuilder:
     """
     Main orchestrator for building the star schema from raw monitoring data.
-    
+
     Supports both full refresh and incremental loading patterns.
     """
 
     def __init__(
         self,
-        output_directory: Optional[str] = None,
-        logger: Optional[logging.Logger] = None,
-        workspace_lookup_path: Optional[str] = None
+        output_directory: str | None = None,
+        logger: logging.Logger | None = None,
+        workspace_lookup_path: str | None = None,
     ):
         self.logger = logger or setup_logging(name="star_schema_builder")
         self.workspace_lookup_path = workspace_lookup_path
-        self._workspace_lookup: Optional[Dict[str, str]] = None
+        self._workspace_lookup: dict[str, str] | None = None
         self.output_directory = resolve_path(
             output_directory or os.getenv("STAR_SCHEMA_OUTPUT_DIR", "exports/star_schema")
         )
@@ -1158,26 +1188,26 @@ class StarSchemaBuilder:
         self.status_builder = StatusDimensionBuilder(self.logger)
 
         # Dimension DataFrames (populated during build)
-        self.dim_date: Optional[pd.DataFrame] = None
-        self.dim_time: Optional[pd.DataFrame] = None
-        self.dim_workspace: Optional[pd.DataFrame] = None
-        self.dim_item: Optional[pd.DataFrame] = None
-        self.dim_user: Optional[pd.DataFrame] = None
-        self.dim_activity_type: Optional[pd.DataFrame] = None
-        self.dim_status: Optional[pd.DataFrame] = None
+        self.dim_date: pd.DataFrame | None = None
+        self.dim_time: pd.DataFrame | None = None
+        self.dim_workspace: pd.DataFrame | None = None
+        self.dim_item: pd.DataFrame | None = None
+        self.dim_user: pd.DataFrame | None = None
+        self.dim_activity_type: pd.DataFrame | None = None
+        self.dim_status: pd.DataFrame | None = None
 
-        self.fact_activity: Optional[pd.DataFrame] = None
-        self.fact_daily_metrics: Optional[pd.DataFrame] = None
+        self.fact_activity: pd.DataFrame | None = None
+        self.fact_daily_metrics: pd.DataFrame | None = None
 
-    def _load_workspace_lookup(self) -> Dict[str, Dict[str, Any]]:
+    def _load_workspace_lookup(self) -> dict[str, dict[str, Any]]:
         """
         Load workspace ID to full workspace data mapping from parquet files.
-        
+
         Searches for workspace parquet files in common locations:
         1. Explicit path provided to constructor
         2. exports/monitor_hub_analysis/parquet/workspaces_*.parquet
         3. notebooks/monitor_hub_analysis/parquet/workspaces_*.parquet
-        
+
         Returns:
             Dict mapping workspace_id to full workspace data dict
             (includes displayName, capacityId, type, state, etc.)
@@ -1212,19 +1242,23 @@ class StarSchemaBuilder:
                 try:
                     df = pd.read_parquet(ws_path)
                     # Handle different column name conventions
-                    id_col = 'id' if 'id' in df.columns else 'workspace_id'
+                    id_col = "id" if "id" in df.columns else "workspace_id"
 
                     if id_col in df.columns:
                         # Convert DataFrame to dict of dicts (full workspace data)
-                        self._workspace_lookup = df.set_index(id_col).to_dict(orient='index')
+                        self._workspace_lookup = df.set_index(id_col).to_dict(orient="index")
 
                         # Log capacity coverage
-                        capacity_col = 'capacityId' if 'capacityId' in df.columns else None
+                        capacity_col = "capacityId" if "capacityId" in df.columns else None
                         if capacity_col:
                             with_capacity = df[capacity_col].notna().sum()
-                            self.logger.info(f"Loaded {len(self._workspace_lookup)} workspaces from {ws_path} ({with_capacity} with capacityId)")
+                            self.logger.info(
+                                f"Loaded {len(self._workspace_lookup)} workspaces from {ws_path} ({with_capacity} with capacityId)"
+                            )
                         else:
-                            self.logger.info(f"Loaded {len(self._workspace_lookup)} workspaces from {ws_path} (no capacityId column)")
+                            self.logger.info(
+                                f"Loaded {len(self._workspace_lookup)} workspaces from {ws_path} (no capacityId column)"
+                            )
                         return self._workspace_lookup
                 except Exception as e:
                     self.logger.warning(f"Could not load workspace lookup from {ws_path}: {e}")
@@ -1232,16 +1266,13 @@ class StarSchemaBuilder:
         self.logger.warning("No workspace lookup file found - workspace data will be extracted from activities")
         return self._workspace_lookup
 
-    def _enrich_activities_with_workspace_names(
-        self,
-        activities: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _enrich_activities_with_workspace_names(self, activities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Enrich activity records with workspace_name and capacityId from lookup.
-        
+
         Args:
             activities: List of activity dictionaries
-            
+
         Returns:
             List of enriched activity dictionaries with workspace_name and capacity_id populated
         """
@@ -1258,7 +1289,7 @@ class StarSchemaBuilder:
             if ws_id and ws_id in workspace_lookup:
                 ws_data = workspace_lookup[ws_id]
                 # ws_data is now a dict with full workspace info
-                name_col = 'displayName' if 'displayName' in ws_data else 'workspace_name'
+                name_col = "displayName" if "displayName" in ws_data else "workspace_name"
                 activity["workspace_name"] = ws_data.get(name_col, activity.get("workspace_name", "Unknown"))
 
                 # Enrich with capacityId if available
@@ -1270,10 +1301,12 @@ class StarSchemaBuilder:
             elif not activity.get("workspace_name"):
                 activity["workspace_name"] = "Unknown"
 
-        self.logger.info(f"Enriched {enriched_count} of {len(activities)} activities with workspace names ({capacity_enriched} with capacityId)")
+        self.logger.info(
+            f"Enriched {enriched_count} of {len(activities)} activities with workspace names ({capacity_enriched} with capacityId)"
+        )
         return activities
 
-    def _load_existing_dimension(self, name: str) -> Optional[pd.DataFrame]:
+    def _load_existing_dimension(self, name: str) -> pd.DataFrame | None:
         """Load existing dimension from Parquet if available."""
         dim_path = self.output_directory / f"{name}.parquet"
         if dim_path.exists():
@@ -1285,10 +1318,10 @@ class StarSchemaBuilder:
 
     def _save_dataframe(self, df: pd.DataFrame, name: str) -> Path:
         """Save DataFrame to Parquet with Spark-compatible timestamp format.
-        
+
         Uses microsecond precision (us) instead of nanosecond to ensure
         compatibility with Apache Spark in Microsoft Fabric.
-        
+
         Also enforces Int64 (nullable integer) type for surrogate key columns
         to ensure Direct Lake relationship compatibility in Power BI.
         """
@@ -1296,50 +1329,51 @@ class StarSchemaBuilder:
 
         # Enforce Int64 type for surrogate key columns (prevents Double conversion)
         # This is critical for Direct Lake relationships in Power BI/Fabric
-        sk_columns = [col for col in df.columns if col.endswith('_sk')]
+        sk_columns = [col for col in df.columns if col.endswith("_sk")]
         for col in sk_columns:
             if col in df.columns:
                 # Convert to Int64 (nullable integer) - handles NaN values properly
-                df[col] = df[col].astype('Int64')
+                df[col] = df[col].astype("Int64")
 
         # Use microsecond precision for Spark compatibility
         # Spark doesn't support TIMESTAMP(NANOS,true) format
         df.to_parquet(
             path,
             index=False,
-            coerce_timestamps='us',  # Microsecond precision (Spark compatible)
-            allow_truncated_timestamps=True  # Allow truncation from ns to us
+            coerce_timestamps="us",  # Microsecond precision (Spark compatible)
+            allow_truncated_timestamps=True,  # Allow truncation from ns to us
         )
         self.logger.info(f"Saved {name} with {len(df)} records to {path}")
         return path
 
     def build_complete_schema(
         self,
-        activities: List[Dict[str, Any]],
-        lineage_data: Optional[List[Dict[str, Any]]] = None,
+        activities: list[dict[str, Any]],
+        lineage_data: list[dict[str, Any]] | None = None,
         incremental: bool = True,
-        date_range_days: int = 365
-    ) -> Dict[str, Any]:
+        date_range_days: int = 365,
+    ) -> dict[str, Any]:
         """
         Build the complete star schema from raw activity data.
-        
+
         Args:
             activities: List of activity dictionaries from Monitor Hub
             lineage_data: Optional lineage data for enriching items
             incremental: If True, only process new records since last run
             date_range_days: Number of days for date dimension (default 1 year)
-        
+
         Returns:
             Summary of the build operation
         """
         import time
+
         start_time = time.time()
 
-        self.logger.info("="*60)
+        self.logger.info("=" * 60)
         self.logger.info("Starting Star Schema Build")
         self.logger.info(f"Mode: {'Incremental' if incremental else 'Full Refresh'}")
         self.logger.info(f"Input activities: {len(activities)}")
-        self.logger.info("="*60)
+        self.logger.info("=" * 60)
 
         # Enrich activities with workspace names from lookup
         self.logger.info("Pre-processing: Enriching activities with workspace names...")
@@ -1351,7 +1385,7 @@ class StarSchemaBuilder:
             "dimensions_built": {},
             "facts_built": {},
             "output_directory": str(self.output_directory),
-            "errors": []
+            "errors": [],
         }
 
         try:
@@ -1360,7 +1394,7 @@ class StarSchemaBuilder:
 
             self.dim_date = self.date_builder.build(
                 start_date=datetime.now() - timedelta(days=date_range_days),
-                end_date=datetime.now() + timedelta(days=90)
+                end_date=datetime.now() + timedelta(days=90),
             )
             self._save_dataframe(self.dim_date, "dim_date")
             results["dimensions_built"]["dim_date"] = len(self.dim_date)
@@ -1389,17 +1423,13 @@ class StarSchemaBuilder:
             results["dimensions_built"]["dim_workspace_new"] = len(new_workspaces)
 
             existing_item = self._load_existing_dimension("dim_item") if incremental else None
-            self.dim_item, new_items = self.item_builder.build_from_activities(
-                activities, lineage_data, existing_item
-            )
+            self.dim_item, new_items = self.item_builder.build_from_activities(activities, lineage_data, existing_item)
             self._save_dataframe(self.dim_item, "dim_item")
             results["dimensions_built"]["dim_item"] = len(self.dim_item)
             results["dimensions_built"]["dim_item_new"] = len(new_items)
 
             existing_user = self._load_existing_dimension("dim_user") if incremental else None
-            self.dim_user, new_users = self.user_builder.build_from_activities(
-                activities, existing_user
-            )
+            self.dim_user, new_users = self.user_builder.build_from_activities(activities, existing_user)
             self._save_dataframe(self.dim_user, "dim_user")
             results["dimensions_built"]["dim_user"] = len(self.dim_user)
             results["dimensions_built"]["dim_user_new"] = len(new_users)
@@ -1415,7 +1445,7 @@ class StarSchemaBuilder:
                 dim_user=self.dim_user,
                 dim_activity_type=self.dim_activity_type,
                 dim_status=self.dim_status,
-                logger=self.logger
+                logger=self.logger,
             )
 
             new_facts = fact_builder.build_from_activities(activities, high_water_mark)
@@ -1454,19 +1484,15 @@ class StarSchemaBuilder:
 
             # 5. Record load operation
             elapsed = time.time() - start_time
-            self.tracker.record_load(
-                "star_schema_build",
-                records_processed=len(activities),
-                duration_seconds=elapsed
-            )
+            self.tracker.record_load("star_schema_build", records_processed=len(activities), duration_seconds=elapsed)
 
             results["duration_seconds"] = round(elapsed, 2)
 
-            self.logger.info("="*60)
+            self.logger.info("=" * 60)
             self.logger.info("Star Schema Build Complete")
             self.logger.info(f"Duration: {elapsed:.2f} seconds")
             self.logger.info(f"Output: {self.output_directory}")
-            self.logger.info("="*60)
+            self.logger.info("=" * 60)
 
         except Exception as e:
             self.logger.error(f"Star Schema build failed: {e}")
@@ -1478,7 +1504,7 @@ class StarSchemaBuilder:
     def get_ddl(self, dialect: str = "delta") -> str:
         """
         Get the DDL statements for creating the star schema tables.
-        
+
         Args:
             dialect: SQL dialect (delta, spark, tsql)
         """
@@ -1573,19 +1599,18 @@ ORDER BY activity_count DESC;
 # CONVENIENCE FUNCTIONS
 # =============================================================================
 
+
 def build_star_schema_from_parquet(
-    activities_parquet_path: str,
-    output_directory: Optional[str] = None,
-    incremental: bool = True
-) -> Dict[str, Any]:
+    activities_parquet_path: str, output_directory: str | None = None, incremental: bool = True
+) -> dict[str, Any]:
     """
     Convenience function to build star schema from existing Parquet exports.
-    
+
     Args:
         activities_parquet_path: Path to activities Parquet file
         output_directory: Output directory for star schema tables
         incremental: Whether to perform incremental load
-    
+
     Returns:
         Build results summary
     """
@@ -1599,16 +1624,14 @@ def build_star_schema_from_parquet(
 
 
 def build_star_schema_from_pipeline_output(
-    pipeline_output_dir: str,
-    output_directory: Optional[str] = None,
-    incremental: bool = True
-) -> Dict[str, Any]:
+    pipeline_output_dir: str, output_directory: str | None = None, incremental: bool = True
+) -> dict[str, Any]:
     """
     Build star schema from Monitor Hub pipeline output directory.
-    
+
     Priority: Loads from parquet/activities_*.parquet (28 columns, full data including
     workspace_name, failure_reason, user details) first, falls back to activities_master CSV.
-    
+
     Args:
         pipeline_output_dir: Directory containing pipeline outputs
         output_directory: Output directory for star schema tables
@@ -1647,11 +1670,7 @@ def build_star_schema_from_pipeline_output(
 
     # Build schema
     builder = StarSchemaBuilder(output_directory=output_directory)
-    return builder.build_complete_schema(
-        activities,
-        lineage_data=lineage_data,
-        incremental=incremental
-    )
+    return builder.build_complete_schema(activities, lineage_data=lineage_data, incremental=incremental)
 
 
 # =============================================================================
@@ -1663,25 +1682,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Build Star Schema for Fabric Monitoring")
     parser.add_argument(
-        "--input-dir",
-        default="exports/monitor_hub_analysis",
-        help="Path to Monitor Hub pipeline output directory"
+        "--input-dir", default="exports/monitor_hub_analysis", help="Path to Monitor Hub pipeline output directory"
     )
-    parser.add_argument(
-        "--output-dir",
-        default="exports/star_schema",
-        help="Output directory for star schema tables"
-    )
-    parser.add_argument(
-        "--full-refresh",
-        action="store_true",
-        help="Perform full refresh instead of incremental load"
-    )
-    parser.add_argument(
-        "--ddl-only",
-        action="store_true",
-        help="Print DDL statements and exit"
-    )
+    parser.add_argument("--output-dir", default="exports/star_schema", help="Output directory for star schema tables")
+    parser.add_argument("--full-refresh", action="store_true", help="Perform full refresh instead of incremental load")
+    parser.add_argument("--ddl-only", action="store_true", help="Print DDL statements and exit")
 
     args = parser.parse_args()
 
@@ -1691,9 +1696,7 @@ if __name__ == "__main__":
         print("\n" + builder.describe_schema())
     else:
         results = build_star_schema_from_pipeline_output(
-            pipeline_output_dir=args.input_dir,
-            output_directory=args.output_dir,
-            incremental=not args.full_refresh
+            pipeline_output_dir=args.input_dir, output_directory=args.output_dir, incremental=not args.full_refresh
         )
 
         print("\nStar Schema Build Results:")

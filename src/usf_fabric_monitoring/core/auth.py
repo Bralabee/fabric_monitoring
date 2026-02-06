@@ -5,15 +5,14 @@ This module handles authentication with Microsoft Fabric APIs using service prin
 Supports both Azure Identity and direct OAuth2 flows.
 """
 
-import os
 import logging
-from typing import Optional, Dict
+import os
 from datetime import datetime, timedelta
 
-
 try:
-    from azure.identity import ClientSecretCredential, DefaultAzureCredential
     from azure.core.exceptions import ClientAuthenticationError
+    from azure.identity import ClientSecretCredential, DefaultAzureCredential
+
     _AZURE_SDK_AVAILABLE = True
 except ImportError:  # pragma: no cover
     ClientSecretCredential = None
@@ -31,13 +30,13 @@ class FabricAuthenticator:
     def __init__(self, tenant_id: str = None, client_id: str = None, client_secret: str = None):
         """
         Initialize the authenticator.
-        
+
         Args:
             tenant_id: Azure tenant ID (optional)
             client_id: Application (client) ID (optional)
             client_secret: Client secret (optional)
-            
-        If credentials are not provided, attempts to use DefaultAzureCredential 
+
+        If credentials are not provided, attempts to use DefaultAzureCredential
         or Fabric Notebook identity (notebookutils).
         """
         self.tenant_id = tenant_id
@@ -60,9 +59,7 @@ class FabricAuthenticator:
                 self.credential = None
             else:
                 self.credential = ClientSecretCredential(
-                    tenant_id=self.tenant_id,
-                    client_id=self.client_id,
-                    client_secret=self.client_secret
+                    tenant_id=self.tenant_id, client_id=self.client_id, client_secret=self.client_secret
                 )
         else:
             self.logger.info("No Service Principal provided. Using DefaultAzureCredential/Notebook Identity.")
@@ -104,6 +101,7 @@ class FabricAuthenticator:
         # 2. Try notebookutils (Fabric Environment)
         try:
             from notebookutils import credentials
+
             self.logger.info("Acquiring token via notebookutils")
             token_str = credentials.getToken("pbi")
             self._fabric_token = token_str
@@ -111,7 +109,7 @@ class FabricAuthenticator:
             self._fabric_token_expires = datetime.now() + timedelta(minutes=55)
             return self._fabric_token
         except ImportError:
-            pass # Not in Fabric notebook or notebookutils not available
+            pass  # Not in Fabric notebook or notebookutils not available
 
         # 3. Try Azure Identity (Default/Managed Identity fallback)
         try:
@@ -153,6 +151,7 @@ class FabricAuthenticator:
         # 2. Try notebookutils
         try:
             from notebookutils import credentials
+
             self.logger.info("Acquiring PowerBI token via notebookutils")
             token_str = credentials.getToken("pbi")
             self._powerbi_token = token_str
@@ -177,25 +176,17 @@ class FabricAuthenticator:
             self.logger.error(f"Failed to acquire Power BI token: {str(e)}")
             raise ClientAuthenticationError(f"Power BI authentication failed: {str(e)}")
 
-    def get_fabric_headers(self) -> Dict[str, str]:
+    def get_fabric_headers(self) -> dict[str, str]:
         """Get HTTP headers for Fabric API requests"""
         token = self.get_fabric_token()
-        return {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
+        return {"Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "application/json"}
 
-    def get_powerbi_headers(self) -> Dict[str, str]:
+    def get_powerbi_headers(self) -> dict[str, str]:
         """Get HTTP headers for Power BI API requests"""
         token = self.get_powerbi_token()
-        return {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
+        return {"Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "application/json"}
 
-    def _is_token_valid(self, expires_at: Optional[datetime]) -> bool:
+    def _is_token_valid(self, expires_at: datetime | None) -> bool:
         """Check if token is still valid (with 5 minute buffer)"""
         if expires_at is None:
             return False
@@ -204,7 +195,7 @@ class FabricAuthenticator:
     def validate_credentials(self) -> bool:
         """
         Validate that the service principal credentials work.
-        
+
         Returns:
             True if credentials are valid, False otherwise
         """
@@ -228,7 +219,7 @@ class FabricAuthenticator:
 def create_authenticator_from_env() -> FabricAuthenticator:
     """
     Create authenticator from environment variables.
-    
+
     Expected environment variables (preferred):
     - AZURE_TENANT_ID
     - AZURE_CLIENT_ID
@@ -238,9 +229,9 @@ def create_authenticator_from_env() -> FabricAuthenticator:
     - TENANT_ID
     - CLIENT_ID
     - CLIENT_SECRET
-    
+
     If variables are missing, returns an authenticator that uses DefaultAzureCredential.
-    
+
     Returns:
         Configured FabricAuthenticator instance
     """
@@ -249,11 +240,9 @@ def create_authenticator_from_env() -> FabricAuthenticator:
     client_secret = os.getenv("AZURE_CLIENT_SECRET") or os.getenv("CLIENT_SECRET")
 
     if not all([tenant_id, client_id, client_secret]):
-        logging.getLogger(__name__).info("Environment variables for Service Principal not found. Using DefaultAzureCredential.")
+        logging.getLogger(__name__).info(
+            "Environment variables for Service Principal not found. Using DefaultAzureCredential."
+        )
         return FabricAuthenticator()
 
-    return FabricAuthenticator(
-        tenant_id=tenant_id,
-        client_id=client_id,
-        client_secret=client_secret
-    )
+    return FabricAuthenticator(tenant_id=tenant_id, client_id=client_id, client_secret=client_secret)

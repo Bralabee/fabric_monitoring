@@ -8,11 +8,11 @@ Each script provides a standalone CLI tool that can be invoked via:
 """
 
 from . import (
-    monitor_hub_pipeline,
-    enforce_workspace_access,
-    validate_config,
     build_star_schema,
+    enforce_workspace_access,
     extract_lineage,
+    monitor_hub_pipeline,
+    validate_config,
 )
 
 __all__ = [
