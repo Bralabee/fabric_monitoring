@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.33 (February 2026) - Mirrored Table Search Fix & Neo4j Data Reload
+
+### Fixed
+
+- **MERGE_TABLE Cypher Key Mismatch** (`lineage_explorer/graph_database/data_loader.py`):
+  - `MERGE_TABLE` query referenced `row.schema_name` but the Python dict uses key `schema`
+  - Caused mirrored table schema to be `null` in Neo4j, breaking search results
+  - Tables like `EDW_DATA/DIM_POSITION_HIERARHCY` were invisible in Table Impact Analysis
+  - Now also persists `table_type`, `status`, `processed_rows`, and `last_sync` metadata
+  - Added `ON MATCH SET` to update status/rows on subsequent reloads
+
+### Verified
+
+- Neo4j graph now contains:
+  - 2,444 FabricItem nodes
+  - 1,814 mirrored table nodes + 1,798 shortcut table nodes (3,612 total)
+  - 153 Workspace nodes
+  - 103 ExternalSource nodes
+  - 3,586 MIRRORS edges, 2,167 shortcut table edges
+- `DIM_POSITION_HIERARHCY` (EDW_DATA) now searchable across DEV, DEV_2, PRD, UAT environments
+- Table Impact Analysis search (`/api/tables/search`) returns all 4 instances
+
+---
+
 ## 0.3.32 (February 2026) - MirroredDatabase Table Extraction & Neo4j Health Fix
 
 ### Added

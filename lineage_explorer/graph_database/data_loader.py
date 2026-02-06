@@ -117,9 +117,17 @@ class LineageDataLoader:
     MERGE (t:Table {id: row.table_id})
     ON CREATE SET
         t.name = row.table_name,
-        t.schema = row.schema_name,
+        t.schema = row.schema,
         t.database = row.database_name,
-        t.full_path = row.full_path
+        t.full_path = row.full_path,
+        t.table_type = row.table_type,
+        t.status = row.status,
+        t.processed_rows = row.processed_rows,
+        t.last_sync = row.last_sync
+    ON MATCH SET
+        t.status = row.status,
+        t.processed_rows = row.processed_rows,
+        t.last_sync = row.last_sync
     """
     
     CREATE_MIRROR_EDGE = """
