@@ -1,4 +1,3 @@
-
 import argparse
 import csv
 import logging
@@ -6,7 +5,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -31,17 +30,17 @@ class ServicePrincipalAuditor(WorkspaceAccessEnforcer):
     def __init__(self, sp_id: str, **kwargs):
         # Remove access_requirements from kwargs if present to avoid conflict
         kwargs.pop('access_requirements', None)
-        
+
         # Pass dummy requirement to satisfy base class validation
         from usf_fabric_monitoring.core.workspace_access_enforcer import AccessRequirement
         dummy = AccessRequirement(object_id="dummy", display_name="Audit", role="Viewer")
-        
+
         super().__init__(access_requirements=[dummy], **kwargs)
         self.sp_id = sp_id.lower()
 
-    def audit(self, max_workspaces: Optional[int] = None) -> List[Dict[str, Any]]:
+    def audit(self, max_workspaces: int | None = None) -> list[dict[str, Any]]:
         logger.info("="*60)
-        logger.info(f"Starting Service Principal Access Audit")
+        logger.info("Starting Service Principal Access Audit")
         logger.info(f"Target SP Identifier: {self.sp_id}")
         logger.info("="*60)
 
@@ -54,35 +53,35 @@ class ServicePrincipalAuditor(WorkspaceAccessEnforcer):
 
         # Filter for Fabric workspaces only
         workspaces = [ws for ws in all_workspaces if self._is_fabric_workspace(ws)]
-        
+
         logger.info(f"Total workspaces found: {len(all_workspaces)}")
         logger.info(f"Fabric/Premium workspaces: {len(workspaces)}")
-        
+
         if not workspaces:
             logger.warning("No Fabric workspaces found to audit.")
             return []
-        
+
         if max_workspaces:
             workspaces = workspaces[:max_workspaces]
             logger.info(f"Limiting audit to first {max_workspaces} workspaces")
 
         results = []
-        
+
         # 2. Check each workspace
         for i, ws in enumerate(workspaces, 1):
             ws_id = ws.get("id")
             ws_name = ws.get("name")
-            
+
             if i % 10 == 0:
                 print(f"   ⏳ Audited {i}/{len(workspaces)} workspaces...", end='\r', flush=True)
 
             try:
                 users = self._fetch_workspace_users(ws_id)
-                
+
                 # Check if SP is in users
                 is_member = False
                 current_role = "None"
-                
+
                 for user in users:
                     # Check all possible identifier fields
                     identifier = str(
@@ -92,12 +91,12 @@ class ServicePrincipalAuditor(WorkspaceAccessEnforcer):
                         or user.get("graphId")
                         or ""
                     ).lower()
-                    
+
                     if identifier == self.sp_id:
                         is_member = True
                         current_role = user.get("groupUserAccessRight") or user.get("role")
                         break
-                
+
                 results.append({
                     "workspace_id": ws_id,
                     "workspace_name": ws_name,
@@ -106,7 +105,7 @@ class ServicePrincipalAuditor(WorkspaceAccessEnforcer):
                     "capacity_id": ws.get("capacityId"),
                     "source": ws.get("source")
                 })
-                
+
             except Exception as e:
                 logger.warning(f"Failed to audit workspace {ws_name} ({ws_id}): {e}")
                 results.append({
@@ -122,7 +121,7 @@ class ServicePrincipalAuditor(WorkspaceAccessEnforcer):
 
 def main():
     load_dotenv()
-    
+
     parser = argparse.ArgumentParser(description="Audit Service Principal access to Fabric workspaces")
     parser.add_argument("--sp-id", help="Service Principal Object ID or Client ID (defaults to AZURE_CLIENT_ID)")
     parser.add_argument("--max-workspaces", type=int, help="Limit number of workspaces to audit")
@@ -140,7 +139,7 @@ def main():
     # We construct a dummy AccessRequirement just to satisfy the init.
     from usf_fabric_monitoring.core.workspace_access_enforcer import AccessRequirement
     dummy_req = AccessRequirement(object_id="dummy", display_name="dummy", role="Viewer")
-    
+
     auditor = ServicePrincipalAuditor(
         sp_id=sp_id,
         access_requirements=[dummy_req],
@@ -154,12 +153,12 @@ def main():
     # Generate Report
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = output_dir / f"sp_access_audit_{timestamp}.csv"
-    
+
     missing_count = 0
-    
+
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["workspace_id", "workspace_name", "is_member", "current_role", "capacity_id", "source", "error"])
         writer.writeheader()
@@ -169,7 +168,7 @@ def main():
                 missing_count += 1
 
     logger.info("="*60)
-    logger.info(f"Audit Complete.")
+    logger.info("Audit Complete.")
     logger.info(f"Total Workspaces: {len(results)}")
     logger.info(f"Access MISSING: {missing_count}")
     logger.info(f"Access CONFIRMED: {len(results) - missing_count}")
