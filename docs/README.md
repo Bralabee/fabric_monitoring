@@ -6,6 +6,7 @@ This directory contains comprehensive documentation for the Microsoft Fabric Mon
 
 ```
 docs/
+├── GLOSSARY.md                # Terminology dictionary
 ├── 01_Getting_Started/        # Initial setup and configuration guides
 ├── 02_User_Guides/            # Day-to-day operational guides
 ├── 03_Technical_Reference/    # Technical specifications and API details
@@ -16,6 +17,12 @@ docs/
 ```
 
 ## 📖 Quick Navigation
+
+### Reference
+| Document | Description |
+|----------|-------------|
+| [GLOSSARY](GLOSSARY.md) | Terminology dictionary for all project concepts |
+
 
 ### Getting Started
 | Document | Description |

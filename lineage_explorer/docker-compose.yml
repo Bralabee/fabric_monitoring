@@ -23,26 +23,26 @@ services:
     container_name: fabric-lineage-neo4j
     hostname: neo4j
     ports:
-      - "127.0.0.1:7474:7474"  # HTTP (Browser) - localhost only
-      - "127.0.0.1:7687:7687"  # Bolt - localhost only
+      - "127.0.0.1:7474:7474" # HTTP (Browser) - localhost only
+      - "127.0.0.1:7687:7687" # Bolt - localhost only
     environment:
       # Authentication - REQUIRED: Set NEO4J_PASSWORD env var before starting
       # Example: NEO4J_PASSWORD=your_secure_password docker-compose up -d
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-changeme_in_production}
-      
+
       # Memory configuration (adjust based on data size)
       NEO4J_server_memory_heap_initial__size: 512m
       NEO4J_server_memory_heap_max__size: 1G
       NEO4J_server_memory_pagecache_size: 512m
-      
+
       # Performance tuning
       NEO4J_dbms_transaction_timeout: 60s
-      
+
       # Enable APOC (Awesome Procedures)
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_dbms_security_procedures_unrestricted: apoc.*
       NEO4J_dbms_security_procedures_allowlist: apoc.*
-      
+
     volumes:
       # Persist data between container restarts
       - neo4j_data:/data
@@ -50,7 +50,8 @@ services:
       - neo4j_import:/var/lib/neo4j/import
       - neo4j_plugins:/plugins
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      # Use wget instead of curl - curl not available in neo4j community image
+      test: [ "CMD", "wget", "-qO-", "http://localhost:7474" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -58,7 +59,6 @@ services:
     restart: unless-stopped
     networks:
       - lineage-network
-
   # Optional: Run the lineage API in Docker
   # Uncomment to enable containerized API
   # lineage-api:

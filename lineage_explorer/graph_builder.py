@@ -18,10 +18,160 @@ from collections import defaultdict
 
 from .models import (
     LineageGraph, Workspace, FabricItem, ExternalSource, 
-    LineageEdge, GraphStats
+    LineageEdge, GraphStats, Table
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _table_id(full_path: str, source_item_id: Optional[str] = None) -> str:
+    """Generate unique table ID via path hash."""
+    key = f"{source_item_id or ''}|{full_path}"
+    return f"tbl_{hashlib.md5(key.encode()).hexdigest()[:12]}"
+
+
+def _extract_table_from_path(path: str, source_item_id: Optional[str] = None,
+                               table_type: str = "shortcut", database: Optional[str] = None) -> Optional[Table]:
+    """
+    Extract table info from a path like 'Tables/EDW_DATA/DIM_POSITION'.
+    
+    Returns Table object or None if path doesn't contain table reference.
+    """
+    if not path:
+        return None
+    
+    # Handle paths like "Tables/SCHEMA/TABLE" or "Tables/TABLE"
+    if 'Tables/' in path:
+        table_part = path.split('Tables/')[-1].strip('/')
+        parts = table_part.split('/')
+        
+        if len(parts) >= 2:
+            # Schema/Table format
+            schema_name = parts[0]
+            table_name = parts[-1]
+        elif len(parts) == 1 and parts[0]:
+            # Just table name
+            schema_name = None
+            table_name = parts[0]
+        else:
+            return None
+        
+        return Table(
+            id=_table_id(path, source_item_id),
+            name=table_name,
+            schema_name=schema_name,
+            database=database,
+            full_path=path,
+            table_type=table_type,
+            source_item_id=source_item_id
+        )
+    
+    # Handle file-based paths (ADLS/S3) that look like tables
+    # e.g., "container/folder/data.parquet" or "database/schema/table"
+    if '/' in path:
+        parts = path.strip('/').split('/')
+        if len(parts) >= 1:
+            table_name = parts[-1]
+            # Remove file extensions
+            for ext in ['.parquet', '.csv', '.delta', '.json']:
+                if table_name.lower().endswith(ext):
+                    table_name = table_name[:-len(ext)]
+                    break
+            schema_name = parts[-2] if len(parts) >= 2 else None
+            return Table(
+                id=_table_id(path, source_item_id),
+                name=table_name,
+                schema_name=schema_name,
+                database=database,
+                full_path=path,
+                table_type=table_type,
+                source_item_id=source_item_id
+            )
+    
+    return None
+
+
+def _extract_tables_from_connection(conn: Dict, source_item_id: Optional[str] = None,
+                                     consumer_id: Optional[str] = None) -> List[Table]:
+    """
+    Extract all table references from a connection dict.
+    
+    Handles:
+    - OneLake: Tables/SCHEMA/TABLE paths
+    - Snowflake: database.schema.table references
+    - ADLS/S3: file paths that represent tables
+    """
+    tables = []
+    if not isinstance(conn, dict):
+        return tables
+    
+    source_type = conn.get('type', '')
+    
+    # OneLake shortcuts
+    if source_type == 'OneLake':
+        one_lake = conn.get('oneLake', {})
+        path = one_lake.get('path', '')
+        item_id = one_lake.get('itemId')
+        if path:
+            table = _extract_table_from_path(
+                path, 
+                source_item_id=item_id or source_item_id,
+                table_type='shortcut'
+            )
+            if table:
+                tables.append(table)
+    
+    # Snowflake connections
+    elif source_type == 'Snowflake':
+        sf = conn.get('snowflake', {})
+        database = sf.get('database', '')
+        schema = sf.get('schema', '')
+        table_name = sf.get('table', sf.get('tableName', ''))
+        if table_name:
+            full_path = f"{database}/{schema}/{table_name}" if schema else f"{database}/{table_name}"
+            tables.append(Table(
+                id=_table_id(full_path, source_item_id),
+                name=table_name,
+                schema_name=schema if schema else None,
+                database=database if database else None,
+                full_path=full_path,
+                table_type='external',
+                source_item_id=source_item_id
+            ))
+    
+    # ADLS Gen2 / Azure Blob
+    elif source_type in ('AdlsGen2', 'AzureBlob'):
+        blob = conn.get('azureBlob', conn.get('adlsGen2', {}))
+        path = blob.get('path', blob.get('name', ''))
+        container = blob.get('container', '')
+        if path:
+            full_path = f"{container}/{path}" if container else path
+            table = _extract_table_from_path(
+                full_path,
+                source_item_id=source_item_id,
+                table_type='external',
+                database=container
+            )
+            if table:
+                tables.append(table)
+    
+    # Amazon S3
+    elif source_type == 'AmazonS3':
+        s3 = conn.get('amazonS3', {})
+        bucket = s3.get('bucket', '')
+        key = s3.get('key', s3.get('path', ''))
+        if key:
+            full_path = f"{bucket}/{key}" if bucket else key
+            table = _extract_table_from_path(
+                full_path,
+                source_item_id=source_item_id,
+                table_type='external',
+                database=bucket
+            )
+            if table:
+                tables.append(table)
+    
+    return tables
 
 
 def _parse_json(value: Any) -> Optional[Dict]:
@@ -154,6 +304,7 @@ def build_graph_from_json(json_path: Path) -> LineageGraph:
     workspaces: Dict[str, Workspace] = {}
     items: Dict[str, FabricItem] = {}
     sources: Dict[str, ExternalSource] = {}
+    tables: Dict[str, Table] = {}  # Table ID -> Table
     edges: List[LineageEdge] = []
     edge_ids: Set[str] = set()
     known_items: Set[str] = set()
@@ -199,6 +350,12 @@ def build_graph_from_json(json_path: Path) -> LineageGraph:
         # OneLake internal reference?
         if source_type == 'OneLake':
             upstream_id = conn.get('oneLake', {}).get('itemId')
+            # Extract table from path
+            extracted_tables = _extract_tables_from_connection(conn, source_item_id=upstream_id)
+            for tbl in extracted_tables:
+                if tbl.id not in tables:
+                    tables[tbl.id] = tbl
+            
             if upstream_id and upstream_id in known_items:
                 edge_id = f"{upstream_id}->{target_id}"
                 if edge_id not in edge_ids:
@@ -223,13 +380,19 @@ def build_graph_from_json(json_path: Path) -> LineageGraph:
                 id=edge_id, source_id=src_id, target_id=target_id, edge_type="external",
                 metadata={"shortcut": shortcut if shortcut and shortcut not in ('', 'nan', 'None') else None}
             ))
+        
+        # Extract tables from external sources (Snowflake, ADLS, S3)
+        extracted_tables = _extract_tables_from_connection(conn, source_item_id=src_id)
+        for tbl in extracted_tables:
+            if tbl.id not in tables:
+                tables[tbl.id] = tbl
     
     graph = LineageGraph(
         workspaces=list(workspaces.values()), items=list(items.values()),
-        external_sources=list(sources.values()), edges=edges,
-        generated_at=datetime.now(), source_file=str(json_path)
+        external_sources=list(sources.values()), tables=list(tables.values()),
+        edges=edges, generated_at=datetime.now(), source_file=str(json_path)
     )
-    logger.info(f"Built: {len(workspaces)} workspaces, {len(items)} items, {len(sources)} sources, {len(edges)} edges")
+    logger.info(f"Built: {len(workspaces)} workspaces, {len(items)} items, {len(sources)} sources, {len(tables)} tables, {len(edges)} edges")
     return graph
 
 

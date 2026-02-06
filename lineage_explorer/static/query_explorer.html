@@ -128,6 +128,13 @@
             height: 16px;
         }
 
+        .nav-separator {
+            width: 1px;
+            height: 20px;
+            background: var(--border-color);
+            margin: 0 4px;
+        }
+
         /* Neo4j Status */
         .neo4j-indicator {
             display: flex;
@@ -666,18 +673,44 @@
         </div>
         <div class="header-right">
             <nav class="main-nav">
-                <a href="/" class="nav-link" title="Graph View">
+                <!-- Visualizations Group -->
+                <a href="/" class="nav-link" title="Graph Overview">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3" />
                         <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
                     </svg>
-                    Graph
+                    Overview
                 </a>
+                <a href="/tables_graph.html" class="nav-link" title="Tables Graph">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="9" y1="9" x2="9" y2="21" />
+                    </svg>
+                    Tables
+                </a>
+                <a href="/elements_graph.html" class="nav-link" title="Items Graph">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="4" />
+                    </svg>
+                    Items
+                </a>
+                <!-- Separator -->
+                <span class="nav-separator"></span>
+                <!-- Analysis Group -->
                 <a href="/dashboard.html" class="nav-link" title="Statistics Dashboard">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 20V10M12 20V4M6 20v-6" />
                     </svg>
-                    Dashboard
+                    Stats
+                </a>
+                <a href="/table_impact.html" class="nav-link" title="Table Impact Analysis">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 8v4l2 2" />
+                    </svg>
+                    Impact
                 </a>
                 <a href="/query_explorer.html" class="nav-link active" title="Neo4j Query Explorer">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1296,6 +1329,50 @@ RETURN s.display_name AS snowflake_source,
        downstream_count AS downstream_dependents
 ORDER BY downstream_count DESC
 LIMIT 25`,
+                        chartType: "table"
+                    }
+                ]
+            },
+            "Advanced Graph Analysis": {
+                icon: "🕵️",
+                description: "Deep dive into structural anomalies and potential issues (Orphans, Circles, etc)",
+                queries: [
+                    {
+                        name: "Orphan Nodes (No Relationships)",
+                        description: "Items that are completely disconnected from the rest of the graph",
+                        query: `MATCH (n:FabricItem)
+WHERE NOT EXISTS { MATCH (n)--() }
+RETURN n.name AS item_name, n.type AS item_type, labels(n) AS labels
+LIMIT 100`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Potential Circular Dependencies",
+                        description: "Paths where an item eventually depends on itself (Cycle detection)",
+                        query: `MATCH path = (n:FabricItem)-[:DEPENDS_ON*2..6]->(n)
+RETURN [node IN nodes(path) | node.name] AS circular_path, length(path) AS path_length
+LIMIT 10`,
+                        chartType: "table"
+                    },
+                    {
+                        name: "Multi-Parent Items (Complexity)",
+                        description: "Items that depend on many other items (High In-Degree)",
+                        query: `MATCH (i:FabricItem)<-[:DEPENDS_ON]-(parent)
+WITH i, count(parent) AS parent_count, collect(parent.name) AS parents
+WHERE parent_count > 3
+RETURN i.name AS item, i.type AS type, parent_count, parents
+ORDER BY parent_count DESC
+LIMIT 20`,
+                        chartType: "bar"
+                    },
+                    {
+                        name: "Deepest Hierarchy Chains",
+                        description: "The longest continuous chains of dependencies found",
+                        query: `MATCH p=(leaf:FabricItem)-[:DEPENDS_ON*]->(root:FabricItem)
+WHERE NOT (leaf)<-[:DEPENDS_ON]-() AND NOT (root)-[:DEPENDS_ON]->()
+RETURN length(p) AS depth, [x IN nodes(p) | x.name] AS chain
+ORDER BY depth DESC
+LIMIT 10`,
                         chartType: "table"
                     }
                 ]

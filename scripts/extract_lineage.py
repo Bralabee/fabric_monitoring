@@ -188,6 +188,56 @@ class LineageExtractor:
             self.logger.error(f"Error getting definition for {item_id}: {str(e)}")
             return None
 
+    def get_mirrored_tables(self, workspace_id, db_id):
+        """Fetch list of tables being mirrored in a MirroredDatabase.
+        
+        Uses the getTablesMirroringStatus API to get actual table names.
+        Returns list of dicts with sourceSchemaName and sourceTableName.
+        """
+        url = f"{self.api_base}/workspaces/{workspace_id}/mirroredDatabases/{db_id}/getTablesMirroringStatus"
+        tables = []
+        
+        try:
+            # Paginate through results if needed
+            continuation_token = None
+            while True:
+                params = {}
+                if continuation_token:
+                    params['continuationToken'] = continuation_token
+                    
+                response = self.make_request_with_retry("POST", url, params=params)
+                
+                if response and response.status_code == 200:
+                    data = response.json()
+                    table_data = data.get("data", [])
+                    
+                    for table in table_data:
+                        tables.append({
+                            "schemaName": table.get("sourceSchemaName", "dbo"),
+                            "tableName": table.get("sourceTableName"),
+                            "status": table.get("status"),
+                            "processedRows": table.get("metrics", {}).get("processedRows"),
+                            "lastSyncDateTime": table.get("metrics", {}).get("lastSyncDateTime")
+                        })
+                    
+                    # Check for more pages
+                    continuation_token = data.get("continuationToken")
+                    if not continuation_token:
+                        break
+                else:
+                    # Mirroring might not be started - log and return empty
+                    if response and response.status_code == 400:
+                        self.logger.debug(f"Mirroring not running for {db_id}, cannot get table status")
+                    else:
+                        code = response.status_code if response else "Unknown"
+                        self.logger.warning(f"Failed to get mirrored tables for {db_id}: {code}")
+                    break
+                    
+        except Exception as e:
+            self.logger.error(f"Error fetching mirrored tables for {db_id}: {str(e)}")
+            
+        return tables
+
     def decode_payload(self, payload_base64):
         """Decode Base64 payload."""
         try:
@@ -358,6 +408,11 @@ class LineageExtractor:
                     
                     self.logger.info(f"  Found Mirrored DB: {db_name}")
                     
+                    # Get table list from mirroring status API
+                    mirrored_tables = self.get_mirrored_tables(ws_id, db_id)
+                    if mirrored_tables:
+                        self.logger.info(f"    Mirrored tables: {len(mirrored_tables)}")
+                    
                     definition = self.get_definition(ws_id, db_id)
                     if definition:
                         parts = definition.get("definition", {}).get("parts", [])
@@ -382,7 +437,8 @@ class LineageExtractor:
                                         "Source Connection": source_props.get("connection", "Unknown"),
                                         "Source Database": source_props.get("database", "Unknown"),
                                         "Connection ID": source_type_props.get("connectionIdentifier", "Unknown"),
-                                        "Full Definition": json.dumps(decoded) # For debugging
+                                        "Mirrored Tables": mirrored_tables,  # NEW: List of tables being mirrored
+                                        "Full Definition": json.dumps(decoded)
                                     })
             except Exception as e:
                  self.logger.error(f"Error processing Mirrored DBs in {ws_name}: {e}")

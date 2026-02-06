@@ -156,6 +156,13 @@
             height: 16px;
         }
 
+        .nav-separator {
+            width: 1px;
+            height: 20px;
+            background: var(--border-color);
+            margin: 0 4px;
+        }
+
         /* Neo4j Status */
         .neo4j-indicator {
             display: flex;
@@ -1468,18 +1475,44 @@
             </div>
             <div class="header-right">
                 <nav class="main-nav">
-                    <a href="/" class="nav-link active" title="Graph View">
+                    <!-- Visualization Group -->
+                    <a href="/" class="nav-link active" title="Full Lineage Overview">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="3" />
                             <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
                         </svg>
-                        Graph
+                        Overview
                     </a>
-                    <a href="/dashboard.html" class="nav-link" title="Statistics Dashboard">
+                    <a href="/tables_graph.html" class="nav-link" title="Physical Tables View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Tables
+                    </a>
+                    <a href="/elements_graph.html" class="nav-link" title="Fabric Items View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                        Items
+                    </a>
+                    <!-- Separator -->
+                    <span class="nav-separator"></span>
+                    <!-- Analysis Group -->
+                    <a href="/dashboard.html" class="nav-link" title="Statistics & Metrics">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18 20V10M12 20V4M6 20v-6" />
                         </svg>
-                        Dashboard
+                        Stats
+                    </a>
+                    <a href="/table_impact.html" class="nav-link" title="Table Impact Analysis">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                        Impact
                     </a>
                     <a href="/query_explorer.html" class="nav-link" title="Neo4j Query Explorer">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

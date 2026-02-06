@@ -415,6 +415,24 @@ async def serve_table_impact():
     raise HTTPException(status_code=404, detail="Table impact page not found")
 
 
+@app.get("/tables_graph.html")
+async def serve_tables_graph():
+    """Serve the specialized Tables Graph visualization."""
+    graph_path = FRONTEND_DIR / "tables_graph.html"
+    if graph_path.exists():
+        return FileResponse(graph_path)
+    raise HTTPException(status_code=404, detail="Tables graph page not found")
+
+
+@app.get("/elements_graph.html")
+async def serve_elements_graph():
+    """Serve the specialized Elements Graph visualization."""
+    graph_path = FRONTEND_DIR / "elements_graph.html"
+    if graph_path.exists():
+        return FileResponse(graph_path)
+    raise HTTPException(status_code=404, detail="Elements graph page not found")
+
+
 # Serve static files from root path (for index-v3.html which uses relative paths)
 @app.get("/{filename:path}")
 async def serve_root_static(filename: str):

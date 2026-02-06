@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tables Graph - Fabric Lineage Explorer</title>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* CSS Variables (matching design system) */
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .header-left,
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .logo svg {
+            width: 24px;
+            height: 24px;
+            color: var(--accent-cyan);
+        }
+
+        .stats-badge {
+            display: flex;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .stats-badge .stat {
+            background: var(--bg-tertiary);
+            padding: 4px 10px;
+            border-radius: 999px;
+            color: var(--text-secondary);
+        }
+
+        .stats-badge .stat strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Navigation */
+        .main-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 16px;
+            padding: 4px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .nav-link.active {
+            color: var(--accent-cyan);
+            background: var(--bg-secondary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-link svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .nav-separator {
+            width: 1px;
+            height: 20px;
+            background: var(--border-color);
+            margin: 0 4px;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-header h2 {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .filter-section {
+            margin-bottom: 16px;
+        }
+
+        .filter-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        /* Filter Chips */
+        .chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .chip.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .chip.lakehouse.active {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .chip.snowflake.active {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+        }
+
+        .chip-count {
+            margin-left: 6px;
+            font-weight: 600;
+        }
+
+        /* Search */
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .search-wrapper svg {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 10px 8px 34px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            background: var(--bg-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Graph Canvas */
+        .graph-container {
+            flex: 1;
+            position: relative;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        .graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Node & Link Styles */
+        .table-node {
+            cursor: pointer;
+        }
+
+        .table-node:hover {
+            filter: brightness(1.1);
+        }
+
+        .item-node {
+            cursor: pointer;
+        }
+
+        .item-node:hover {
+            filter: brightness(1.1);
+        }
+
+        .link {
+            stroke: var(--border-color);
+            stroke-opacity: 0.6;
+            fill: none;
+        }
+
+        .link.uses {
+            stroke: var(--accent-green);
+            stroke-dasharray: 4 2;
+        }
+
+        .link.provides {
+            stroke: var(--accent-purple);
+        }
+
+        .link.mirrors {
+            stroke: var(--accent-cyan);
+            stroke-dasharray: 6 3;
+        }
+
+        /* Labels */
+        .node-label {
+            font-size: 10px;
+            fill: var(--text-secondary);
+            pointer-events: none;
+            text-anchor: middle;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: var(--radius-md);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .toolbar-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(248, 250, 252, 0.9);
+            z-index: 50;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            padding: 8px 12px;
+            background: var(--text-primary);
+            color: white;
+            font-size: 12px;
+            border-radius: var(--radius-md);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 200;
+            max-width: 280px;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .tooltip-meta {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            font-size: 11px;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .legend-shape {
+            width: 12px;
+            height: 12px;
+        }
+
+        .legend-shape.diamond {
+            transform: rotate(45deg);
+            width: 10px;
+            height: 10px;
+        }
+
+        .legend-shape.circle {
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Tables Graph</span>
+                </div>
+                <div class="stats-badge" id="statsBadge">
+                    <span class="stat"><strong id="tableCount">-</strong> Tables</span>
+                    <span class="stat"><strong id="itemCount">-</strong> Items</span>
+                    <span class="stat"><strong id="linkCount">-</strong> Links</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <nav class="main-nav">
+                    <!-- Visualization Group -->
+                    <a href="/" class="nav-link" title="Full Lineage Overview">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+                        </svg>
+                        Overview
+                    </a>
+                    <a href="/tables_graph.html" class="nav-link active" title="Physical Tables View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Tables
+                    </a>
+                    <a href="/elements_graph.html" class="nav-link" title="Fabric Items View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                        Items
+                    </a>
+                    <!-- Separator -->
+                    <span class="nav-separator"></span>
+                    <!-- Analysis Group -->
+                    <a href="/dashboard.html" class="nav-link" title="Statistics & Metrics">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 20V10M12 20V4M6 20v-6" />
+                        </svg>
+                        Stats
+                    </a>
+                    <a href="/table_impact.html" class="nav-link" title="Table Impact Analysis">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                        Impact
+                    </a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>Filters</h2>
+                </div>
+                <div class="sidebar-content">
+                    <!-- Search -->
+                    <div class="search-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Search tables...">
+                    </div>
+
+                    <!-- Source Type Filter -->
+                    <div class="filter-section">
+                        <div class="filter-section-title">Source Type</div>
+                        <div class="chip-container">
+                            <button class="chip lakehouse active" data-filter="lakehouse">
+                                <span>Lakehouse</span>
+                                <span class="chip-count" id="lakehouseCount">-</span>
+                            </button>
+                            <button class="chip snowflake active" data-filter="snowflake">
+                                <span>Snowflake</span>
+                                <span class="chip-count" id="snowflakeCount">-</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Relationship Filter -->
+                    <div class="filter-section">
+                        <div class="filter-section-title">Relationship</div>
+                        <div class="chip-container">
+                            <button class="chip active" data-rel="USES_TABLE">Uses</button>
+                            <button class="chip active" data-rel="PROVIDES_TABLE">Provides</button>
+                            <button class="chip active" data-rel="MIRRORS">Mirrors</button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Graph Container -->
+            <div class="graph-container" id="graphContainer">
+                <svg class="graph-svg" id="graphSvg"></svg>
+
+                <!-- Loading Overlay -->
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="loading-spinner"></div>
+                </div>
+
+                <!-- Legend -->
+                <div class="legend">
+                    <div class="legend-title">Legend</div>
+                    <div class="legend-item">
+                        <div class="legend-shape diamond" style="background: var(--accent-green);"></div>
+                        <span>Lakehouse Table</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-shape diamond" style="background: var(--accent-purple);"></div>
+                        <span>Snowflake Table</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-shape circle" style="background: var(--accent-cyan);"></div>
+                        <span>Lakehouse Item</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-shape circle" style="background: var(--accent-amber);"></div>
+                        <span>Mirrored DB</span>
+                    </div>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <button class="toolbar-btn" id="zoomIn" title="Zoom In">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            <line x1="11" y1="8" x2="11" y2="14" />
+                            <line x1="8" y1="11" x2="14" y2="11" />
+                        </svg>
+                    </button>
+                    <button class="toolbar-btn" id="zoomOut" title="Zoom Out">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            <line x1="8" y1="11" x2="14" y2="11" />
+                        </svg>
+                    </button>
+                    <button class="toolbar-btn" id="fitView" title="Fit to View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+                        </svg>
+                    </button>
+                    <button class="toolbar-btn" id="toggleLabels" title="Toggle Labels">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Tooltip -->
+                <div class="tooltip" id="tooltip"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================================================================
+        // Configuration
+        // ===================================================================
+        const CONFIG = {
+            simulation: {
+                chargeStrength: -150,
+                linkDistance: 60,
+                collisionRadius: 25,
+                alphaDecay: 0.02
+            },
+            nodes: {
+                tableSize: 8,
+                itemSize: 14
+            },
+            maxNodes: 2000  // Tables graph can handle more due to simpler nodes
+        };
+
+        // ===================================================================
+        // State
+        // ===================================================================
+        let graphData = { nodes: [], links: [] };
+        let filteredData = { nodes: [], links: [] };
+        let simulation = null;
+        let showLabels = true;
+        let activeFilters = {
+            sourceTypes: new Set(['lakehouse', 'snowflake']),
+            relationships: new Set(['USES_TABLE', 'PROVIDES_TABLE', 'MIRRORS'])
+        };
+
+        // ===================================================================
+        // DOM Elements
+        // ===================================================================
+        const svg = d3.select('#graphSvg');
+        const graphContainer = document.getElementById('graphContainer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const tooltip = document.getElementById('tooltip');
+        const searchInput = document.getElementById('searchInput');
+
+        // ===================================================================
+        // Initialize
+        // ===================================================================
+        async function init() {
+            await loadGraphData();
+            setupEventListeners();
+            renderGraph();
+        }
+
+        // ===================================================================
+        // Data Loading
+        // ===================================================================
+        async function loadGraphData() {
+            try {
+                const response = await fetch('/api/graph/with-tables');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                // API returns: items, tables, table_edges
+                const tableNodes = (data.tables || []).map(t => ({
+                    id: t.id,
+                    type: 'table',
+                    isTable: true,
+                    sourceType: t.database ? 'snowflake' : 'lakehouse',
+                    data: {
+                        label: t.name || t.label,
+                        schema: t.schema,
+                        database: t.database
+                    }
+                }));
+
+                const tableIds = new Set(tableNodes.map(n => n.id));
+
+                // Find items connected to tables via table_edges
+                // API returns: { source: item_id, target: table_id, type: 'TABLE_LINK' }
+                const tableLinks = (data.table_edges || []);
+                const itemIds = new Set();
+                tableLinks.forEach(link => {
+                    if (tableIds.has(link.target)) itemIds.add(link.source);
+                });
+
+                // Get corresponding items (Lakehouses/MirroredDatabases only)
+                const itemNodes = (data.items || [])
+                    .filter(item => itemIds.has(item.id) && ['Lakehouse', 'MirroredDatabase'].includes(item.itemType))
+                    .map(item => ({
+                        id: item.id,
+                        type: 'item',
+                        isTable: false,
+                        data: {
+                            label: item.label,
+                            type: item.itemType,
+                            workspace: item.workspace
+                        }
+                    }));
+
+                // Build graph data
+                graphData.nodes = [...tableNodes, ...itemNodes];
+
+                // Convert table_edges to links format
+                // source = item, target = table
+                graphData.links = tableLinks
+                    .filter(e => tableIds.has(e.target) && itemIds.has(e.source))
+                    .map(e => ({
+                        source: e.source,
+                        target: e.target,
+                        type: e.type || 'TABLE_LINK'
+                    }));
+
+                // Update stats
+                const lakehouseCount = tableNodes.filter(n => n.sourceType === 'lakehouse').length;
+                const snowflakeCount = tableNodes.filter(n => n.sourceType === 'snowflake').length;
+
+                document.getElementById('tableCount').textContent = tableNodes.length.toLocaleString();
+                document.getElementById('itemCount').textContent = itemNodes.length.toLocaleString();
+                document.getElementById('linkCount').textContent = graphData.links.length.toLocaleString();
+                document.getElementById('lakehouseCount').textContent = lakehouseCount.toLocaleString();
+                document.getElementById('snowflakeCount').textContent = snowflakeCount.toLocaleString();
+
+                applyFilters();
+            } catch (error) {
+                console.error('Failed to load graph data:', error);
+                loadingOverlay.innerHTML = `
+                    <div style="text-align: center; color: var(--accent-red);">
+                        <p>Failed to load data</p>
+                        <p style="font-size: 12px; color: var(--text-muted);">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // ===================================================================
+        // Filtering
+        // ===================================================================
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+
+            // Filter nodes
+            filteredData.nodes = graphData.nodes.filter(n => {
+                // Source type filter (tables only)
+                if (n.isTable && !activeFilters.sourceTypes.has(n.sourceType)) {
+                    return false;
+                }
+                // Search filter
+                if (searchTerm && !n.data?.label?.toLowerCase().includes(searchTerm)) {
+                    return false;
+                }
+                return true;
+            });
+
+            // Limit nodes if needed
+            if (filteredData.nodes.length > CONFIG.maxNodes) {
+                // Prioritize items over tables for connectivity
+                const items = filteredData.nodes.filter(n => !n.isTable);
+                const tables = filteredData.nodes.filter(n => n.isTable);
+                filteredData.nodes = [...items, ...tables.slice(0, CONFIG.maxNodes - items.length)];
+            }
+
+            const nodeIds = new Set(filteredData.nodes.map(n => n.id));
+
+            // Filter links
+            filteredData.links = graphData.links.filter(l => {
+                if (!activeFilters.relationships.has(l.type) && l.type !== 'TABLE_LINK') {
+                    return false;
+                }
+                const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                return nodeIds.has(sourceId) && nodeIds.has(targetId);
+            });
+        }
+
+        // ===================================================================
+        // Graph Rendering
+        // ===================================================================
+        function renderGraph() {
+            // Clear existing
+            svg.selectAll('*').remove();
+
+            const width = graphContainer.clientWidth;
+            const height = graphContainer.clientHeight;
+
+            // Create main group for zoom/pan
+            const g = svg.append('g').attr('class', 'main-group');
+
+            // Setup zoom
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => g.attr('transform', event.transform));
+
+            svg.call(zoom);
+
+            // Create simulation
+            simulation = d3.forceSimulation(filteredData.nodes)
+                .force('link', d3.forceLink(filteredData.links).id(d => d.id).distance(CONFIG.simulation.linkDistance))
+                .force('charge', d3.forceManyBody().strength(CONFIG.simulation.chargeStrength))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(CONFIG.simulation.collisionRadius))
+                .alphaDecay(CONFIG.simulation.alphaDecay);
+
+            // Draw links
+            const link = g.append('g')
+                .attr('class', 'links')
+                .selectAll('line')
+                .data(filteredData.links)
+                .join('line')
+                .attr('class', d => `link ${d.type.toLowerCase().replace('_', '-')}`);
+
+            // Draw nodes
+            const node = g.append('g')
+                .attr('class', 'nodes')
+                .selectAll('g')
+                .data(filteredData.nodes)
+                .join('g')
+                .attr('class', d => d.isTable ? 'table-node' : 'item-node')
+                .call(drag(simulation));
+
+            // Table nodes (diamonds)
+            node.filter(d => d.isTable)
+                .append('path')
+                .attr('d', d3.symbol().type(d3.symbolDiamond).size(CONFIG.nodes.tableSize ** 2 * 4))
+                .attr('fill', d => d.sourceType === 'snowflake' ? 'var(--accent-purple)' : 'var(--accent-green)');
+
+            // Item nodes (circles)
+            node.filter(d => !d.isTable)
+                .append('circle')
+                .attr('r', CONFIG.nodes.itemSize)
+                .attr('fill', d => d.data?.type === 'MirroredDatabase' ? 'var(--accent-amber)' : 'var(--accent-cyan)');
+
+            // Labels
+            const labels = node.append('text')
+                .attr('class', 'node-label')
+                .attr('dy', d => d.isTable ? 16 : 22)
+                .text(d => truncate(d.data?.label || d.id, 15));
+
+            // Tooltip events
+            node
+                .on('mouseenter', (event, d) => showTooltip(event, d))
+                .on('mouseleave', hideTooltip)
+                .on('click', (event, d) => {
+                    if (d.isTable) {
+                        window.open(`/table_impact.html?id=${encodeURIComponent(d.id)}`, '_blank');
+                    }
+                });
+
+            // Simulation tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            // Hide loading
+            loadingOverlay.style.display = 'none';
+
+            // Store zoom for toolbar
+            window.currentZoom = zoom;
+            window.mainGroup = g;
+        }
+
+        // ===================================================================
+        // Drag Behavior
+        // ===================================================================
+        function drag(simulation) {
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+
+            return d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended);
+        }
+
+        // ===================================================================
+        // Tooltip
+        // ===================================================================
+        function showTooltip(event, d) {
+            const type = d.isTable ? (d.sourceType === 'snowflake' ? 'Snowflake Table' : 'Lakehouse Table') : d.data?.type;
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${d.data?.label || d.id}</div>
+                <div class="tooltip-meta">${type}</div>
+                ${d.data?.schema ? `<div class="tooltip-meta">Schema: ${d.data.schema}</div>` : ''}
+            `;
+            tooltip.style.left = `${event.pageX + 10}px`;
+            tooltip.style.top = `${event.pageY + 10}px`;
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            tooltip.classList.remove('visible');
+        }
+
+        // ===================================================================
+        // Utilities
+        // ===================================================================
+        function truncate(str, len) {
+            if (!str) return '';
+            return str.length > len ? str.substring(0, len) + '...' : str;
+        }
+
+        // ===================================================================
+        // Event Listeners
+        // ===================================================================
+        function setupEventListeners() {
+            // Filter chips
+            document.querySelectorAll('.chip[data-filter]').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    chip.classList.toggle('active');
+                    const filter = chip.dataset.filter;
+                    if (chip.classList.contains('active')) {
+                        activeFilters.sourceTypes.add(filter);
+                    } else {
+                        activeFilters.sourceTypes.delete(filter);
+                    }
+                    applyFilters();
+                    renderGraph();
+                });
+            });
+
+            document.querySelectorAll('.chip[data-rel]').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    chip.classList.toggle('active');
+                    const rel = chip.dataset.rel;
+                    if (chip.classList.contains('active')) {
+                        activeFilters.relationships.add(rel);
+                    } else {
+                        activeFilters.relationships.delete(rel);
+                    }
+                    applyFilters();
+                    renderGraph();
+                });
+            });
+
+            // Search
+            searchInput.addEventListener('input', () => {
+                applyFilters();
+                renderGraph();
+            });
+
+            // Toolbar buttons
+            document.getElementById('zoomIn').addEventListener('click', () => {
+                svg.transition().call(window.currentZoom.scaleBy, 1.3);
+            });
+
+            document.getElementById('zoomOut').addEventListener('click', () => {
+                svg.transition().call(window.currentZoom.scaleBy, 0.7);
+            });
+
+            document.getElementById('fitView').addEventListener('click', () => {
+                const bounds = window.mainGroup.node().getBBox();
+                const width = graphContainer.clientWidth;
+                const height = graphContainer.clientHeight;
+                const scale = 0.9 / Math.max(bounds.width / width, bounds.height / height);
+                const tx = (width - scale * (bounds.x * 2 + bounds.width)) / 2;
+                const ty = (height - scale * (bounds.y * 2 + bounds.height)) / 2;
+                svg.transition().duration(500).call(
+                    window.currentZoom.transform,
+                    d3.zoomIdentity.translate(tx, ty).scale(scale)
+                );
+            });
+
+            document.getElementById('toggleLabels').addEventListener('click', () => {
+                showLabels = !showLabels;
+                svg.selectAll('.node-label').style('display', showLabels ? 'block' : 'none');
+            });
+        }
+
+        // ===================================================================
+        // Bootstrap
+        // ===================================================================
+        init();
+    </script>
+</body>
+
+</html>

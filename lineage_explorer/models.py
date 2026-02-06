@@ -31,6 +31,17 @@ class Workspace(BaseModel):
     name: str
 
 
+class Table(BaseModel):
+    """A table within a Lakehouse, Warehouse, or MirroredDatabase"""
+    id: str  # Hash of full_path for uniqueness
+    name: str  # e.g., "DIM_POSITION_HIERARCHY"
+    schema_name: Optional[str] = Field(default=None, description="Schema name, e.g., 'EDW_DATA'")
+    database: Optional[str] = Field(default=None, description="Database/item name")
+    full_path: str  # e.g., "Tables/EDW_DATA/DIM_POSITION_HIERARCHY"
+    table_type: str = Field(default="table", description="table, shortcut, mirrored")
+    source_item_id: Optional[str] = Field(default=None, description="ID of the FabricItem providing this table")
+
+
 class LineageEdge(BaseModel):
     """An edge representing data flow between nodes"""
     id: str
@@ -45,6 +56,7 @@ class LineageGraph(BaseModel):
     workspaces: List[Workspace]
     items: List[FabricItem]
     external_sources: List[ExternalSource]
+    tables: List[Table] = Field(default_factory=list)
     edges: List[LineageEdge]
     
     # Metadata

@@ -363,36 +363,43 @@ class LineageDataLoader:
                         'table_path': table_path
                     })
                     
-                    # NEW: Extract table node from shortcut path (e.g., "Tables/CUSTOMER")
+                    # NEW: Extract table node from shortcut path (e.g., "Tables/EDW_DATA/CUSTOMER")
                     if table_path and table_path.startswith('Tables/'):
-                        table_name = table_path.replace('Tables/', '')
-                        table_id = f"shortcut_{upstream_id}_{table_name}".lower().replace(' ', '_')
+                        # Parse table_path to extract schema and table name
+                        # Format: "Tables/SCHEMA/TABLE" or just "Tables/TABLE"
+                        path_parts = table_path.replace('Tables/', '').strip('/').split('/')
                         
-                        # Extract schema from Shortcut Path (e.g., "/Tables/dbo" -> "dbo")
-                        shortcut_path = record.get('Shortcut Path', '/Tables')
-                        schema = 'dbo'  # default schema
-                        if shortcut_path and shortcut_path.startswith('/Tables/'):
-                            schema_part = shortcut_path.replace('/Tables/', '').strip('/')
-                            if schema_part:  # e.g., "dbo", "GL", "CUSTOMER"
-                                schema = schema_part
+                        if len(path_parts) >= 2:
+                            # Schema/Table format: Tables/EDW_DATA/DIM_POSITION
+                            schema = path_parts[0]  # e.g., "EDW_DATA"
+                            table_name = path_parts[-1]  # e.g., "DIM_POSITION" or "DIM_POSITION_HIERARCHY"
+                        elif len(path_parts) == 1 and path_parts[0]:
+                            # Just table name: Tables/CUSTOMER
+                            schema = 'dbo'  # default schema
+                            table_name = path_parts[0]
+                        else:
+                            table_name = None  # Skip invalid paths
                         
-                        if table_id not in shortcut_tables:
-                            shortcut_tables[table_id] = {
+                        if table_name:
+                            table_id = f"shortcut_{upstream_id}_{schema}_{table_name}".lower().replace(' ', '_')
+                        
+                            if table_id not in shortcut_tables:
+                                shortcut_tables[table_id] = {
+                                    'table_id': table_id,
+                                    'table_name': table_name,
+                                    'schema': schema,
+                                    'source_item_id': upstream_id,
+                                    'source_workspace_id': workspace_id,
+                                    'full_path': table_path
+                                }
+                        
+                            shortcut_table_edges.append({
+                                'target_item_id': item_id,
                                 'table_id': table_id,
-                                'table_name': table_name,
-                                'schema': schema,  # NEW: extracted schema
-                                'source_item_id': upstream_id,
-                                'source_workspace_id': workspace_id,
-                                'full_path': table_path
-                            }
-                        
-                        shortcut_table_edges.append({
-                            'target_item_id': item_id,
-                            'table_id': table_id,
-                            'shortcut_name': record.get('Shortcut Name'),
-                            'shortcut_path': record.get('Shortcut Path'),
-                            'source_item_id': upstream_id
-                        })
+                                'shortcut_name': record.get('Shortcut Name'),
+                                'shortcut_path': record.get('Shortcut Path'),
+                                'source_item_id': upstream_id
+                            })
                 else:
                     # External OneLake reference (cross-tenant or unknown)
                     source_id = self._generate_source_id('OneLake', conn)
@@ -422,12 +429,45 @@ class LineageDataLoader:
                 })
             
             elif item_type == 'MirroredDatabase':
-                # Parse mounted tables from Full Definition
+                # Parse mounted tables from Full Definition (legacy)
                 full_def = self._parse_definition(record.get('Full Definition'))
                 if full_def:
                     self._extract_mirrored_tables(
                         item_id, full_def, tables, mirror_edges, external_sources, external_edges
                     )
+                
+                # NEW: Process Mirrored Tables from getTablesMirroringStatus API
+                mirrored_tables = record.get('Mirrored Tables', [])
+                if mirrored_tables and isinstance(mirrored_tables, list):
+                    for tbl in mirrored_tables:
+                        if not isinstance(tbl, dict):
+                            continue
+                        schema_name = tbl.get('schemaName', 'dbo')
+                        table_name = tbl.get('tableName')
+                        if not table_name:
+                            continue
+                        
+                        # Create table ID using item_id for uniqueness
+                        table_id = f"mirror_{item_id}_{schema_name}_{table_name}".lower().replace(' ', '_')
+                        
+                        if table_id not in tables:
+                            tables[table_id] = {
+                                'table_id': table_id,
+                                'table_name': table_name,
+                                'schema': schema_name,
+                                'database_name': record.get('Source Database', 'Unknown'),
+                                'full_path': f"{schema_name}.{table_name}",
+                                'table_type': 'mirrored',
+                                'status': tbl.get('status'),
+                                'processed_rows': tbl.get('processedRows'),
+                                'last_sync': tbl.get('lastSyncDateTime')
+                            }
+                        
+                        # Create mirror edge
+                        mirror_edges.append({
+                            'item_id': item_id,
+                            'table_id': table_id
+                        })
             
             # NEW (opt-in): Handle PowerBI/Dataset source types for Report -> SemanticModel edges
             elif include_all_items and source_type == 'PowerBI' and item_type == 'Report':
