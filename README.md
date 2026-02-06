@@ -63,6 +63,9 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
     - **Cross-Workspace View**: Highlight dependencies spanning workspaces
     - **Centrality Highlighting**: Size nodes by importance/connection count
     - **Statistics Dashboard**: Comprehensive analytics at `/dashboard.html`
+    - **Elements Graph**: Dedicated item-focused visualization at `/elements_graph.html`
+    - **Tables Graph**: Table-level dependency visualization at `/tables_graph.html`
+    - **Table Impact Analysis**: Blast radius analysis at `/table_impact.html`
 - **Command**: `make lineage-explorer` (starts server at http://127.0.0.1:8000)
 
 ### 4. Star Schema Analytics (`build_star_schema.py`) ⭐ NEW in v0.3.0
@@ -273,9 +276,18 @@ After `pip install -e .` or `make install`, these commands become available:
 | `usf-validate-config` | `scripts.validate_config` | Validate JSON configs |
 
 
-## ⚠️ Recent Updates (v0.3.34 - Current Release)
+## ⚠️ Recent Updates (v0.3.35 - Current Release)
 
-This release introduces powerful star schema analytics capabilities:
+This release adds detail panels, table health dashboards, and enhanced tooltips to the Lineage Explorer.
+
+### 🔍 **Lineage Explorer v0.3.35**
+- **Detail Panels**: Click-to-inspect nodes with table footprint across all graph views
+- **Table Health Dashboard**: Orphan tables, high-dependency tables, cross-workspace patterns with KPI cards
+- **Enhanced Tooltips**: Workspace name, connection counts, table hints for Lakehouse/MirroredDatabase items
+- **8 New Query Explorer Queries**: Table status distribution, highest row counts, orphan detection, blast radius analysis
+- **5 Graph Pages**: Main graph, Elements graph, Tables graph, Dashboard, Query Explorer
+
+Previous highlights:
 
 ### 🏗️ **Star Schema Builder**
 - **Dimensional Modeling**: Kimball-style star schema with 7 dimensions and 2 fact tables
@@ -320,7 +332,7 @@ To run this solution directly within a Microsoft Fabric Notebook:
     ```bash
     make build
     ```
-    This will generate a file like `dist/usf_fabric_monitoring-0.3.34-py3-none-any.whl`.
+    This will generate a file like `dist/usf_fabric_monitoring-0.3.35-py3-none-any.whl`.
 
 2.  **Upload to Fabric**:
     -   Navigate to your Fabric Workspace.
@@ -343,7 +355,7 @@ For advanced deployment options (inline pip install, lakehouse file reference, e
 
 ## 🔗 Related Projects
 
-- **[usf_fabric_cli_cicd](../usf_fabric_cli_cicd)**: Lightweight CLI for Fabric deployment automation (v1.3.1)
+- **[usf_fabric_cli_cicd](../usf_fabric_cli_cicd)**: Lightweight CLI for Fabric deployment automation (v1.6.3)
 - **[usf-fabric-cicd](../usf-fabric-cicd)**: Original monolithic framework (predecessor to CLI tool)
 - **[stakeholder_presentations](../stakeholder_presentations)**: Executive presentation decks for monitoring/CI/CD solutions
 - **[fabric-purview-playbook-webapp](../fabric-purview-playbook-webapp)**: Delivery playbook web application

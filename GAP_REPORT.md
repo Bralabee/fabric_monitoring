@@ -5,7 +5,7 @@ Scope: `usf_fabric_monitoring` repo (library, scripts, docs, packaging, tests). 
 ## Current status (what’s solid)
 
 - Core architecture is coherent (`core/` library, `scripts/` entry points, `Makefile` workflows).
-- Packaging uses `pyproject.toml` with `src/` layout; dependencies are declared and version is consistent (`0.3.34`).
+- Packaging uses `pyproject.toml` with `src/` layout; dependencies are declared and version is consistent (`0.3.35`).
 - Pytest defaults are now safe by default (runs `tests/` only; integration tests are opt-in via marker).
 - Auth strategy in `core/auth.py` is robust (explicit Service Principal → Fabric notebook identity → `DefaultAzureCredential`).
 

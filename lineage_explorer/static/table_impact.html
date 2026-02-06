@@ -1553,65 +1553,119 @@
 
             // Detect mode: Table mode has 'table', Item mode has 'item'
             if (currentImpactData.table) {
-                // TABLE MODE: Original export logic
-                csvRows = [
-                    ['Item Name', 'Item Type', 'Workspace', 'Depth', 'Relationship', 'Source Table'].join(','),
+                // TABLE MODE: Full export with all available metadata
+                const t = currentImpactData.table;
+
+                // Summary header rows with table metadata
+                const summaryRows = [
+                    ['# Table Impact Analysis Report'].join(','),
+                    ['# Generated', new Date().toISOString()].join(','),
+                    ['# Source Table', escapeCsvField(t.name)].join(','),
+                    ['# Schema', escapeCsvField(t.schema || '')].join(','),
+                    ['# Database', escapeCsvField(t.database || '')].join(','),
+                    ['# Full Path', escapeCsvField(t.full_path || '')].join(','),
+                    ['# Status', escapeCsvField(t.status || '')].join(','),
+                    ['# Processed Rows', escapeCsvField(t.processed_rows != null ? t.processed_rows : '')].join(','),
+                    ['# Last Sync', escapeCsvField(t.last_sync || '')].join(','),
+                    ['# Parent Item', escapeCsvField(t.parent_item_name || ''), escapeCsvField(t.parent_item_type || '')].join(','),
+                    ['# Parent Workspace', escapeCsvField(t.parent_workspace || '')].join(','),
+                    ['# Direct Consumers', currentImpactData.direct_consumer_count].join(','),
+                    ['# Downstream Items', currentImpactData.downstream_count].join(','),
+                    ['# Total Impact', currentImpactData.total_impact].join(','),
+                    ''
+                ];
+
+                const dataRows = [
+                    ['Item Name', 'Item ID', 'Item Type', 'Workspace', 'Depth', 'Relationship', 'Source Name', 'Dependency Path'].join(','),
                     ...currentImpactData.direct_consumers.map(d =>
                         [
                             escapeCsvField(d.item_name),
+                            escapeCsvField(d.item_id || ''),
                             escapeCsvField(d.item_type),
                             escapeCsvField(d.workspace),
                             '0',
                             'Direct Consumer',
-                            escapeCsvField(currentImpactData.table.name)
+                            escapeCsvField(t.name),
+                            ''
                         ].join(',')
                     ),
                     ...currentImpactData.downstream_items.map(d =>
                         [
                             escapeCsvField(d.item_name),
+                            escapeCsvField(d.item_id || ''),
                             escapeCsvField(d.item_type),
                             escapeCsvField(d.workspace),
                             d.depth,
                             'Downstream',
-                            escapeCsvField(currentImpactData.table.name)
+                            escapeCsvField(d.source_name || ''),
+                            escapeCsvField(d.path_names ? d.path_names.join(' → ') : '')
                         ].join(',')
                     )
                 ];
-                const safeName = currentImpactData.table.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                csvRows = [...summaryRows, ...dataRows];
+                const safeName = t.name.replace(/[^a-zA-Z0-9_-]/g, '_');
                 filename = `table_impact_${safeName}_${new Date().toISOString().slice(0, 10)}.csv`;
             } else if (currentImpactData.item) {
-                // ITEM MODE: Export tables_used, tables_provided, downstream_items
-                csvRows = [
-                    ['Name', 'Type', 'Location', 'Section', 'Source Item'].join(','),
+                // ITEM MODE: Full export with all available metadata
+                const item = currentImpactData.item;
+
+                // Summary header rows with item metadata
+                const summaryRows = [
+                    ['# Item Impact Analysis Report'].join(','),
+                    ['# Generated', new Date().toISOString()].join(','),
+                    ['# Item Name', escapeCsvField(item.name)].join(','),
+                    ['# Item Type', escapeCsvField(item.type || '')].join(','),
+                    ['# Workspace', escapeCsvField(item.workspace || '')].join(','),
+                    ['# Tables Used', currentImpactData.tables_used_count].join(','),
+                    ['# Tables Provided', currentImpactData.tables_provided_count].join(','),
+                    ['# Downstream Items', currentImpactData.downstream_count].join(','),
+                    ['# Total Impact', currentImpactData.total_impact].join(','),
+                    ''
+                ];
+
+                const dataRows = [
+                    ['Name', 'ID', 'Type', 'Location', 'Section', 'Depth', 'Source Item', 'Dependency Path'].join(','),
                     ...(currentImpactData.tables_used || []).map(t =>
                         [
                             escapeCsvField(t.table_name),
+                            escapeCsvField(t.table_id || ''),
                             'Table',
                             escapeCsvField(t.full_path || ''),
                             'Tables Used',
-                            escapeCsvField(currentImpactData.item.name)
+                            '',
+                            escapeCsvField(item.name),
+                            ''
                         ].join(',')
                     ),
                     ...(currentImpactData.tables_provided || []).map(t =>
                         [
                             escapeCsvField(t.table_name),
+                            escapeCsvField(t.table_id || ''),
                             'Table',
                             escapeCsvField(t.full_path || ''),
                             'Tables Provided',
-                            escapeCsvField(currentImpactData.item.name)
+                            '',
+                            escapeCsvField(item.name),
+                            ''
                         ].join(',')
                     ),
                     ...(currentImpactData.downstream_items || []).map(d =>
                         [
                             escapeCsvField(d.item_name),
+                            escapeCsvField(d.item_id || ''),
                             escapeCsvField(d.item_type),
                             escapeCsvField(d.workspace || ''),
                             'Downstream Dependency',
-                            escapeCsvField(currentImpactData.item.name)
+                            d.depth != null ? d.depth : '',
+                            escapeCsvField(item.name),
+                            escapeCsvField(d.path_names ? d.path_names.join(' → ') : '')
                         ].join(',')
                     )
                 ];
-                const safeName = currentImpactData.item.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                csvRows = [...summaryRows, ...dataRows];
+                const safeName = item.name.replace(/[^a-zA-Z0-9_-]/g, '_');
                 filename = `item_impact_${safeName}_${new Date().toISOString().slice(0, 10)}.csv`;
             } else {
                 console.error('Unknown impact data format');

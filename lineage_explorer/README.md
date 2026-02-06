@@ -59,6 +59,9 @@ docker compose up -d neo4j
 | `statistics.py` | Enhanced statistics calculation module |
 | `static/index.html` | **Main graph visualization** with D3.js (light theme) |
 | `static/app.js` | D3.js force-directed graph with filters |
+| `static/elements_graph.html` | **Elements graph** with item-focused detail panels |
+| `static/tables_graph.html` | **Tables graph** with table-level dependency visualization |
+| `static/table_impact.html` | **Table impact analysis** with blast radius view |
 | `static/dashboard.html` | **Statistics dashboard** with Chart.js (light theme) |
 | `static/query_explorer.html` | **Interactive query explorer** with 10 categories (light theme) |
 | `graph_database/neo4j_client.py` | Neo4j connection management |
@@ -68,10 +71,13 @@ docker compose up -d neo4j
 
 ## Features
 
-### Three Complementary Pages (Light Theme)
+### Six Visualization Pages (Light Theme)
 1. **Graph View** (`/`) - Interactive D3.js visualization with persistent node selection
-2. **Dashboard** (`/dashboard.html`) - Statistics and charts with workspace analytics
-3. **Query Explorer** (`/query_explorer.html`) - Interactive Neo4j query catalog
+2. **Elements Graph** (`/elements_graph.html`) - Item-focused visualization with detail panels and table footprint
+3. **Tables Graph** (`/tables_graph.html`) - Table-level dependency visualization with status badges
+4. **Table Impact** (`/table_impact.html`) - Blast radius analysis for table changes
+5. **Dashboard** (`/dashboard.html`) - Statistics, charts, and table health patterns
+6. **Query Explorer** (`/query_explorer.html`) - Interactive Neo4j query catalog with 40+ queries
 
 ### Core Visualization (Graph Page)
 - **3 Layout Modes**: Force-directed (default), Radial, Tree

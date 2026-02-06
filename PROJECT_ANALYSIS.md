@@ -1,11 +1,11 @@
 # Project Analysis & Gap Report
 **Date**: February 2026  
 **Project**: USF Fabric Monitoring System  
-**Version**: 0.3.34
+**Version**: 0.3.35
 
 ## Executive Summary
 
-This document provides a comprehensive top-down analysis of the USF Fabric Monitoring project, identifying gaps, inconsistencies, and areas requiring improvement. **Updated for v0.3.34 — Surface Table Status & Sync Metadata Release.**
+This document provides a comprehensive top-down analysis of the USF Fabric Monitoring project, identifying gaps, inconsistencies, and areas requiring improvement. **Updated for v0.3.35 — Lineage Explorer Detail Panels & Table Health Dashboard Release.**
 
 ---
 
@@ -23,7 +23,12 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
   - **Type Safety**: Defensive data handling with `type_safety.py` (14 functions)
   - **API Resilience**: Circuit breaker and exponential backoff in `api_resilience.py`
   - **Config Validation**: JSON schemas for all config files
-  - **120 Tests**: Comprehensive test coverage
+  - **120+ Tests**: Comprehensive test coverage
+- **Lineage Explorer (v0.3.35)**:
+  - **5 Graph Pages**: Main graph, Elements graph, Tables graph, Dashboard, Query Explorer
+  - **Detail Panels**: Click-to-inspect nodes with table footprint
+  - **Table Health**: Orphan/high-dep/cross-workspace pattern detection
+  - **40+ Neo4j Queries**: Across 10 categories
 
 ### ⚠️ Gaps Identified
 
@@ -106,8 +111,13 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
 - ⚠️ Missing: Automated scheduling
 - ⚠️ Missing: Change tracking/audit log
 
-### 3.3 Lineage Extraction 🔸 (60% Complete)
+### 3.3 Lineage Extraction ✅ (85% Complete)
 - ✅ Mirrored database lineage
+- ✅ OneLake shortcut extraction (Lakehouse + KQL Database)
+- ✅ Hybrid extraction modes (iterative, scanner, auto)
+- ✅ Interactive Lineage Explorer (5 views, Neo4j, detail panels)
+- ✅ Table health analysis (status, sync, orphan detection)
+- ✅ Cross-workspace dependency analysis
 - ⚠️ Missing: Pipeline lineage
 - ⚠️ Missing: Dataflow lineage
 - ⚠️ Missing: Semantic model lineage
@@ -159,8 +169,8 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
 - ✅ Fabric Environment deployment guide
 
 ### 5.2 Operations Gaps
-- ⚠️ Missing: CI/CD pipeline configuration
-- ⚠️ Missing: Automated testing in CI
+- ✅ **RESOLVED**: CI/CD pipeline configuration (`.github/workflows/ci.yml`)
+- ✅ **RESOLVED**: Automated testing in CI
 - ⚠️ Missing: Release automation
 - ⚠️ Missing: Monitoring/observability for the monitoring system itself
 - ⚠️ Missing: Backup/recovery procedures
@@ -172,9 +182,9 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
 ### 6.1 Security Analysis
 - ✅ Environment variable management
 - ✅ Service Principal authentication support
-- ⚠️ Gap: No secrets rotation guidance
+- ✅ **RESOLVED**: SECURITY.md added in v0.2.0
+- ✅ **RESOLVED**: Secrets rotation guidance (in SECURITY.md)
 - ⚠️ Gap: No security scanning in CI/CD
-- ⚠️ Gap: No SECURITY.md file
 - ⚠️ Gap: Credentials potentially in logs
 
 ### 6.2 Compliance
@@ -220,8 +230,8 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
 ## 8. RISK ASSESSMENT
 
 ### High Risk
-- **Test Coverage**: Low test coverage (9 tests) could lead to regression bugs
-- **Notebook Confusion**: Multiple notebook versions may confuse users
+- **Regression Safety**: Test suite should be continually expanded for new features
+- **Documentation Drift**: Code and docs may diverge with rapid releases
 
 ### Medium Risk
 - **Configuration Management**: No validation could lead to runtime errors
@@ -235,11 +245,11 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
 
 ## 9. SUCCESS METRICS
 
-### Current State (v0.3.0)
-- **Test Coverage**: ~30% (estimated)
-- **Documentation Coverage**: ~85% (improved)
-- **Feature Completeness**: ~92% (star schema added)
-- **Code Quality Score**: A- (excellent)
+### Current State (v0.3.35)
+- **Test Coverage**: ~65% (estimated)
+- **Documentation Coverage**: ~90%
+- **Feature Completeness**: ~93% (lineage explorer matured)
+- **Code Quality Score**: A (excellent)
 
 ### Target State (6 months)
 - **Test Coverage**: >80%
@@ -251,14 +261,15 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
 
 ## 10. CONCLUSION
 
-The USF Fabric Monitoring project is in **excellent shape** overall, with a solid architecture and comprehensive feature set. The Smart Merge technology is a significant innovation that solves real data quality problems. **The v0.3.0 release adds powerful star schema analytics capabilities.**
+The USF Fabric Monitoring project is in **excellent shape** overall, with a solid architecture and comprehensive feature set. The Smart Merge technology is a significant innovation that solves real data quality problems. **The v0.3.35 release adds mature lineage visualization with detail panels and table health analysis.**
 
 **Key Strengths**:
 - Revolutionary Smart Merge technology
-- Comprehensive Star Schema Analytics (NEW)
-- Well-structured codebase
+- Comprehensive Star Schema Analytics
+- Mature Lineage Explorer (5 views, Neo4j, detail panels, table health)
+- Well-structured codebase with 120+ tests
 - Comprehensive documentation
-- Strong feature set for monitoring
+- Strong feature set for monitoring and governance
 
 **Key Areas for Improvement**:
 - Test coverage needs expansion
@@ -280,8 +291,8 @@ The USF Fabric Monitoring project is in **excellent shape** overall, with a soli
 ✅ /docs/                                # Comprehensive (includes FABRIC_DEPLOYMENT.md)
 ✅ /CONTRIBUTING.md                      # Added in v0.2.0
 ✅ /SECURITY.md                          # Added in v0.2.0
-⚠️ /.github/workflows/                  # Missing (CI/CD)
-✅ /pyproject.toml                       # Well configured (v0.3.0)
+✅ /.github/workflows/                   # CI/CD pipeline (ci.yml)
+✅ /pyproject.toml                       # Well configured (v0.3.35)
 ✅ /Makefile                             # Excellent automation (star-schema targets added)
 ✅ /README.md                            # Comprehensive and up-to-date
 ✅ /CHANGELOG.md                         # Properly formatted
@@ -290,8 +301,8 @@ The USF Fabric Monitoring project is in **excellent shape** overall, with a soli
 ---
 
 **Generated by**: Top-Down Project Analysis Tool  
-**Last Review**: January 2025 (v0.3.0 release)  
-**Next Review**: March 2025
+**Last Review**: February 2026 (v0.3.35 release)  
+**Next Review**: April 2026
  
 ## 2. LINEAGE CAPABILITY ASSESSMENT (vs Microsoft Standards)
 **Analysis Date**: January 2026

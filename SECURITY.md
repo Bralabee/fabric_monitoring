@@ -393,9 +393,9 @@ We appreciate responsible disclosure and will:
 
 This security policy is reviewed quarterly and updated as needed.
 
-- **Last Review**: December 5, 2025
-- **Next Review**: March 5, 2026
-- **Policy Version**: 1.0
+- **Last Review**: February 6, 2026
+- **Next Review**: May 6, 2026
+- **Policy Version**: 1.1
 
 ---
 

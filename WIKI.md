@@ -38,7 +38,7 @@ We transformed the local scripts into a distributable format.
     pip install build
     python -m build
     ```
-3.  This generates a `.whl` file in the `dist/` folder (e.g., `usf_fabric_monitoring-0.3.34-py3-none-any.whl`).
+3.  This generates a `.whl` file in the `dist/` folder (e.g., `usf_fabric_monitoring-0.3.35-py3-none-any.whl`).
 
 ### Phase 2: Configure Fabric Environment
 1.  In your Fabric Workspace, create a new **Environment** (e.g., `Monitoring_Env`).
@@ -139,7 +139,8 @@ Legacy aliases (supported): `CLIENT_ID`, `CLIENT_SECRET`, `TENANT_ID`.
 - `usf-monitor-hub --days 14 --member-only --output-dir exports/monitor_hub_analysis`
 - `usf-enforce-access --help`
 - `usf-validate-config`
-- `usf-star-schema --help` ⭐ NEW
+- `usf-star-schema --help` ⭐
+- `usf-extract-lineage --mode auto`
 
 ### "401 Client Error: Unauthorized" during Analysis
 *   **Cause**: The Service Principal can see *that* a workspace exists (Tenant Admin rights) but cannot see *inside* it (Workspace Member rights).
