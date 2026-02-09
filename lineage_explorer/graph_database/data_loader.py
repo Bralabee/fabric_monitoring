@@ -565,10 +565,10 @@ class LineageDataLoader:
                 # Handle Python dict literal format
                 import ast
                 return ast.literal_eval(conn_value)
-            except:
+            except (ValueError, SyntaxError):
                 try:
                     return json.loads(conn_value.replace("'", '"').replace('None', 'null'))
-                except:
+                except (json.JSONDecodeError, ValueError):
                     return None
         
         return None
@@ -583,7 +583,7 @@ class LineageDataLoader:
         
         try:
             return json.loads(def_value)
-        except:
+        except (json.JSONDecodeError, ValueError):
             return None
     
     def _generate_source_id(self, source_type: str, conn: Optional[Dict]) -> str:
