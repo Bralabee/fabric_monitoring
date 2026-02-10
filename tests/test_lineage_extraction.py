@@ -44,7 +44,7 @@ class TestLineageExtractorInit:
         mock_auth_factory.return_value = mock_auth
         mock_logging.return_value = MagicMock()
 
-        with pytest.raises(Exception, match="Authentication failed"):
+        with pytest.raises(RuntimeError, match="Authentication failed"):
             extract_lineage.LineageExtractor()
 
 

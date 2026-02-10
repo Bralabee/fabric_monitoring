@@ -3,7 +3,7 @@
 # Provides a complete graph database backend for advanced lineage querying.
 #
 # Usage:
-#   cd src/usf_fabric_monitoring/lineage_explorer
+#   cd lineage_explorer
 #   docker-compose up -d
 #
 # Services:
@@ -26,7 +26,7 @@ services:
     environment:
       # Authentication - REQUIRED: Set NEO4J_PASSWORD env var before starting
       # Example: NEO4J_PASSWORD=your_secure_password docker-compose up -d
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-changeme_in_production}
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?NEO4J_PASSWORD env var must be set}
 
       # Memory configuration (adjust based on data size)
       NEO4J_server_memory_heap_initial__size: 512m

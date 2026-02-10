@@ -43,7 +43,7 @@ class LineageExtractor:
         load_dotenv()
         self.authenticator = create_authenticator_from_env()
         if not self.authenticator.validate_credentials():
-            raise Exception("Authentication failed")
+            raise RuntimeError("Authentication failed")
         self.token = self.authenticator.get_fabric_token()
         self.headers = {"Authorization": f"Bearer {self.token}"}
         self.api_base = "https://api.fabric.microsoft.com/v1"
@@ -69,7 +69,7 @@ class LineageExtractor:
 
                 return response
 
-            except Exception as e:
+            except requests.RequestException as e:
                 self.logger.error(f"Request failed: {str(e)}")
                 if attempt == max_retries - 1:
                     raise
@@ -111,7 +111,7 @@ class LineageExtractor:
             else:
                 code = response.status_code if response else "Unknown"
                 self.logger.warning(f"Failed to fetch mirrored DBs for {workspace_id}: {code}")
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error(f"Error fetching items for {workspace_id}: {str(e)}")
 
         return items
@@ -134,7 +134,7 @@ class LineageExtractor:
                 items.extend(data.get("value", []))
                 url = data.get("continuationUri")
 
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error(f"Error fetching Lakehouses for {workspace_id}: {str(e)}")
 
         return items
@@ -157,7 +157,7 @@ class LineageExtractor:
                 items.extend(data.get("value", []))
                 url = data.get("continuationUri")
 
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error(f"Error fetching KQL Databases for {workspace_id}: {str(e)}")
 
         return items
@@ -171,7 +171,7 @@ class LineageExtractor:
             response = self.make_request_with_retry("GET", url)
             if response and response.status_code == 200:
                 shortcuts = response.json().get("value", [])
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error(f"Error fetching shortcuts for {item_id}: {str(e)}")
 
         return shortcuts
@@ -189,7 +189,7 @@ class LineageExtractor:
                     f"Failed to get definition for {item_id}: {response.text if response else 'No response'}"
                 )
                 return None
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error(f"Error getting definition for {item_id}: {str(e)}")
             return None
 
@@ -198,7 +198,7 @@ class LineageExtractor:
         try:
             decoded_bytes = base64.b64decode(payload_base64)
             return json.loads(decoded_bytes.decode("utf-8"))
-        except Exception as e:
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
             self.logger.error(f"Failed to decode payload: {str(e)}")
             return None
 
@@ -220,7 +220,7 @@ class LineageExtractor:
                 items.extend(data.get("value", []))
                 url = data.get("continuationUri")
 
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error(f"Error fetching Semantic Models for {workspace_id}: {str(e)}")
 
         return items
@@ -240,7 +240,7 @@ class LineageExtractor:
                 items.extend(data.get("value", []))
                 url = data.get("continuationUri")
 
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error(f"Error fetching Dataflows for {workspace_id}: {str(e)}")
 
         return items
@@ -260,7 +260,7 @@ class LineageExtractor:
                 items.extend(data.get("value", []))
                 url = data.get("continuationUri")
 
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.error(f"Error fetching Reports for {workspace_id}: {str(e)}")
 
         return items
@@ -274,7 +274,7 @@ class LineageExtractor:
             response = self.make_request_with_retry("GET", url)
             if response and response.status_code == 200:
                 connections = response.json().get("value", [])
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.debug(f"No connections for {item_id}: {str(e)}")
 
         return connections
@@ -289,7 +289,7 @@ class LineageExtractor:
             response = self.make_request_with_retry("GET", url)
             if response and response.status_code == 200:
                 datasources = response.json().get("value", [])
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.debug(f"No datasources for dataset {dataset_id}: {str(e)}")
 
         return datasources
@@ -303,7 +303,7 @@ class LineageExtractor:
             response = self.make_request_with_retry("GET", url)
             if response and response.status_code == 200:
                 tables = response.json().get("value", [])
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.debug(f"No tables for dataset {dataset_id}: {str(e)}")
 
         return tables
@@ -317,7 +317,7 @@ class LineageExtractor:
             response = self.make_request_with_retry("GET", url)
             if response and response.status_code == 200:
                 return response.json()
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.debug(f"No report details for {report_id}: {str(e)}")
 
         return None
@@ -331,7 +331,7 @@ class LineageExtractor:
             response = self.make_request_with_retry("GET", url)
             if response and response.status_code == 200:
                 datasources = response.json().get("value", [])
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.debug(f"No datasources for dataflow {dataflow_id}: {str(e)}")
 
         return datasources
@@ -392,7 +392,7 @@ class LineageExtractor:
                                             "Full Definition": json.dumps(decoded),  # For debugging
                                         }
                                     )
-            except Exception as e:
+            except (requests.RequestException, KeyError, ValueError) as e:
                 self.logger.error(f"Error processing Mirrored DBs in {ws_name}: {e}")
 
             # --- 2. Lakehouse Shortcuts ---
@@ -431,10 +431,10 @@ class LineageExtractor:
                                     "Full Definition": json.dumps(shortcut),
                                 }
                             )
-                        except Exception as e:
+                        except (KeyError, TypeError, ValueError) as e:
                             self.logger.warning(f"Error parsing shortcut {sc_name} in {lh_name}: {e}")
 
-            except Exception as e:
+            except (requests.RequestException, KeyError, ValueError) as e:
                 self.logger.error(f"Error processing Shortcuts in {ws_name}: {e}")
 
             # --- 3. KQL Database Shortcuts ---
@@ -473,10 +473,10 @@ class LineageExtractor:
                                     "Full Definition": json.dumps(shortcut),
                                 }
                             )
-                        except Exception as e:
+                        except (KeyError, TypeError, ValueError) as e:
                             self.logger.warning(f"Error parsing shortcut {sc_name} in {db_name}: {e}")
 
-            except Exception as e:
+            except (requests.RequestException, KeyError, ValueError) as e:
                 self.logger.error(f"Error processing KQL Shortcuts in {ws_name}: {e}")
 
             # --- 4. Semantic Models (Datasets) with Connections and Datasources ---
@@ -524,7 +524,7 @@ class LineageExtractor:
                         f"    Model: {model_name} - {len(datasources)} datasources, {len(connections)} connections"
                     )
 
-            except Exception as e:
+            except (requests.RequestException, KeyError, ValueError) as e:
                 self.logger.error(f"Error processing Semantic Models in {ws_name}: {e}")
 
             # --- 5. Dataflows with Datasources ---
@@ -565,7 +565,7 @@ class LineageExtractor:
                     if datasources:
                         self.logger.info(f"    Dataflow: {df_name} - {len(datasources)} datasources")
 
-            except Exception as e:
+            except (requests.RequestException, KeyError, ValueError) as e:
                 self.logger.error(f"Error processing Dataflows in {ws_name}: {e}")
 
             # --- 6. Reports with Upstream Dataset Binding ---
@@ -608,7 +608,7 @@ class LineageExtractor:
                     if dataset_id:
                         self.logger.info(f"    Report: {report_name} -> Dataset: {dataset_id}")
 
-            except Exception as e:
+            except (requests.RequestException, KeyError, ValueError) as e:
                 self.logger.error(f"Error processing Reports in {ws_name}: {e}")
 
         if lineage_data:
@@ -686,7 +686,7 @@ class HybridLineageExtractor:
         load_dotenv()
         self.authenticator = create_authenticator_from_env()
         if not self.authenticator.validate_credentials():
-            raise Exception("Authentication failed")
+            raise RuntimeError("Authentication failed")
         self.token = self.authenticator.get_fabric_token()
 
     def extract(self, output_dir: str = "exports/lineage") -> Path:
@@ -729,7 +729,7 @@ class HybridLineageExtractor:
                 count = len(response.json().get("value", []))
                 self.logger.info(f"Found {count} accessible workspaces")
                 return count
-        except Exception as e:
+        except requests.RequestException as e:
             self.logger.warning(f"Failed to count workspaces: {e}")
 
         return 0
@@ -810,7 +810,7 @@ class HybridLineageExtractor:
                 data = response.json()
                 workspace_ids.extend([ws["id"] for ws in data.get("value", [])])
                 url = data.get("continuationUri")
-            except Exception as e:
+            except requests.RequestException as e:
                 self.logger.error(f"Failed to get workspaces: {e}")
                 break
 

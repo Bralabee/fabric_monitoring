@@ -6,6 +6,8 @@ Test Neo4j queries using the CORRECT schema:
 - Properties: type (not item_type)
 """
 
+import os
+
 from neo4j import GraphDatabase
 from neo4j.exceptions import CypherSyntaxError, ClientError
 
@@ -435,8 +437,8 @@ QUERIES = {
 
 def run_tests():
     driver = GraphDatabase.driver(
-        "bolt://localhost:7687",
-        auth=("neo4j", "fabric_lineage_2026")
+        os.getenv("NEO4J_URI", "bolt://localhost:7687"),
+        auth=("neo4j", os.getenv("NEO4J_PASSWORD", "changeme_in_production"))
     )
     
     print("=" * 80)
