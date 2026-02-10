@@ -2,11 +2,13 @@
 
 A comprehensive Python-based solution for monitoring, analyzing, and governing Microsoft Fabric workspaces. This project provides tools for historical activity analysis (Monitor Hub), automated security group enforcement, and star schema analytics for business intelligence.
 
-> **Current Version: 0.3.35** - Lineage Explorer detail panels, table health dashboard & enhanced tooltips  
+> **Current Version: 0.3.36** - Audit Phase 1: Exception refinement & security hardening  
 > See [CHANGELOG.md](CHANGELOG.md) for release notes | [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines | [SECURITY.md](SECURITY.md) for security policies
+>
 ## 🚀 Key Features
 
 ### 1. Monitor Hub Analysis (`monitor_hub_pipeline.py`)
+
 - **Historical Data Extraction**: Retrieves up to 28 days of activity data (API limit compliant).
 - **Enhanced Duration Calculation**: Revolutionary Smart Merge technology that restores missing timing data by correlating activity logs with detailed job execution data, achieving 100% duration data recovery.
 - **Detailed Job History**: Automatically fetches granular job execution details (JSON) to ensure accurate failure tracking and precise timing analysis.
@@ -23,6 +25,7 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 - **Scope Control**: Analyze all tenant workspaces or filter to specific subsets.
 
 ### 2. Workspace Access Enforcement (`enforce_workspace_access.py`)
+
 - **Security Compliance**: Ensures required security groups are assigned to workspaces.
 - **Dual Modes**:
   - `assess`: Dry-run mode to audit current permissions and identify gaps.
@@ -31,6 +34,7 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 - **Suppression Support**: Whitelist specific workspaces to skip enforcement.
 
 ### 3. Lineage Extraction (`extract_lineage.py`)
+
 - **Mirrored Database Analysis**: Scans workspaces for Mirrored Databases (Snowflake, Azure SQL, Cosmos DB).
 - **OneLake Shortcut Analysis**: Extracts OneLake shortcuts from **Lakehouses** and **KQL Databases**.
 - **Unified Inventory**: Outputs a consolidated CSV schema (`Workspace`, `Item`, `Type`, `Source Connection`) for all external dependencies.
@@ -66,9 +70,10 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
     - **Elements Graph**: Dedicated item-focused visualization at `/elements_graph.html`
     - **Tables Graph**: Table-level dependency visualization at `/tables_graph.html`
     - **Table Impact Analysis**: Blast radius analysis at `/table_impact.html`
-- **Command**: `make lineage-explorer` (starts server at http://127.0.0.1:8000)
+- **Command**: `make lineage-explorer` (starts server at <http://127.0.0.1:8000>)
 
 ### 4. Star Schema Analytics (`build_star_schema.py`) ⭐ NEW in v0.3.0
+
 - **Kimball-Style Dimensional Model**: Transforms raw Monitor Hub data into a proper star schema for analytics.
 - **7 Dimension Tables**: `dim_date`, `dim_time`, `dim_workspace`, `dim_item`, `dim_user`, `dim_activity_type`, `dim_status`
 - **2 Fact Tables**: `fact_activity` (1M+ records), `fact_daily_metrics` (pre-aggregated)
@@ -89,22 +94,26 @@ A comprehensive Python-based solution for monitoring, analyzing, and governing M
 
 This project uses a `Makefile` to simplify environment management.
 
-1.  **Clone the repository**:
+1. **Clone the repository**:
+
     ```bash
     git clone <repository-url>
     cd usf_fabric_monitoring
     ```
 
-2.  **Create the environment**:
+2. **Create the environment**:
+
     ```bash
     make create
     ```
 
-3.  **Configure Environment Variables**:
+3. **Configure Environment Variables**:
     Copy the template and edit your settings.
+
     ```bash
     cp .env.template .env
     ```
+
     Authentication options:
     - Recommended: set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` (Service Principal)
     - Alternative: rely on `DefaultAzureCredential` (Managed Identity / Azure CLI login / Fabric notebook identity)
@@ -133,11 +142,13 @@ The system is configured via the `.env` file and JSON configuration files in the
 ### Running Monitor Hub Analysis
 
 Analyze the last 7 days of activity across the tenant:
+
 ```bash
 make monitor-hub
 ```
 
 Analyze a specific window (e.g., 14 days) and output to a custom directory:
+
 ```bash
 make monitor-hub DAYS=14 OUTPUT_DIR=exports/custom_report
 ```
@@ -146,12 +157,14 @@ make monitor-hub DAYS=14 OUTPUT_DIR=exports/custom_report
 
 **Audit Mode (Dry Run)**:
 Check which workspaces are missing required groups without making changes.
+
 ```bash
 make enforce-access MODE=assess CSV_SUMMARY=1
 ```
 
 **Enforcement Mode**:
 Apply changes to fix permission gaps.
+
 ```bash
 make enforce-access MODE=enforce CONFIRM=1
 ```
@@ -159,11 +172,13 @@ make enforce-access MODE=enforce CONFIRM=1
 ### Lineage Extraction
 
 Extract lineage details for Mirrored Databases:
+
 ```bash
 make extract-lineage
 ```
 
 **Extraction Modes** (for large tenants):
+
 ```bash
 # Auto mode (default) - selects based on workspace count
 python scripts/extract_lineage.py --mode auto
@@ -186,20 +201,23 @@ python scripts/extract_lineage.py --mode auto --threshold 100
 
 For advanced analysis and visualization, use the consolidated Jupyter Notebook:
 
-1.  **Launch Jupyter**:
+1. **Launch Jupyter**:
+
     ```bash
     jupyter notebook
     ```
-2.  **Open**: `notebooks/1_Monitor_Hub_Analysis.ipynb`
-3.  **Run**: This notebook handles the end-to-end workflow:
-    -   Installs dependencies.
-    -   Runs the extraction pipeline (`monitor_hub_pipeline.py`).
-    -   Uses PySpark to analyze the detailed JSON logs.
-    -   Visualizes failures, user activity, and error trends.
+
+2. **Open**: `notebooks/1_Monitor_Hub_Analysis.ipynb`
+3. **Run**: This notebook handles the end-to-end workflow:
+    - Installs dependencies.
+    - Runs the extraction pipeline (`monitor_hub_pipeline.py`).
+    - Uses PySpark to analyze the detailed JSON logs.
+    - Visualizes failures, user activity, and error trends.
 
 ### Manual Report Generation
 
 Regenerate reports from previously extracted data (useful if extraction was interrupted):
+
 ```bash
 make generate-reports
 ```
@@ -275,12 +293,12 @@ After `pip install -e .` or `make install`, these commands become available:
 | `usf-star-schema` | `scripts.build_star_schema` | Build dimensional schema |
 | `usf-validate-config` | `scripts.validate_config` | Validate JSON configs |
 
-
-## ⚠️ Recent Updates (v0.3.35 - Current Release)
+## ⚠️ Recent Updates (v0.3.36 - Current Release)
 
 This release adds detail panels, table health dashboards, and enhanced tooltips to the Lineage Explorer.
 
 ### 🔍 **Lineage Explorer v0.3.35**
+
 - **Detail Panels**: Click-to-inspect nodes with table footprint across all graph views
 - **Table Health Dashboard**: Orphan tables, high-dependency tables, cross-workspace patterns with KPI cards
 - **Enhanced Tooltips**: Workspace name, connection counts, table hints for Lakehouse/MirroredDatabase items
@@ -290,6 +308,7 @@ This release adds detail panels, table health dashboards, and enhanced tooltips 
 Previous highlights:
 
 ### 🏗️ **Star Schema Builder**
+
 - **Dimensional Modeling**: Kimball-style star schema with 7 dimensions and 2 fact tables
 - **1M+ Records**: Processes complete Monitor Hub activity data into analytical format
 - **Incremental Loads**: High-water mark tracking for efficient delta processing
@@ -297,6 +316,7 @@ Previous highlights:
 - **Delta Lake DDL**: Auto-generated scripts for Fabric deployment
 
 ### 🔧 **Smart Merge Technology** (from v0.2.0)
+
 - **Dual API Correlation**: Combines Activity Events API (audit log) with Job History API (job executions) using `merge_asof` by `item_id` + 5-minute timestamp tolerance
 - **Failure Detection**: Activity Events report ALL status="Succeeded" (audit entries can't fail), while Job History provides actual failure data for job executions
 - **Duration Recovery**: Restores missing timing data by matching activities with detailed job execution records
@@ -305,18 +325,21 @@ Previous highlights:
 - **Backward Compatibility**: Gracefully handles scenarios with missing job details
 
 ### 📊 **Advanced Analytics & Visualization**
+
 - **16+ Visualizations**: Comprehensive dashboard with interactive Plotly charts
 - **Executive Dashboard**: High-level KPIs and trends for leadership reporting
 - **Performance Insights**: Deep analysis of long-running operations and bottlenecks
 - **Failure Analysis**: Detailed error tracking with root cause identification
 
 ### 📚 **Documentation & Governance**
+
 - **Fabric Deployment Guide**: Complete deployment options ([docs/02_User_Guides/03_Fabric_Deployment.md](docs/02_User_Guides/03_Fabric_Deployment.md))
 - **Comprehensive Project Analysis**: Complete gap assessment and improvement roadmap ([PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md))
 - **Contribution Guidelines**: Standardized development workflow and coding standards ([CONTRIBUTING.md](CONTRIBUTING.md))
 - **Security Policy**: Best practices and vulnerability reporting procedures ([SECURITY.md](SECURITY.md))
 
 ### 🧪 **Testing & Quality**
+
 - **Test Coverage**: Enhanced test suite with offline analysis capabilities
 - **Comparative Analysis**: Before/after validation of duration fixes
 - **End-to-End Validation**: Complete pipeline testing from data loading to report generation
@@ -327,29 +350,31 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 To run this solution directly within a Microsoft Fabric Notebook:
 
-1.  **Build the Package**:
+1. **Build the Package**:
     Run the following command locally to create a Python Wheel (`.whl`) file:
+
     ```bash
     make build
     ```
-    This will generate a file like `dist/usf_fabric_monitoring-0.3.35-py3-none-any.whl`.
 
-2.  **Upload to Fabric**:
-    -   Navigate to your Fabric Workspace.
-    -   Create a **Fabric Environment** (or use an existing one).
-    -   In the "Public Libraries" or "Custom Libraries" section, upload the `.whl` file.
-    -   Save and Publish the Environment.
+    This will generate a file like `dist/usf_fabric_monitoring-0.3.36-py3-none-any.whl`.
 
-3.  **Configure the Notebook**:
-    -   Import one of the available notebooks:
+2. **Upload to Fabric**:
+    - Navigate to your Fabric Workspace.
+    - Create a **Fabric Environment** (or use an existing one).
+    - In the "Public Libraries" or "Custom Libraries" section, upload the `.whl` file.
+    - Save and Publish the Environment.
+
+3. **Configure the Notebook**:
+    - Import one of the available notebooks:
         - `notebooks/1_Monitor_Hub_Analysis.ipynb` - Historical activity analysis
         - `notebooks/3_Workspace_Access_Enforcement.ipynb` - Security compliance
         - `notebooks/2A_Fabric_Star_Schema_Builder.ipynb` - Star schema analytics ⭐ NEW
-    -   In the notebook settings (Environment), select the Environment you created in step 2.
-    -   This ensures the `usf_fabric_monitoring` library is installed and available to the notebook.
+    - In the notebook settings (Environment), select the Environment you created in step 2.
+    - This ensures the `usf_fabric_monitoring` library is installed and available to the notebook.
 
-4.  **Run**:
-    -   Execute the notebook cells. The library will be automatically detected.
+4. **Run**:
+    - Execute the notebook cells. The library will be automatically detected.
 
 For advanced deployment options (inline pip install, lakehouse file reference, etc.), see [docs/02_User_Guides/03_Fabric_Deployment.md](docs/02_User_Guides/03_Fabric_Deployment.md).
 

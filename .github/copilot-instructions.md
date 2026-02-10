@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions for USF Fabric Monitoring
 
-**Version**: 0.3.35 (February 2026) | **Library-first** Microsoft Fabric monitoring/governance toolkit.
+**Version**: 0.3.36 (February 2026) | **Library-first** Microsoft Fabric monitoring/governance toolkit.
 Core logic in `src/usf_fabric_monitoring/`; scripts/notebooks are thin wrappers.
 
 ## Project Structure (src-layout)
@@ -281,7 +281,8 @@ cd lineage_explorer
 docker compose up -d neo4j
 
 # Access Neo4j Browser: http://localhost:7474
-# Credentials: Set NEO4J_PASSWORD in .env
+# Credentials: Set NEO4J_PASSWORD env var (REQUIRED)
+# Example: NEO4J_PASSWORD=your_secure_password docker compose up -d neo4j
 
 # Data is auto-loaded when server starts with Neo4j available
 ```
