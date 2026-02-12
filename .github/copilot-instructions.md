@@ -310,3 +310,61 @@ Organized into 7 numbered folders:
 - `08_Reference_Materials/` - Images, external references
 
 See `docs/README.md` for navigation index.
+
+## 🔄 CI/CD Protocols (MANDATORY)
+
+### Quality Gate — Every PR Must Pass
+All code changes must pass the automated CI pipeline before merge:
+1. **Lint**: `ruff check src/` — zero violations
+2. **Format**: `ruff format --check src/` — zero formatting differences
+3. **Type Check**: `mypy src/` — informational (soft gate)
+4. **Config Validation**: All JSON schemas in `config/schemas/` must validate
+5. **Unit Tests**: `pytest tests/ -m "not integration"` — 100% pass rate
+6. **Coverage**: Uploaded to Codecov — minimum 70% on changed files
+7. **Build**: `python -m build` — wheel must build successfully
+8. **Integration Tests**: Run on `main` only with Azure secrets
+
+### Pre-commit Hooks (REQUIRED for local development)
+```bash
+pip install pre-commit && pre-commit install
+```
+Hooks run automatically on `git commit`: ruff (lint + format), mypy, trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-added-large-files, validate-config-schemas.
+
+### Commit Message Convention
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+```
+feat: add new activity type to star schema
+fix: handle NULL workspace_id in Smart Merge
+docs: update data pipeline documentation
+refactor: simplify dimension builder logic
+test: add edge cases for type_safety module
+ci: upgrade ruff pre-commit to latest
+chore: update dependencies
+```
+
+### Branch Strategy
+| Type | Pattern | Example |
+|------|---------|---------|
+| Feature | `feature/<description>` | `feature/smart-merge-optimization` |
+| Bug fix | `fix/<issue>-<description>` | `fix/123-pandas-warning` |
+| Hotfix | `hotfix/<version>-<description>` | `hotfix/0.3.37-auth-bug` |
+| Docs | `docs/<description>` | `docs/api-documentation` |
+
+### PR Requirements
+- Fill out PR template completely
+- All CI checks pass (green)
+- At least one reviewer approval (CODEOWNERS enforced)
+- No secrets or hardcoded values
+- CHANGELOG.md updated for user-facing changes
+- Data counting patterns use `record_count` sum (not `activity_id` count)
+
+### Dependency Management
+- **Dependabot** monitors pip, GitHub Actions, and Docker dependencies weekly
+- Review and merge dependency PRs promptly
+- Dev dependencies specified in `[project.optional-dependencies] dev`
+
+### Release Process
+1. Update version in `pyproject.toml`
+2. Update `CHANGELOG.md` with release notes
+3. Create PR to `main` → CI validates
+4. Merge → Tag release → Build wheel

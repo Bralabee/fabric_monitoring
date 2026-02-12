@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CODEOWNERS — Automatic reviewer assignment for pull requests
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Default owners
+*                                   @BralaBee-LEIT
+
+# Core source code
+src/                                @BralaBee-LEIT
+tests/                              @BralaBee-LEIT
+
+# CI/CD & Infrastructure
+.github/                            @BralaBee-LEIT
+Makefile                            @BralaBee-LEIT
+
+# Configuration & Schemas
+config/                             @BralaBee-LEIT
+
+# Lineage Explorer
+lineage_explorer/                   @BralaBee-LEIT
+
+# Notebooks
+notebooks/                          @BralaBee-LEIT
+
+# Documentation
+docs/                               @BralaBee-LEIT
+*.md                                @BralaBee-LEIT

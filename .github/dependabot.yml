@@ -28,3 +28,14 @@ updates:
       - "ci"
     commit-message:
       prefix: "ci"
+
+  # Docker (lineage explorer)
+  - package-ecosystem: "docker"
+    directory: "/lineage_explorer"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker"
