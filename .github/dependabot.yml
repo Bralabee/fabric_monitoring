@@ -29,13 +29,6 @@ updates:
     commit-message:
       prefix: "ci"
 
-  # Docker (lineage explorer)
-  - package-ecosystem: "docker"
-    directory: "/lineage_explorer"
-    schedule:
-      interval: "weekly"
-    labels:
-      - "dependencies"
-      - "docker"
-    commit-message:
-      prefix: "docker"
+  # Note: Docker ecosystem removed — lineage_explorer uses docker-compose.yml
+  # with pre-built images (neo4j), not a Dockerfile. Dependabot's docker
+  # ecosystem requires a Dockerfile to scan.
