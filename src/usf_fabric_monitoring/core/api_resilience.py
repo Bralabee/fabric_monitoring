@@ -23,7 +23,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TypeVar
 
 import requests
@@ -103,7 +103,7 @@ def exponential_backoff_with_jitter(
 # =============================================================================
 
 
-class CircuitState(str, Enum):
+class CircuitState(StrEnum):
     """Circuit breaker states."""
 
     CLOSED = "CLOSED"  # Normal operation, requests allowed

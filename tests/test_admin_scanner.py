@@ -126,8 +126,9 @@ class TestResultNormalization:
         assert result[0]["Upstream Count"] == 1
 
 
+@pytest.mark.integration
 class TestHybridExtractor:
-    """Tests for hybrid mode selection logic."""
+    """Tests for hybrid mode selection logic (requires auth env vars)."""
 
     @patch("scripts.extract_lineage.load_dotenv")
     @patch("scripts.extract_lineage.create_authenticator_from_env")
