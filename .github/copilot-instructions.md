@@ -148,7 +148,7 @@ make test-smoke                # Quick import tests
 ```
 
 ### CLI Entrypoints (see `pyproject.toml`)
-`usf-monitor-hub`, `usf-enforce-access`, `usf-validate-config`, `usf-star-schema`
+`usf-monitor-hub`, `usf-enforce-access`, `usf-validate-config`, `usf-star-schema`, `usf-extract-lineage`
 
 ## Conventions
 
@@ -243,13 +243,9 @@ docker compose up -d neo4j
   - `/api/stats` - Summary statistics
   - `/api/health` - Health check with cache status
   - `/api/refresh` - Reload CSV data
-  - `/api/neo4j/*` - Neo4j graph database endpoints (24 endpoints)
+  - `/api/neo4j/*` - Neo4j graph database endpoints
 - **Frontend**: Single-page app with D3.js v7 (`static/`)
-  - `index.html` - Main UI with header, sidebar, graph container
-  - `styles.css` - Deep space theme with glassmorphism
-  - `app.js` - D3 force simulation, filters, interactions
-  - `neo4j-features.js` - Neo4j-powered advanced features
-  - `neo4j-features.css` - Styles for context menu, panels
+  - All CSS/JS is embedded inline within HTML files (index.html, dashboard.html, elements_graph.html, query_explorer.html, table_impact.html, tables_graph.html)
 - **Graph Database** (`graph_database/`):
   - `neo4j_client.py` - Connection management
   - `data_loader.py` - CSV to Neo4j graph transformation

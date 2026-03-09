@@ -380,7 +380,7 @@ For advanced deployment options (inline pip install, lakehouse file reference, e
 
 ## 🔗 Related Projects
 
-- **[usf_fabric_cli_cicd](../usf_fabric_cli_cicd)**: Lightweight CLI for Fabric deployment automation (v1.6.3)
+- **[usf_fabric_cli_cicd](../usf_fabric_cli_cicd)**: Lightweight CLI for Fabric deployment automation (v1.8.0)
 - **[usf-fabric-cicd](../usf-fabric-cicd)**: Original monolithic framework (predecessor to CLI tool)
 - **[stakeholder_presentations](../stakeholder_presentations)**: Executive presentation decks for monitoring/CI/CD solutions
 - **[fabric-purview-playbook-webapp](../fabric-purview-playbook-webapp)**: Delivery playbook web application
