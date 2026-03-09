@@ -366,5 +366,7 @@ chore: update dependencies
 ### Release Process
 1. Update version in `pyproject.toml`
 2. Update `CHANGELOG.md` with release notes
-3. Create PR to `main` → CI validates
-4. Merge → Tag release → Build wheel
+3. Update `README.md` and `.github/copilot-instructions.md` version references
+4. **Docs freshness audit**: grep repo for old version string; verify test count, command count, and file listings in all docs match reality. Use actual commands (`pytest --co -q | tail -1`, `grep -rn "v<OLD>" docs/`) — not memory.
+5. Create PR to `main` → CI validates
+6. Merge → Tag release → Build wheel
