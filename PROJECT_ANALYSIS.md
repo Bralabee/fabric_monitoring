@@ -25,7 +25,7 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
   - **Type Safety**: Defensive data handling with `type_safety.py` (14 functions)
   - **API Resilience**: Circuit breaker and exponential backoff in `api_resilience.py`
   - **Config Validation**: JSON schemas for all config files
-  - **120+ Tests**: Comprehensive test coverage
+  - **204 Tests**: Comprehensive test coverage
 - **Lineage Explorer (v0.3.35)**:
   - **5 Graph Pages**: Main graph, Elements graph, Tables graph, Dashboard, Query Explorer
   - **Detail Panels**: Click-to-inspect nodes with table footprint
@@ -45,7 +45,7 @@ This document provides a comprehensive top-down analysis of the USF Fabric Monit
 
 #### 1.2 Code Quality Gaps
 
-- ✅ **RESOLVED**: Test Coverage (120 tests including config, type safety, API resilience, star schema)
+- ✅ **RESOLVED**: Test Coverage (204 tests including config, type safety, API resilience, star schema)
 - ✅ **RESOLVED**: Pre-commit hooks with Ruff, MyPy, and custom config validation
 - ✅ **RESOLVED**: KQL Database Shortcut Support added in v0.3.17
 - **Remaining**: pandas SettingWithCopyWarning in historical_analyzer.py (low priority)
@@ -294,7 +294,7 @@ The USF Fabric Monitoring project is in **excellent shape** overall, with a soli
 - Revolutionary Smart Merge technology
 - Comprehensive Star Schema Analytics
 - Mature Lineage Explorer (5 views, Neo4j, detail panels, table health)
-- Well-structured codebase with 120+ tests
+- Well-structured codebase with 204 tests
 - Comprehensive documentation
 - Strong feature set for monitoring and governance
 
