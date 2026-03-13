@@ -51,7 +51,7 @@ dev = [
     "jupyter>=1.0,<2",
     "notebook>=7.0,<8",
     "pyspark>=3.5,<4",
-    "delta-spark>=3.0,<4",
+    "delta-spark>=3.0,<5",
     "matplotlib>=3.8,<4",
     "seaborn>=0.13,<1"
 ]
