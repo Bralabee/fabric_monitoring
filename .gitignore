@@ -62,4 +62,5 @@ htmlcov/
 
 .claude/
 CLAUDE.md
+.agent/
 
