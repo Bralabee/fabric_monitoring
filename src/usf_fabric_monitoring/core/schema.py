@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 
 DDL_ACTIVITIES_MASTER = """
 CREATE TABLE IF NOT EXISTS activities_master (
+    event_id STRING,
     activity_id STRING,
     workspace_id STRING,
     workspace_name STRING,
@@ -38,7 +39,10 @@ CREATE TABLE IF NOT EXISTS activities_master (
     error_message STRING,
     error_code STRING,
     is_failed BOOLEAN,
-    is_success BOOLEAN
+    is_success BOOLEAN,
+    invoke_type STRING,
+    root_activity_id STRING,
+    job_instance_id STRING
 ) USING DELTA;
 """
 

@@ -410,6 +410,8 @@ class MonitorHubPipeline:
         df_jobs = pd.DataFrame(detailed_jobs)
 
         # Map Job columns to friendly names
+        # Official Fabric Job Instance schema:
+        # https://learn.microsoft.com/en-us/rest/api/fabric/core/job-scheduler/get-item-job-instance
         job_rename_map = {
             "id": "job_instance_id",
             "startTimeUtc": "job_start_time",
@@ -418,7 +420,8 @@ class MonitorHubPipeline:
             "failureReason": "job_failure_reason",
             "itemId": "item_id",
             "jobType": "job_type",
-            "invoker": "job_invoker",
+            "invokeType": "invoke_type",
+            "rootActivityId": "root_activity_id",
         }
         df_jobs = df_jobs.rename(columns=job_rename_map)
 

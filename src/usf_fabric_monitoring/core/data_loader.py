@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 RENAME_MAP = {
+    "Id": "event_id",
     "ActivityId": "activity_id",
     "Activity": "activity_type",
     "ItemId": "item_id",
@@ -31,6 +32,7 @@ RENAME_MAP = {
 }
 
 REQUIRED_COLUMNS = [
+    "event_id",
     "activity_id",
     "activity_type",
     "item_id",
@@ -68,6 +70,11 @@ def load_activities_from_directory(export_dir: str) -> list[dict[str, object]]:
     df = pd.concat(frames, ignore_index=True)
     df = _rename_columns(df)
     df = _ensure_required_columns(df)
+
+    # Backfill activity_id with event_id for Fabric-native events
+    # where the API does not return ActivityId (e.g. RunArtifact, DeleteFileOrBlob)
+    df["activity_id"] = df["activity_id"].fillna(df["event_id"])
+
     df["duration_seconds"] = pd.to_numeric(df["duration_seconds"], errors="coerce").fillna(0)
 
     # Fallbacks for start/end time

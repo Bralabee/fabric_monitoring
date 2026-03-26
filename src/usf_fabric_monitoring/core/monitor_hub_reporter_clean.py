@@ -110,6 +110,7 @@ class MonitorHubCSVReporter:
 
         # Reorder columns for better readability
         column_order = [
+            "event_id",
             "activity_id",
             "workspace_id",
             "workspace_name",
@@ -118,6 +119,7 @@ class MonitorHubCSVReporter:
             "item_type",
             "activity_type",
             "status",
+            "invoke_type",
             "start_time",
             "end_time",
             "date",
@@ -134,6 +136,8 @@ class MonitorHubCSVReporter:
             "failure_reason",
             "error_message",
             "error_code",
+            "root_activity_id",
+            "job_instance_id",
         ]
 
         # Keep only columns that exist

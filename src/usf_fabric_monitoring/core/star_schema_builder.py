@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS fact_activity (
     activity_sk BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
     -- Natural/Business Keys
-    activity_id STRING NOT NULL,
+    event_id STRING,                -- Always-present unique record ID from API (Common schema Id)
+    activity_id STRING,             -- Backfilled from event_id when API omits ActivityId
 
     -- Foreign Keys to Dimensions
     date_sk INT,                    -- FK to dim_date
@@ -1066,6 +1067,7 @@ class FactActivityBuilder(DimensionBuilder):
 
             records.append(
                 {
+                    "event_id": activity.get("event_id"),
                     "activity_id": activity.get("activity_id"),
                     "date_sk": date_sk,
                     "time_sk": time_sk,
