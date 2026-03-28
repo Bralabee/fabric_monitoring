@@ -20,8 +20,44 @@ pd.set_option("future.no_silent_downcasting", True)
 _run_historical_extraction = None
 _run_item_details_extraction = None
 
-_project_root = Path(__file__).resolve().parent.parent.parent.parent  # core -> usf_fabric_monitoring -> src -> root
-_scripts_dir = _project_root / "scripts"
+
+def _find_scripts_dir() -> Path:
+    """Locate the repo-level scripts/ directory across environments.
+
+    Search order:
+    1. Repo layout (dev/editable install): walk up from this file to find scripts/
+    2. Current working directory: cwd/scripts/ (notebook run from project root)
+    3. Fabric Lakehouse: /lakehouse/default/Files/scripts/
+    4. USF_SCRIPTS_DIR environment variable override
+    """
+    # Env-var override (escape hatch)
+    env_override = os.environ.get("USF_SCRIPTS_DIR")
+    if env_override:
+        p = Path(env_override)
+        if p.is_dir():
+            return p
+
+    # 1. Repo layout: __file__ is …/src/usf_fabric_monitoring/core/pipeline.py
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    candidate = repo_root / "scripts"
+    if candidate.is_dir() and (candidate / "extract_historical_data.py").exists():
+        return candidate
+
+    # 2. CWD-relative (covers notebook execution from project root)
+    cwd_candidate = Path.cwd() / "scripts"
+    if cwd_candidate.is_dir() and (cwd_candidate / "extract_historical_data.py").exists():
+        return cwd_candidate
+
+    # 3. Fabric Lakehouse Files directory
+    lakehouse_candidate = Path("/lakehouse/default/Files/scripts")
+    if lakehouse_candidate.is_dir() and (lakehouse_candidate / "extract_historical_data.py").exists():
+        return lakehouse_candidate
+
+    # Nothing found — return the repo-layout path so the error message is informative
+    return candidate
+
+
+_scripts_dir = _find_scripts_dir()
 
 
 def _import_script_function(script_name: str, func_name: str):
@@ -30,7 +66,11 @@ def _import_script_function(script_name: str, func_name: str):
 
     script_path = _scripts_dir / f"{script_name}.py"
     if not script_path.exists():
-        raise ImportError(f"Script not found: {script_path}")
+        raise ImportError(
+            f"Script not found: {script_path}. "
+            f"Upload the scripts/ folder to your Lakehouse Files, "
+            f"or set USF_SCRIPTS_DIR to the directory containing {script_name}.py"
+        )
     spec = importlib.util.spec_from_file_location(script_name, script_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

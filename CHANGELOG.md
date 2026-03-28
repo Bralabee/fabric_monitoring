@@ -9,6 +9,29 @@ All notable changes to this project will be documented in this file.
 - **Ruff lint compliance**: Fixed 466 lint errors across `src/`, `scripts/`, and `tests/` — bulk auto-fixed W293 (whitespace), I001 (unsorted imports), F541 (f-string placeholders), UP006/UP035 (deprecated annotations), F401 (unused imports); manually suppressed E402 (module-import-not-at-top) in scripts with required `sys.path` setup; resolved B018 (useless expressions) in test assertions
 - **Ruff format compliance**: Applied `ruff format` to 15 files for consistent code style
 
+---
+
+## 0.3.37 (March 2026) - Data Quality: Field Mapping & Activity ID Backfill
+
+### Fixed
+
+- **`activity_id` empty for ~89% of records**: The Power BI Activity Events API omits `ActivityId` for Fabric-native event types (`RunArtifact`, `DeleteFileOrBlob`, etc.). The API's `Id` field (always present, always unique) is now mapped as `event_id` and used to backfill `activity_id` when absent — resolves 11% → 100% population
+- **`invoke_type` empty across all records**: The Fabric Job Instance API returns `invokeType` (Scheduled/Manual) and `rootActivityId`, but `pipeline.py`'s `job_rename_map` did not include them — camelCase fields passed through silently and were missed by snake_case star schema lookups. Added both to the rename map. Removed dead `invoker` mapping (field does not exist in the API response)
+- **Notebook schema validation**: Updated `1_Monitor_Hub_Analysis.ipynb` Cell 8 from 22-column to 26-column schema validation to accept the new fields
+
+### Added
+
+- **4 new columns in `activities_master` CSV**: `event_id`, `invoke_type`, `root_activity_id`, `job_instance_id` — included in `monitor_hub_reporter_clean.py` column order
+- **Schema DDL updates**: `activities_master` and `fact_activity` DDLs updated with the new columns
+- **RunArtifact deduplication**: With `root_activity_id` now flowing through the merge, duplicate `RunArtifact` events (~2.6 per execution) can be grouped for accurate pipeline execution counts
+
+### Changed
+
+- **License**: Replaced MIT with Ricoh proprietary license
+- **Dependabot**: Removed `dependabot.yml` — dependency updates managed manually
+
+---
+
 ## 0.3.36 (February 2026) - Audit Phase 1: Exception Refinement & Security Hardening
 
 ### Changed
